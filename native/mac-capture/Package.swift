@@ -10,14 +10,18 @@ let package = Package(
         .library(
             name: "MacCapture",
             targets: ["MacCapture"]
+        ),
+        .executable(
+            name: "MacCaptureSmoke",
+            targets: ["MacCaptureSmoke"]
         )
     ],
     targets: [
         .target(
             name: "MacCapture"
         ),
-        .testTarget(
-            name: "MacCaptureTests",
+        .executableTarget(
+            name: "MacCaptureSmoke",
             dependencies: ["MacCapture"]
         )
     ]

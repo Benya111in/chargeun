@@ -15,6 +15,9 @@
 - desktop UI에 capture control contract, source 상태, permission/session 상태 연결
 - browser `getDisplayMedia` 기반 live preview fallback 연결
 - live preview lane과 Shadow Player replay lane을 분리한 상태로 `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm build` 검증
+- `native/mac-capture`에 permission/source/session foundation 추가
+- ScreenCaptureKit source enumerate와 session bookkeeping을 반영한 `MacCaptureCoordinator` 강화
+- `swift build`, `swift run MacCaptureSmoke`로 native foundation smoke 검증
 
 ### 진행 중
 
@@ -26,4 +29,5 @@
 
 1. `native/mac-capture`를 ScreenCaptureKit 세션/권한/소스 열거 경로로 강화
 2. Tauri 셸에서 source enumerate, start, stop command를 실제 capture bridge와 연결
-3. browser/native preview 입력을 shadow/perception lane으로 분기 연결
+3. native frame/audio event를 preview/shadow 입력으로 전달하는 브리지 추가
+4. browser/native preview 입력을 shadow/perception lane으로 분기 연결
