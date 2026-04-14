@@ -7,6 +7,7 @@ import type {
 import { earthquakeRuleCatalog, fireRuleCatalog } from './rule-catalog'
 
 export type DemoScenario = {
+  demoFrames: DemoFrame[]
   id: string
   overlaySummary: string
   overlayTargets: Array<{ label: string }>
@@ -18,8 +19,18 @@ export type DemoScenario = {
   videoCaption: string
 }
 
+export type DemoFrame = {
+  imageRef: string
+  tsMs: number
+}
+
 export const demoScenarios: DemoScenario[] = [
   {
+    demoFrames: [
+      { imageRef: '/demo/fire-grounded-01.jpg', tsMs: 6_000 },
+      { imageRef: '/demo/fire-grounded-02.jpg', tsMs: 8_500 },
+      { imageRef: '/demo/fire-grounded-03.jpg', tsMs: 11_000 },
+    ],
     id: 'grounded-fire',
     title: '연기를 보고 대피 경로를 고르는 장면',
     phaseLabel: '세그먼트 04 | 대피 경로 선택',
@@ -59,6 +70,11 @@ export const demoScenarios: DemoScenario[] = [
       '복도에 연기가 차고 있고, 화면 오른쪽 위에 비상구 표지가 보입니다. 내레이션은 엘리베이터 대신 계단을 찾으라고 안내합니다.',
   },
   {
+    demoFrames: [
+      { imageRef: '/demo/earthquake-review-01.jpg', tsMs: 6_000 },
+      { imageRef: '/demo/earthquake-review-02.jpg', tsMs: 8_500 },
+      { imageRef: '/demo/earthquake-review-03.jpg', tsMs: 11_000 },
+    ],
     id: 'review-earthquake',
     title: '흔들림은 보이지만 보호 행동 근거가 약한 장면',
     phaseLabel: '세그먼트 02 | 공식 확인 우선',
@@ -89,6 +105,11 @@ export const demoScenarios: DemoScenario[] = [
       '카메라가 흔들리고 탁자 비슷한 객체가 보이지만 OCR과 음성 근거가 부족해서 공식 원문 확인이 먼저 필요합니다.',
   },
   {
+    demoFrames: [
+      { imageRef: '/demo/fire-visual-01.jpg', tsMs: 6_000 },
+      { imageRef: '/demo/fire-visual-02.jpg', tsMs: 8_500 },
+      { imageRef: '/demo/fire-visual-03.jpg', tsMs: 11_000 },
+    ],
     id: 'backup-fire-visual',
     title: '오디오 없이도 계단 대피를 판단할 수 있는 장면',
     phaseLabel: '세그먼트 05 | visual-only backup',
@@ -131,6 +152,11 @@ export const demoScenarios: DemoScenario[] = [
       '오디오가 꺼진 상태지만 비상구와 계단, 복도 정보만으로도 계단 대피 grounded 설명을 유지하는 백업 세션입니다.',
   },
   {
+    demoFrames: [
+      { imageRef: '/demo/earthquake-after-01.jpg', tsMs: 6_000 },
+      { imageRef: '/demo/earthquake-after-02.jpg', tsMs: 8_500 },
+      { imageRef: '/demo/earthquake-after-03.jpg', tsMs: 11_000 },
+    ],
     id: 'backup-earthquake-after',
     title: '흔들림 종료 후 가스와 전기를 끄고 출구를 확보하는 장면',
     phaseLabel: '세그먼트 03 | 흔들림 종료 후 조치',

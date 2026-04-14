@@ -196,3 +196,8 @@
 
 - 이유: release 직전에는 earthquake만 actual clip이 있고 fire/review가 demo-fixture로 남아 있으면 manual QA queue와 rehearsal 로그가 계속 비현실적으로 남는다.
 - 영향: fire fixture 2개는 안전한TV 공식 원본 `[사회재난] 아파트 화재 시 이렇게 행동합시다`를 tracked source로 등록하고, local `data/eval/sources/*.mp4`에서 실제 clip을 잘라 `data/eval/clips/*.mp4`에 준비한다. review fallback fixture는 의도적으로 근거 없는 장면이 목적이므로 local generated blank clip을 허용하되, pass/fail은 여전히 UI walkthrough로만 확정한다.
+
+### D-040 브라우저 데모는 상태 변화가 반드시 영상 변화로 보여야 한다
+
+- 이유: localhost 시연에서 실제 capture가 비활성인 상태에서는 버튼 클릭이 텍스트/근거만 바꾸면, 첫 인상상 "아무것도 안 된다"로 읽히기 쉽다.
+- 영향: demo preset은 scenario별 정적 frame 세트를 함께 가지고, `ShadowVideoStage`는 live frame이 없을 때 replay/live thumbnail에 이 frame을 cursor 기준으로 렌더링한다. 실제 live capture가 붙으면 이 fallback은 자동으로 비활성화된다.

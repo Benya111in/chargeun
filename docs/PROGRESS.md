@@ -108,6 +108,9 @@
 
 ### 완료
 
+- localhost demo path에서 버튼 상태만 바뀌고 Shadow Player 화면이 비어 보이던 문제를 추적해, scenario별 정적 demo frame 자산(`apps/desktop-ui/public/demo/*.jpg`)과 replay/live thumbnail fallback을 연결했다
+- `mock-session`이 demo timeline용 frame 목록을 같이 들고 다니도록 확장하고, `ShadowVideoStage`가 live frame이 없을 때 scenario demo frame을 cursor 기준으로 고르도록 수정했다
+- 이후 localhost 브라우저 데모에서도 각 preset 버튼이 실제 scene image 변경으로 바로 드러나게 되어, "버튼은 눌리는데 아무것도 안 바뀐다"는 오해를 줄였다
 - Tauri runtime/storage/QA 경로를 release bundle 기준으로 재정리해, debug에서는 기존 저장소 `.slowlearner` 및 `data/eval` 흐름을 유지하고 release/package에서는 `app_local_data_dir` 기반 로컬 runtime을 사용하도록 수정
 - `load_app_runtime_state`, `save_app_runtime_state`, `append_session_log_entry`, `save_live_analysis_snapshot`, `load_last_live_analysis_snapshot`, QA review command들이 모두 `AppHandle` 기반 path resolver를 사용하도록 정리
 - release bundle이 `annotated_segments.json`, `manual_review_runs.json`, `rehearsal_runs.json`을 `Contents/Resources/data/eval/*`에 포함하고, standalone 앱이 최초 실행 시 이를 app-local QA JSON seed로 복사해 쓰도록 정리
@@ -134,9 +137,11 @@
 ### 진행 중
 
 - 실제 UI walkthrough/pass-fail 기록과 native permission 허용 후 rehearsal pass 로그 누적 단계
+- localhost demo path를 넘어, capture 시작/중지와 프리셋 전환이 처음 보는 사용자에게도 명확하게 읽히도록 onboarding/empty-state를 다듬는 단계
 
 ### 다음
 
 1. 실제 clip 기반 walkthrough/pass-fail 기록 채우기
 2. Screen Recording 권한 허용 뒤 native live rehearsal pass 로그 축적
 3. live ASR OpenAI fallback을 앱 설정 또는 secure local secret 주입 경로까지 제품형으로 다듬기
+4. demo/live empty state와 첫 사용 설명을 제품 수준으로 정리

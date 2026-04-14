@@ -321,6 +321,7 @@ function App() {
 
   const shadowScenario = useMemo(
     () => ({
+      demoFrames: liveAnalysis || restoredAnalysis ? [] : scenario.demoFrames,
       id: liveAnalysis
         ? `live-${capture.state.activeSession?.id ?? 'preview'}`
         : restoredAnalysis
@@ -342,6 +343,7 @@ function App() {
       liveAnalysis,
       restoredAnalysis,
       restoredLiveSnapshot?.session.session.id,
+      scenario.demoFrames,
       scenario.id,
     ],
   )

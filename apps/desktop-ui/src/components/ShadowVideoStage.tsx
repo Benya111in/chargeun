@@ -23,6 +23,7 @@ import { useShadowLivePlayer } from '../lib/useShadowLivePlayer'
 import { cn, formatClock } from '../lib/utils'
 
 type ShadowStageScenario = {
+  demoFrames?: Array<{ imageRef: string; tsMs: number }>
   id: string
   overlaySummary: string
   overlayTargets: Array<{ label: string }>
@@ -67,6 +68,22 @@ export function ShadowVideoStage({
       ? livePlayer
       : demoPlayer
   const isLiveReplay = player.state.mode === 'live'
+  const replayFrameRef =
+    player.state.replayFrameRef ??
+    (!isLiveReplay
+      ? pickDemoFrameAtOrBefore(
+          scenario.demoFrames ?? [],
+          player.state.replayCursorMs,
+        )
+      : null)
+  const liveFrameRef =
+    player.state.liveFrameRef ??
+    (!isLiveReplay
+      ? pickDemoFrameAtOrBefore(
+          scenario.demoFrames ?? [],
+          player.state.liveEdgeMs,
+        )
+      : null)
 
   const replayProgressPct = getPercent(
     player.state.replayCursorMs,
@@ -111,15 +128,16 @@ export function ShadowVideoStage({
       <div className="flex h-full min-h-[380px] flex-col justify-between px-5 pb-5 pt-18">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <div className="relative overflow-hidden rounded-md border border-white/10 bg-black/40">
-            {player.state.replayFrameRef ? (
+            {replayFrameRef ? (
               <img
                 alt="Shadow replay frame"
                 className="aspect-video w-full object-cover"
-                src={player.state.replayFrameRef}
+                src={replayFrameRef}
               />
             ) : (
               <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_transparent_36%),linear-gradient(180deg,rgba(13,16,20,0.82),rgba(4,6,9,0.98))] px-6 text-center text-sm leading-6 text-white/70">
-                실제 frame이 들어오면 4초 지연 replay가 이 화면에 표시됩니다.
+                replay frame을 아직 받지 못했습니다. capture를 시작하거나 demo
+                preset을 선택해 주세요.
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/30 to-transparent" />
@@ -136,12 +154,12 @@ export function ShadowVideoStage({
                 </span>
               ) : null}
             </div>
-            {player.state.liveFrameRef ? (
+            {liveFrameRef ? (
               <div className="absolute bottom-4 right-4 w-36 overflow-hidden rounded-md border border-white/12 bg-black/42 shadow-[0_20px_40px_rgba(0,0,0,0.28)]">
                 <img
                   alt="Live edge frame"
                   className="aspect-video w-full object-cover"
-                  src={player.state.liveFrameRef}
+                  src={liveFrameRef}
                 />
                 <div className="border-t border-white/12 px-2 py-1 text-[11px] text-white/70">
                   live edge
@@ -352,4 +370,21 @@ function getPercent(valueMs: number, startMs: number, endMs: number) {
   const rawPct = ((valueMs - startMs) / rangeMs) * 100
 
   return Math.min(100, Math.max(0, rawPct))
+}
+
+function pickDemoFrameAtOrBefore(
+  frames: Array<{ imageRef: string; tsMs: number }>,
+  cursorMs: number,
+) {
+  if (frames.length === 0) {
+    return null
+  }
+
+  for (let index = frames.length - 1; index >= 0; index -= 1) {
+    if (frames[index].tsMs <= cursorMs) {
+      return frames[index].imageRef
+    }
+  }
+
+  return frames[0]?.imageRef ?? null
 }
