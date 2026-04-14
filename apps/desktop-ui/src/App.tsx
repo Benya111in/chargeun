@@ -17,6 +17,7 @@ import {
 } from '@ansimtrack/llm-orchestrator'
 import { voiceIntentLabels, type VoiceIntent } from '@ansimtrack/shared-types'
 
+import { EvidenceDrawer } from './components/EvidenceDrawer'
 import { LiveCapturePreview } from './components/LiveCapturePreview'
 import { ShadowVideoStage } from './components/ShadowVideoStage'
 import {
@@ -79,16 +80,15 @@ function App() {
     [scenario],
   )
 
-  const matchedRules = useMemo(
+  const ruleMatches = useMemo(
     () =>
       matchGroundedRules({
         evidence: scenario.perceptionPacket,
         rules: scenario.rules,
         segment,
-      }).map((candidate) => candidate.rule),
+      }),
     [scenario, segment],
   )
-
   const explanation = useMemo(
     () =>
       buildGroundedExplanation({
@@ -122,7 +122,6 @@ function App() {
     [explanation],
   )
 
-  const currentRule = matchedRules[0]
   const selectedTrackText =
     explanation.tracks[selectedTrack] ??
     explanation.tracks.easy ??
@@ -164,7 +163,15 @@ function App() {
                 <ShieldAlert className="size-4" />
                 안심트랙 Live
               </span>
-              <StatusPill tone={segment.hazard === 'fire' ? 'danger' : 'calm'}>
+              <StatusPill
+                tone={
+                  segment.hazard === 'fire'
+                    ? 'danger'
+                    : segment.hazard === 'earthquake'
+                      ? 'calm'
+                      : 'review'
+                }
+              >
                 {getHazardBadgeLabel(segment.hazard)}
               </StatusPill>
               <StatusPill
@@ -524,67 +531,12 @@ function App() {
             </section>
 
             {showEvidence ? (
-              <section className="panel-edge">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                      Source Evidence
-                    </p>
-                    <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-                      근거 패널
-                    </h2>
-                  </div>
-                  <StatusPill tone="neutral">
-                    {currentRule ? 'rule 연결됨' : '공식 선택 필요'}
-                  </StatusPill>
-                </div>
-
-                {currentRule ? (
-                  <div className="mt-4 grid gap-4">
-                    <div className="rounded-md border border-[var(--line)] bg-white px-4 py-4">
-                      <dl className="grid gap-3 text-sm text-[var(--muted)]">
-                        <MetaRow label="rule id">{currentRule.rule_id}</MetaRow>
-                        <MetaRow label="phase">{currentRule.phase}</MetaRow>
-                        <MetaRow label="출처">
-                          {currentRule.source_title}
-                        </MetaRow>
-                        <MetaRow label="선택 이유">
-                          OCR/ASR와 장면 객체가 현재 phase와 맞아서 이 규칙을
-                          우선 사용합니다.
-                        </MetaRow>
-                      </dl>
-                    </div>
-                    <div className="rounded-md border border-[var(--line)] bg-white px-4 py-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                        공식 문장 재구성
-                      </p>
-                      <div className="mt-3 grid gap-3 text-sm leading-6 text-[var(--ink)]">
-                        <EvidenceLine label="행동">
-                          {currentRule.action}
-                        </EvidenceLine>
-                        {currentRule.do_not ? (
-                          <EvidenceLine label="금지">
-                            {currentRule.do_not}
-                          </EvidenceLine>
-                        ) : null}
-                        <EvidenceLine label="이유">
-                          {currentRule.why}
-                        </EvidenceLine>
-                        {currentRule.report_script ? (
-                          <EvidenceLine label="신고">
-                            {currentRule.report_script}
-                          </EvidenceLine>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-                    공식 행동요령 선택이 아직 확정되지 않아 action track을
-                    숨겼습니다.
-                  </div>
-                )}
-              </section>
+              <EvidenceDrawer
+                packet={scenario.perceptionPacket}
+                reviewMode={explanation.safetyMode === 'review_official'}
+                ruleMatches={ruleMatches}
+                segment={segment}
+              />
             ) : null}
           </section>
         </main>
@@ -679,21 +631,6 @@ function MetaRow({
     <div className="grid gap-1 sm:grid-cols-[88px_1fr]">
       <dt className="font-semibold text-[var(--ink)]">{label}</dt>
       <dd>{children}</dd>
-    </div>
-  )
-}
-
-function EvidenceLine({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="grid gap-1 sm:grid-cols-[64px_1fr]">
-      <div className="font-semibold text-[var(--muted)]">{label}</div>
-      <div>{children}</div>
     </div>
   )
 }

@@ -44,7 +44,7 @@
    - source docs: `docs/13_VOICE_REALTIME_AND_TTS.md`
    - goal: 최소 4개 intent에 대한 near-realtime voice explain
 
-9. `pending` frontend polish and evidence flow
+9. `done` frontend polish and evidence flow
    - source docs: `docs/04_PRODUCT_UX_ACCESSIBILITY_REQUIREMENTS.md`, `docs/14_FRONTEND_PLAYER_UI.md`
    - goal: SegmentCard, Panic Mode, evidence drawer polish
 

@@ -76,3 +76,8 @@
 
 - 이유: 현재 단계에서 중요한 것은 intent 버튼을 눌렀을 때 1초 안에 반응이 시작되는 데모 흐름이다.
 - 영향: TTS는 우선 `speechSynthesis`를 사용하고, unavailable 환경에서는 transcript 카드만 유지한다. 외부 TTS 모델이나 비용 있는 API는 아직 붙이지 않는다.
+
+### D-016 evidence drawer는 raw packet과 matcher signal을 직접 보여 준다
+
+- 이유: 심사나 협업 상황에서는 "왜 이 규칙이 선택됐는지"가 즉시 드러나야 한다.
+- 영향: 근거 패널은 요약 문장 대신 `matchedSignals`, candidate rule score, OCR/ASR/object hints, packet window를 직접 노출한다.

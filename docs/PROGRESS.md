@@ -42,14 +42,16 @@
 - `matchGroundedRules` 결과를 근거 패널과 segment card에 연결해 rule id/action/report 노출이 실제 matcher 결과를 따르도록 정리
 - browser `speechSynthesis` 기반 TTS fallback과 재생 상태 관리를 추가해 5개 intent 버튼이 transcript + 음성 재생을 함께 제공하도록 연결
 - 음성 unavailable 환경에서는 자동으로 텍스트-only fallback으로 남기고, 재생 중지 버튼과 상태 배지를 추가
+- 근거 패널을 `EvidenceDrawer`로 분리하고 matcher의 `matchedSignals`, 규칙 후보 score, packet evidence, grounded ids를 그대로 보여 주도록 정리
+- segment/evidence/voice 영역을 더 읽기 쉬운 발표용 정보 흐름으로 정리하고, evidence toggle이 실제 drawer 성격의 패널을 여닫도록 다듬음
 
 ### 진행 중
 
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
-- frontend evidence flow polish
+- storage/jobs skeleton
 
 ### 다음
 
-1. frontend evidence flow polish
-2. storage/jobs skeleton
-3. safety/privacy/compliance pass
+1. storage/jobs skeleton
+2. safety/privacy/compliance pass
+3. evaluation and QA tooling

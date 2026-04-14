@@ -15,3 +15,4 @@
 - `data/eval/annotated_segments.json`는 현재 rule JSON보다 예전 phase/rule id를 일부 기대하고 있어, QA slice에서 fixture 정합성 재조정이 필요하다.
 - desktop UI는 demo scenario에서 새 grounded path를 쓰지만, 실제 live capture의 `captureInput`를 perception worker와 segment engine으로 흘리는 실시간 연결은 아직 미구현이다.
 - 현재 voice path는 browser `speechSynthesis` fallback이며, 네이티브 TTS/ducking/마이크 intent 분류는 아직 미구현이다.
+- evidence drawer는 demo packet 기준으로는 정리됐지만, live capture 세션 로그/재시작 복원/export 경로는 아직 없다.
