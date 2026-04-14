@@ -9,5 +9,6 @@ test-results
 target
 apps/desktop-ui/dist
 apps/desktop-ui/src-tauri/target
+native/mac-capture/.build
 files/cache
 files/export
