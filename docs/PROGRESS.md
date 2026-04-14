@@ -85,6 +85,8 @@
 - `qa-review` helper에 manual review 우선순위 queue와 release checklist snapshot derivation을 추가해, 미완료 fixture를 먼저 보이고 최근 rehearsal 기준 남은 리스크를 앱 안에서 바로 확인할 수 있게 정리
 - `QaReviewPanel`이 다음 walkthrough 추천 fixture, sorted fixture queue, release checklist snapshot을 표시하도록 확장하고 `getLatestRehearsalRun`은 더 이상 배열을 mutate하지 않도록 수정
 - `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 QA readiness dashboard slice 검증 완료
+- 지진 fixture 2개에 사용자가 제안한 행정안전부 YouTube 원본 source reference를 등록하고, `QaReviewPanel`에서 source title/link/추출 메모를 바로 보게 해 실제 clip intake 경로를 명시적으로 고정
+- `pnpm eval:audit`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 source reference slice 검증 완료
 
 ### 진행 중
 

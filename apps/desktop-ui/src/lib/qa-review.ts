@@ -1,3 +1,11 @@
+export type QaSourceReference = {
+  credit: string
+  kind: 'file' | 'youtube'
+  notes: string
+  title: string
+  url: string
+}
+
 export type QaFixtureRecord = {
   clipId: string
   description: string
@@ -5,6 +13,7 @@ export type QaFixtureRecord = {
   hasAudio: boolean
   hazard: string
   phase: string
+  sourceReference?: QaSourceReference | null
 }
 
 export type ManualReviewStatus = 'blocked' | 'fail' | 'pass' | 'pending'

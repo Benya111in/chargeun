@@ -287,6 +287,16 @@ struct VoiceIntentRecognitionResult {
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+struct QaSourceReference {
+    credit: String,
+    kind: String,
+    notes: String,
+    title: String,
+    url: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct QaFixtureRecord {
     clip_id: String,
     description: String,
@@ -294,6 +304,7 @@ struct QaFixtureRecord {
     has_audio: bool,
     hazard: String,
     phase: String,
+    source_reference: Option<QaSourceReference>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]

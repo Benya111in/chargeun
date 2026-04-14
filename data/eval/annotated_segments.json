@@ -66,6 +66,13 @@
     "description": "실내에서 흔들림이 시작되어 탁자 아래로 몸을 숨기는 장면",
     "hazard": "earthquake",
     "phase": "protect",
+    "sourceReference": {
+      "kind": "youtube",
+      "title": "🚨 지진 발생 시 이렇게 행동하세요!",
+      "url": "https://www.youtube.com/watch?v=yYwX3qqVMSE",
+      "credit": "행정안전부",
+      "notes": "사용자가 제안한 원본 링크입니다. 이 원본에서 탁자 아래로 들어가 머리를 보호하는 구간을 로컬 mp4/mov clip으로 잘라 manual walkthrough path에 연결합니다."
+    },
     "idealSegmentStartMs": 1000,
     "idealSegmentEndMs": 4800,
     "expectedRuleIds": ["KR_EQ_03"],
@@ -92,6 +99,13 @@
     "description": "흔들림이 멈춘 뒤 가스와 전기를 끄고 출구를 확보하는 장면",
     "hazard": "earthquake",
     "phase": "after_shaking",
+    "sourceReference": {
+      "kind": "youtube",
+      "title": "🚨 지진 발생 시 이렇게 행동하세요!",
+      "url": "https://www.youtube.com/watch?v=yYwX3qqVMSE",
+      "credit": "행정안전부",
+      "notes": "사용자가 제안한 원본 링크입니다. 이 원본에서 흔들림 종료 뒤 가스·전기 차단과 출구 확보 구간을 로컬 mp4/mov clip으로 잘라 manual walkthrough path에 연결합니다."
+    },
     "idealSegmentStartMs": 5200,
     "idealSegmentEndMs": 8700,
     "expectedRuleIds": ["KR_EQ_05"],

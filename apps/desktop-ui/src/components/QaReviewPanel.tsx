@@ -1,6 +1,7 @@
 import {
   CheckCheck,
   ClipboardCheck,
+  ExternalLink,
   FileWarning,
   TimerReset,
 } from 'lucide-react'
@@ -189,6 +190,35 @@ export function QaReviewPanel({
                   {selectedFixture.description}
                 </p>
               </div>
+
+              {selectedFixture.sourceReference ? (
+                <div className="grid gap-2 rounded-md border border-[var(--line)] bg-[var(--soft)] px-3 py-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                      Source Reference
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--ink)]">
+                      {selectedFixture.sourceReference.title}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      {selectedFixture.sourceReference.credit} ·{' '}
+                      {selectedFixture.sourceReference.kind}
+                    </p>
+                  </div>
+                  <a
+                    className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ink)] underline"
+                    href={selectedFixture.sourceReference.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <ExternalLink className="size-4" />
+                    open source link
+                  </a>
+                  <p className="text-sm leading-6 text-[var(--muted)]">
+                    {selectedFixture.sourceReference.notes}
+                  </p>
+                </div>
+              ) : null}
 
               <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--ink)]">
                 {clipPreviewSrc && isLikelyVideoPath(clipPreviewSrc) ? (

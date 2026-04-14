@@ -156,3 +156,8 @@
 
 - 이유: 대회 직전에는 별도 스프레드시트나 문서를 또 맞추기보다, 지금 앱에서 실제로 남긴 rehearsal/manual review 로그를 기준으로 남은 리스크를 바로 보는 편이 빠르고 협업 인수인계도 단순하다.
 - 영향: desktop UI는 `QaReviewPanel`에서 latest rehearsal + manual review coverage를 조합해 release checklist snapshot을 계산하고, 미완료 fixture를 우선순위 queue로 재정렬한다. pause/seek 같은 아직 계측되지 않은 항목은 계속 사람 기준 manual verification으로 남긴다.
+
+### D-032 외부 원본 영상은 fixture source reference로만 먼저 등록한다
+
+- 이유: YouTube 같은 외부 영상은 바로 저장소에 내려받아 넣기보다, 어떤 공식 원본에서 어떤 clip을 잘라야 하는지를 먼저 데이터로 남기는 편이 저작권과 협업 측면에서 안전하다.
+- 영향: `annotated_segments.json`의 fixture는 optional `sourceReference`를 가질 수 있고, QA 패널은 제목/링크/메모를 보여 준다. 실제 수동 검수는 여전히 로컬로 잘라 둔 mp4/mov path를 manual review input에 별도로 기록한다.
