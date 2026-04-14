@@ -10,5 +10,17 @@
     "sourceStartMs": null,
     "sourceEndMs": null,
     "notes": "흔들림 종료 뒤 가스/전기 차단과 출구 확보가 보이는 시작/끝 시간을 채웁니다."
+  },
+  {
+    "clipId": "fire-door-control-001",
+    "sourceStartMs": 14000,
+    "sourceEndMs": 22200,
+    "notes": "안전한TV 아파트 화재 원본에서 현관문을 닫고 계단으로 내려가는 자막/행동이 모두 보이는 구간입니다."
+  },
+  {
+    "clipId": "fire-stair-no-audio-001",
+    "sourceStartMs": 18200,
+    "sourceEndMs": 24800,
+    "notes": "같은 원본의 계단 이동 구간을 사용하되, 실제 추출 clip에서는 `-an`으로 오디오를 제거합니다."
   }
 ]

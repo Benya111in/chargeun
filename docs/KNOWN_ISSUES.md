@@ -26,8 +26,8 @@
 - QA workspace의 release checklist snapshot은 현재 rehearsal JSON에 있는 항목만 파생하므로, Shadow Player pause/seek/replay marker 같은 세부 동작은 여전히 사람이 수동으로 확인해야 한다.
 - fixture에 외부 source reference를 붙일 수는 있지만, YouTube 원본에서 필요한 구간을 자동으로 잘라 주거나 duration/timestamp를 자동 태깅하는 intake 도구는 아직 없다.
 - `pnpm qa:prepare-clips`는 local source path와 source start/end timestamp가 채워져 있어야만 실제 clip을 뽑을 수 있으며, 현재 example 파일에는 그 값이 비어 있다.
-- 현재 실제 local clip이 준비된 것은 earthquake fixture 2개뿐이고, fire fixture 2개와 review fallback fixture는 여전히 synthetic/demo-fixture 중심이다.
-- 저장소에는 아직 실제 mp4/mov clip 자산이 없어서 `manual_review_runs.json`과 `rehearsal_runs.json`의 많은 항목이 `pending`/`blocked` 상태로 남아 있다.
+- 저장소에는 실제 mp4/mov clip 자산을 계속 tracked로 넣지 않으므로, 팀원별 `data/eval/sources/*.mp4`와 `data/eval/clips/*.mp4` 준비 여부는 로컬 작업 상태에 의존한다.
+- fire/earthquake/review local clip은 모두 준비했지만, `manual_review_runs.json`과 `rehearsal_runs.json`의 최신 상태는 아직 `pending`/`in_progress`라 실제 UI walkthrough와 native permission rehearsal pass 기록이 남아 있다.
 - eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.
 - runtime state 복원은 demo/UI 상태와 last session metadata 기준이며, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.

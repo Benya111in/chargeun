@@ -8,12 +8,28 @@
     "notes": "evidence drawer에서 source title과 matched signals 확인 필요"
   },
   {
+    "clipId": "fire-door-control-001",
+    "date": "2026-04-15",
+    "operator": "Codex",
+    "path": "data/eval/clips/fire-door-control-001.mp4",
+    "status": "pending",
+    "notes": "안전한TV 원본에서 local clip 추출 완료. Shadow replay와 grounded KR_FIRE_04 설명 흐름, ASR/OCR 근거 확인만 남음"
+  },
+  {
     "clipId": "fire-stair-no-audio-001",
     "date": "2026-04-14",
     "operator": "Codex",
     "path": "demo-fixture",
     "status": "pending",
     "notes": "OCR/object hint만으로 grounded 유지 확인 필요"
+  },
+  {
+    "clipId": "fire-stair-no-audio-001",
+    "date": "2026-04-15",
+    "operator": "Codex",
+    "path": "data/eval/clips/fire-stair-no-audio-001.mp4",
+    "status": "pending",
+    "notes": "무음 actual clip 준비 완료. audio 없이도 grounded 유지와 no-audio fallback UI 확인만 남음"
   },
   {
     "clipId": "earthquake-desk-001",
@@ -54,5 +70,13 @@
     "path": "demo-fixture",
     "status": "pending",
     "notes": "action/report/do_not 숨김 정책 수동 점검 필요"
+  },
+  {
+    "clipId": "review-unknown-empty-001",
+    "date": "2026-04-15",
+    "operator": "Codex",
+    "path": "data/eval/clips/review-unknown-empty-001.mp4",
+    "status": "pending",
+    "notes": "3초 black actual clip 생성 완료. review_official 강등과 action/report/do_not 숨김 확인만 남음"
   }
 ]

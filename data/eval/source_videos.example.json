@@ -7,5 +7,14 @@
     "durationSeconds": 594,
     "localPath": "",
     "notes": "로컬로 확보한 원본 mp4/mov 경로를 `data/eval/source_videos.local.json`에 넣고 사용합니다. tracked example에는 실제 사용자 경로를 넣지 않습니다."
+  },
+  {
+    "sourceId": "safetv-fire-apt-2739",
+    "title": "[사회재난] 아파트 화재 시 이렇게 행동합시다",
+    "url": "https://www.safetv.go.kr/base/video/view?idx=2739&playlistManagementIdx=&searchCategory=",
+    "credit": "행정안전부 안전한TV",
+    "durationSeconds": 60,
+    "localPath": "",
+    "notes": "안전한TV 다운로드 버튼에서 제공하는 원본 mp4를 로컬에 저장한 경로를 `data/eval/source_videos.local.json`에 넣고 사용합니다."
   }
 ]

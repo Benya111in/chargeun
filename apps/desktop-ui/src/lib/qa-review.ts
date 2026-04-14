@@ -1,6 +1,6 @@
 export type QaSourceReference = {
   credit: string
-  kind: 'file' | 'youtube'
+  kind: 'file' | 'generated-local' | 'safetv' | 'youtube'
   notes: string
   title: string
   url: string

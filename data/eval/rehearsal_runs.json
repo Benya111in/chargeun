@@ -16,5 +16,23 @@
     "lowConfidenceFallbackWorks": true,
     "backupReady": true,
     "notes": "actual native rehearsal blocked by macOS Screen Recording permission; native voice/audio runtime smoke only"
+  },
+  {
+    "date": "2026-04-15",
+    "operator": "Codex",
+    "path": "actual earthquake/fire/review local clips + automated checks",
+    "result": "in_progress",
+    "startupUnder10s": true,
+    "shadowPlayerPrimary": true,
+    "fallbackWorks": true,
+    "voiceOffWorks": true,
+    "permissionsRetryWorks": false,
+    "fullMonitorCaptureWorks": false,
+    "windowCaptureWorks": false,
+    "noAudioFallbackWorks": true,
+    "evidenceAndCacheWorks": true,
+    "lowConfidenceFallbackWorks": true,
+    "backupReady": true,
+    "notes": "fire fixture 2개와 review empty local clip까지 준비 완료. actual UI walkthrough와 native Screen Recording 권한 허용 후 rehearsal pass 기록만 남음"
   }
 ]

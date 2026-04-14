@@ -22,6 +22,7 @@
 
 ## Run Log
 
-| date         | operator | path                             | result      | notes                                                                                                       |
-| ------------ | -------- | -------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
-| `2026-04-14` | Codex    | demo scenario + automated checks | in_progress | actual native rehearsal blocked by macOS Screen Recording permission; native voice/audio runtime smoke only |
+| date         | operator | path                                                         | result      | notes                                                                                                                                             |
+| ------------ | -------- | ------------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `2026-04-14` | Codex    | demo scenario + automated checks                             | in_progress | actual native rehearsal blocked by macOS Screen Recording permission; native voice/audio runtime smoke only                                       |
+| `2026-04-15` | Codex    | actual earthquake/fire/review local clips + automated checks | in_progress | fire fixture 2개와 review empty local clip까지 준비 완료. actual UI walkthrough와 native Screen Recording 권한 허용 후 rehearsal pass 기록만 남음 |

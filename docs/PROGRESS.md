@@ -126,13 +126,17 @@
 - Tauri Rust는 local Speech 결과가 unavailable/error일 때 `OPENAI_API_KEY` 또는 `SLOWLEARNER_OPENAI_API_KEY`가 있으면 공식 audio transcription endpoint에 `gpt-4o-mini-transcribe`로 fallback하도록 정리했고, frontend preview에 ASR status/message를 표시하도록 확장했다
 - `apps/desktop-ui/src-tauri/Info.plist`를 추가해 `NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`를 bundle에 포함했고, debug bundle의 `Contents/Info.plist`에 실제 반영된 것을 확인했다
 - `swift build`, `./.build/debug/MacCaptureBridge transcribe-audio --audio-path /tmp/slowlearner-asr-smoke-en.aiff --locale en-US`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm --filter desktop-ui test`, `pnpm --filter desktop-ui typecheck`, `pnpm lint`, `pnpm build`, `pnpm --filter desktop-ui tauri build --debug`, `plutil -p apps/desktop-ui/src-tauri/target/debug/bundle/macos/AnsimTrack Live.app/Contents/Info.plist | rg 'NSMicrophoneUsageDescription|NSSpeechRecognitionUsageDescription'`로 ASR slice 검증 완료
+- 안전한TV `[사회재난] 아파트 화재 시 이렇게 행동합시다` 원본 page/mp4를 fire fixture 공식 source로 고정하고, `fire-door-control-001`, `fire-stair-no-audio-001`의 tracked `sourceReference`/`sourceClipPlan`과 `source_videos.example.json`, `clip_windows.example.json`을 갱신했다
+- 로컬 `data/eval/sources/fire-apartment-2739.mp4`에서 `fire-door-control-001.mp4`(8.2초), `fire-stair-no-audio-001.mp4`(6.6초, 무음)를 실제 추출하고, `review-unknown-empty-001.mp4`는 3초 black clip으로 생성해 fire/review fixture까지 전부 local clip 준비 상태로 맞췄다
+- `data/eval/manual_review_runs.json`, `data/eval/rehearsal_runs.json`에 actual fire/review clip 준비 상태를 추가하고, `pnpm qa:sync`로 generated markdown log를 다시 맞췄다
+- `pnpm eval:audit`, `pnpm qa:smoke`, `pnpm --filter desktop-ui typecheck`, `pnpm lint`로 fire/review clip intake slice 검증 완료
 
 ### 진행 중
 
-- fire/review fixture actual clip 확보와 실제 walkthrough/rehearsal 로그 누적 단계
+- 실제 UI walkthrough/pass-fail 기록과 native permission 허용 후 rehearsal pass 로그 누적 단계
 
 ### 다음
 
-1. fire/review fixture actual clip 확보와 source/clip metadata 정리
-2. 실제 clip 기반 walkthrough/pass-fail 기록과 rehearsal log 누적
+1. 실제 clip 기반 walkthrough/pass-fail 기록 채우기
+2. Screen Recording 권한 허용 뒤 native live rehearsal pass 로그 축적
 3. live ASR OpenAI fallback을 앱 설정 또는 secure local secret 주입 경로까지 제품형으로 다듬기

@@ -191,3 +191,8 @@
 
 - 이유: ScreenCaptureKit audio callback은 metadata만으로는 ASR에 쓸 수 없고, macOS `Speech` 권한 요청은 현재 CLI bridge 구조에서 TCC privacy crash를 일으킬 수 있다.
 - 영향: native audio preview는 1.5초 내외 `.caf` chunk file을 temp에 저장하고 `pcmRef`로 UI에 전달한다. Tauri는 먼저 local Speech bridge 결과를 읽되, bridge가 번들 식별자/usage description 없이 실행되는 환경에서는 권한 요청을 시도하지 않고 `unavailable`로 안전하게 빠진다. `OPENAI_API_KEY` 또는 `SLOWLEARNER_OPENAI_API_KEY`가 있으면 `gpt-4o-mini-transcribe`로 fallback하고, 없으면 live path는 OCR/visual 중심으로 유지한다.
+
+### D-039 fire/review QA clip도 tracked metadata + local asset로 마감한다
+
+- 이유: release 직전에는 earthquake만 actual clip이 있고 fire/review가 demo-fixture로 남아 있으면 manual QA queue와 rehearsal 로그가 계속 비현실적으로 남는다.
+- 영향: fire fixture 2개는 안전한TV 공식 원본 `[사회재난] 아파트 화재 시 이렇게 행동합시다`를 tracked source로 등록하고, local `data/eval/sources/*.mp4`에서 실제 clip을 잘라 `data/eval/clips/*.mp4`에 준비한다. review fallback fixture는 의도적으로 근거 없는 장면이 목적이므로 local generated blank clip을 허용하되, pass/fail은 여전히 UI walkthrough로만 확정한다.
