@@ -12,15 +12,18 @@
 - `packages/shadow-buffer`에 4초 지연, 최소 8초 버퍼, 세그먼트 marker, rewind/replay 제어를 갖춘 Shadow Player 링버퍼 추가
 - desktop UI에 mock capture/replay lane 기반 `ShadowVideoStage` 연결
 - `pnpm typecheck`, `pnpm test`, `pnpm rules:validate`, `pnpm lint`, `pnpm build`로 Shadow Player slice 검증
+- desktop UI에 capture control contract, source 상태, permission/session 상태 연결
+- browser `getDisplayMedia` 기반 live preview fallback 연결
+- live preview lane과 Shadow Player replay lane을 분리한 상태로 `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm build` 검증
 
 ### 진행 중
 
 - macOS ScreenCaptureKit bridge 실연결
-- 브라우저 fallback capture adapter
+- 브라우저 fallback preview를 shadow/perception 입력으로 연결
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
 
 ### 다음
 
-1. native frame source를 `shadow-buffer` contract에 연결
-2. Tauri 셸에서 권한/세션 시작 상태를 실제 capture bridge와 연결
-3. mock segment -> grounded rule match -> voice/evidence/panic 흐름을 실데이터 입력으로 교체
+1. `native/mac-capture`를 ScreenCaptureKit 세션/권한/소스 열거 경로로 강화
+2. Tauri 셸에서 source enumerate, start, stop command를 실제 capture bridge와 연결
+3. browser/native preview 입력을 shadow/perception lane으로 분기 연결

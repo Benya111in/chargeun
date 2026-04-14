@@ -6,13 +6,20 @@ import {
   RotateCcw,
   ScreenShare,
   ShieldAlert,
+  Square,
 } from 'lucide-react'
 
 import { buildExplanation, buildVoiceReply } from '@ansimtrack/llm-orchestrator'
 import { voiceIntentLabels, type VoiceIntent } from '@ansimtrack/shared-types'
 
+import { LiveCapturePreview } from './components/LiveCapturePreview'
 import { ShadowVideoStage } from './components/ShadowVideoStage'
+import {
+  capturePermissionLabels,
+  captureStatusLabels,
+} from './lib/capture-contract'
 import { demoScenarios } from './lib/mock-session'
+import { useCaptureController } from './lib/useCaptureController'
 import { cn, formatClock, formatPercent } from './lib/utils'
 
 type TrackKey = 'basic' | 'easy' | 'action' | 'reason' | 'caregiver' | 'report'
@@ -40,10 +47,8 @@ function App() {
   )
   const [showEvidence, setShowEvidence] = useState(true)
   const [panicMode, setPanicMode] = useState(false)
-  const [captureNotice, setCaptureNotice] = useState(
-    '실제 캡처 브리지는 다음 단계에서 연결됩니다. 현재는 검증 가능한 mock replay lane으로 동작합니다.',
-  )
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
+  const capture = useCaptureController()
 
   const scenario = useMemo(
     () =>
@@ -95,9 +100,6 @@ function App() {
     setSelectedTrack(getPreferredTrack(nextExplanation))
     setVoiceReply(defaultVoiceReply)
     setPanicMode(false)
-    setCaptureNotice(
-      '시나리오를 전환했고 Shadow Player 버퍼도 새 세그먼트 기준으로 다시 시작합니다.',
-    )
   }
 
   return (
@@ -139,7 +141,12 @@ function App() {
           <section className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
             <Metric
               title="현재 세션"
-              value={scenario.session.displayName ?? '데모 모니터'}
+              value={
+                capture.state.activeSession?.displayName ??
+                capture.state.selectedSource?.displayName ??
+                scenario.session.displayName ??
+                '데모 모니터'
+              }
             />
             <Metric title="세그먼트 지연" value="04.0초" />
             <Metric
@@ -151,48 +158,102 @@ function App() {
 
         <main className="mt-4 grid flex-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.9fr)]">
           <section className="flex min-h-0 flex-col gap-4">
-            <section className="panel-edge flex flex-wrap items-start justify-between gap-3">
-              <div className="max-w-3xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                  캡처 시작
-                </p>
-                <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
-                  브라우저 공유는 보조 기능입니다. 데스크톱 권한이 가능하면 현재
-                  모니터 읽기를 우선합니다.
-                </p>
+            <section className="panel-edge flex flex-col gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="max-w-3xl">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                    캡처 시작
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                    브라우저 공유는 보조 기능입니다. 데스크톱 권한이 가능하면
+                    현재 모니터 읽기를 우선하고, live preview lane은 replay
+                    lane과 분리합니다.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <ActionButton
+                    icon={<MonitorPlay className="size-4" />}
+                    onClick={capture.actions.startNativeMonitor}
+                    variant="primary"
+                  >
+                    현재 모니터 읽기 시작
+                  </ActionButton>
+                  <ActionButton
+                    icon={<ScreenShare className="size-4" />}
+                    onClick={capture.actions.startBrowserFallback}
+                  >
+                    브라우저 공유 시작
+                  </ActionButton>
+                  <ActionButton
+                    disabled={!capture.state.activeSession}
+                    icon={<Square className="size-4" />}
+                    onClick={() =>
+                      capture.actions.stopCapture(
+                        '사용자가 live preview 캡처를 중지했습니다.',
+                      )
+                    }
+                  >
+                    캡처 중지
+                  </ActionButton>
+                  <ActionButton
+                    icon={<RotateCcw className="size-4" />}
+                    onClick={handleScenarioToggle}
+                  >
+                    저신뢰 데모 전환
+                  </ActionButton>
+                </div>
               </div>
+
               <div className="flex flex-wrap gap-2">
-                <ActionButton
-                  icon={<MonitorPlay className="size-4" />}
-                  onClick={() =>
-                    setCaptureNotice(
-                      'macOS ScreenCaptureKit bridge가 아직 스텁이라 현재는 mock capture lane으로 시연합니다.',
-                    )
-                  }
-                  variant="primary"
-                >
-                  현재 모니터 읽기 시작
-                </ActionButton>
-                <ActionButton
-                  icon={<ScreenShare className="size-4" />}
-                  onClick={() =>
-                    setCaptureNotice(
-                      '브라우저 fallback 어댑터는 다음 slice에서 연결합니다. 지금은 동일한 replay shell로 시연합니다.',
-                    )
-                  }
-                >
-                  브라우저 공유 시작
-                </ActionButton>
-                <ActionButton
-                  icon={<RotateCcw className="size-4" />}
-                  onClick={handleScenarioToggle}
-                >
-                  저신뢰 데모 전환
-                </ActionButton>
+                <StatusPill tone={getCaptureTone(capture.state.status)}>
+                  {captureStatusLabels[capture.state.status]}
+                </StatusPill>
+                <StatusPill tone={getPermissionTone(capture.state.permission)}>
+                  {capturePermissionLabels[capture.state.permission]}
+                </StatusPill>
+                <StatusPill tone="neutral">
+                  {capture.state.bootstrap.platform}
+                </StatusPill>
               </div>
-              <p className="w-full text-sm leading-6 text-[var(--muted)]">
-                {captureNotice}
-              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {capture.state.sources.map((source) => (
+                  <button
+                    key={source.id}
+                    className={cn(
+                      'rounded-md border px-3 py-2 text-left text-sm transition',
+                      capture.state.selectedSourceId === source.id
+                        ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
+                        : 'border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--ink)]/40',
+                    )}
+                    onClick={() => capture.actions.selectSource(source.id)}
+                    type="button"
+                  >
+                    <span className="block font-medium">
+                      {source.displayName}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-1 block text-xs',
+                        capture.state.selectedSourceId === source.id
+                          ? 'text-white/72'
+                          : 'text-[var(--muted)]',
+                      )}
+                    >
+                      {source.priority === 'primary' ? '우선 경로' : 'fallback'}{' '}
+                      · {source.ready ? '준비됨' : '준비 중'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <LiveCapturePreview
+                notice={capture.state.notice}
+                selectedSource={capture.state.selectedSource}
+                session={capture.state.activeSession}
+                status={capture.state.status}
+                stream={capture.state.previewStream}
+              />
             </section>
 
             <section className="panel-edge flex min-h-[520px] flex-col gap-4">
@@ -462,19 +523,22 @@ function App() {
 
 function ActionButton({
   children,
+  disabled = false,
   icon,
   onClick,
   variant = 'default',
 }: {
   children: React.ReactNode
+  disabled?: boolean
   icon: React.ReactNode
-  onClick: () => void
+  onClick: () => void | Promise<void>
   variant?: 'default' | 'primary' | 'danger'
 }) {
   return (
     <button
       className={cn(
         'inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition',
+        disabled && 'cursor-not-allowed opacity-50',
         variant === 'primary' &&
           'border-rose-700 bg-rose-700 text-white hover:border-rose-800 hover:bg-rose-800',
         variant === 'danger' &&
@@ -482,6 +546,7 @@ function ActionButton({
         variant === 'default' &&
           'border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--ink)]/40',
       )}
+      disabled={disabled}
       onClick={onClick}
       type="button"
     >
@@ -578,6 +643,30 @@ function PanicLine({
       </p>
     </div>
   )
+}
+
+function getCaptureTone(status: string) {
+  switch (status) {
+    case 'running':
+      return 'calm'
+    case 'error':
+      return 'danger'
+    default:
+      return 'neutral'
+  }
+}
+
+function getPermissionTone(permission: string) {
+  switch (permission) {
+    case 'granted':
+      return 'grounded'
+    case 'denied':
+      return 'review'
+    case 'unsupported':
+      return 'danger'
+    default:
+      return 'neutral'
+  }
 }
 
 function getPreferredTrack(
