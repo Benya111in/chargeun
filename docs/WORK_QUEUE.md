@@ -52,7 +52,7 @@
     - source docs: `docs/15_BACKEND_STORAGE_AND_JOBS.md`
     - goal: session log/export, local job skeleton
 
-11. `pending` safety/privacy/compliance pass
+11. `done` safety/privacy/compliance pass
     - source docs: `docs/17_SAFETY_PRIVACY_AND_COMPLIANCE.md`
     - goal: guardrails, privacy defaults, local-first constraints 확인
 

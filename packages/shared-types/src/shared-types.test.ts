@@ -24,15 +24,17 @@ describe('segmentExplanationSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects action text in review mode', () => {
+  it('rejects behavior guidance in review mode', () => {
     const result = segmentExplanationSchema.safeParse({
       segmentId: 'seg-2',
       safetyMode: 'review_official',
+      doNot: '창문으로 뛰어내리지 마세요',
       tracks: {
         basic: '상황 판단이 더 필요합니다.',
         easy: '공식 행동요령을 먼저 확인해 주세요.',
         action: '밖으로 뛰어가세요',
         reason: '근거가 아직 충분하지 않습니다.',
+        report: '119에 바로 신고하세요.',
       },
       overlayTargets: [],
     })

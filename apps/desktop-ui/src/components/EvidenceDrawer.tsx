@@ -57,6 +57,12 @@ export function EvidenceDrawer({
               <p className="text-sm font-semibold text-[var(--ink)]">
                 선택된 규칙: {primaryMatch.rule.rule_id}
               </p>
+              <p className="text-sm leading-6 text-[var(--muted)]">
+                출처: {primaryMatch.rule.source_title}
+              </p>
+              <p className="text-sm leading-6 text-[var(--muted)]">
+                {primaryMatch.rule.why}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {primaryMatch.matchedSignals.map((signal) => (
                   <SignalChip key={signal} signal={signal} />
@@ -138,6 +144,9 @@ export function EvidenceDrawer({
                   </div>
                   <p className="leading-6 text-[var(--ink)]">
                     {match.rule.action}
+                  </p>
+                  <p className="text-sm leading-6 text-[var(--muted)]">
+                    {match.rule.source_title}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {match.matchedSignals.map((signal) => (

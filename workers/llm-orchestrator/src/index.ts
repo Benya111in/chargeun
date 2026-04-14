@@ -81,6 +81,11 @@ export type HazardClassification = {
   signals: string[]
 }
 
+export type SafetyGuardrailResult = {
+  explanation: SegmentExplanation
+  warnings: string[]
+}
+
 export const buildExplanation = (input: {
   segment: Segment
   matchedRules: RuleRecord[]
@@ -92,7 +97,7 @@ export const buildExplanation = (input: {
   const explanation: SegmentExplanation = {
     segmentId: input.segment.id,
     safetyMode: reviewMode ? 'review_official' : 'grounded',
-    doNot: primaryRule?.do_not,
+    doNot: reviewMode ? undefined : primaryRule?.do_not,
     tracks: {
       basic: primaryRule
         ? `${humanizeHazard(input.segment.hazard)} 상황으로 보입니다.`
@@ -134,6 +139,78 @@ export const buildGroundedExplanation = (input: {
     },
     matchedRules,
   })
+}
+
+export const applySafetyGuardrails = (input: {
+  evidenceVisible: boolean
+  explanation: SegmentExplanation
+  panicMode: boolean
+  privacyConsent: boolean
+  segment: Pick<Segment, 'confidence' | 'officialRuleIds'>
+}): SafetyGuardrailResult => {
+  const warnings = new Set<string>()
+  let nextExplanation: SegmentExplanation = {
+    ...input.explanation,
+    tracks: {
+      ...input.explanation.tracks,
+    },
+  }
+
+  const downgradeToReview = () => {
+    nextExplanation = {
+      ...nextExplanation,
+      safetyMode: 'review_official',
+      doNot: undefined,
+      tracks: {
+        ...nextExplanation.tracks,
+        action: undefined,
+        report: undefined,
+      },
+    }
+  }
+
+  const hideActionTracks = () => {
+    nextExplanation = {
+      ...nextExplanation,
+      tracks: {
+        ...nextExplanation.tracks,
+        action: undefined,
+        report: undefined,
+      },
+    }
+  }
+
+  if (!input.privacyConsent) {
+    warnings.add('캡처 동의가 확인되기 전에는 행동 트랙을 잠급니다.')
+    downgradeToReview()
+  }
+
+  if (input.segment.officialRuleIds.length === 0) {
+    warnings.add('공식 rule id가 없어 공식 원문 확인을 먼저 안내합니다.')
+    downgradeToReview()
+  }
+
+  if (
+    input.explanation.safetyMode === 'review_official' ||
+    input.segment.confidence < lowConfidenceThreshold
+  ) {
+    warnings.add('확신이 낮아 공식 행동요령 확인을 우선합니다.')
+    downgradeToReview()
+  }
+
+  if (!input.evidenceVisible) {
+    warnings.add('근거 패널을 열어야 action과 report 트랙을 볼 수 있습니다.')
+    hideActionTracks()
+  }
+
+  if (input.panicMode && nextExplanation.safetyMode === 'review_official') {
+    warnings.add('Panic Mode에서도 행동 확정보다 공식 확인을 먼저 안내합니다.')
+  }
+
+  return {
+    explanation: segmentExplanationSchema.parse(nextExplanation),
+    warnings: Array.from(warnings),
+  }
 }
 
 export const classifyHazard = (

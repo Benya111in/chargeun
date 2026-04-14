@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Ear,
   Mic,
@@ -10,26 +10,37 @@ import {
 } from 'lucide-react'
 
 import {
+  applySafetyGuardrails,
   buildGroundedExplanation,
   buildSegmentFromPerception,
   buildVoiceReply,
   matchGroundedRules,
 } from '@ansimtrack/llm-orchestrator'
-import { voiceIntentLabels, type VoiceIntent } from '@ansimtrack/shared-types'
+import {
+  type SegmentExplanation,
+  voiceIntentLabels,
+  type VoiceIntent,
+} from '@ansimtrack/shared-types'
 
 import { EvidenceDrawer } from './components/EvidenceDrawer'
 import { LiveCapturePreview } from './components/LiveCapturePreview'
+import {
+  PrivacyConsentDialog,
+  PrivacyControlPanel,
+} from './components/PrivacyControlPanel'
 import { ShadowVideoStage } from './components/ShadowVideoStage'
 import {
   capturePermissionLabels,
   captureStatusLabels,
 } from './lib/capture-contract'
+import { clearLocalRuntimeFiles } from './lib/desktop-bridge'
 import { demoScenarios } from './lib/mock-session'
 import { useCaptureController } from './lib/useCaptureController'
 import { cn, formatClock, formatPercent } from './lib/utils'
 import { useVoicePlayback } from './lib/voice-playback'
 
 type TrackKey = 'basic' | 'easy' | 'action' | 'reason' | 'caregiver' | 'report'
+type PendingCaptureStart = 'browser' | 'native'
 
 const trackLabels: Record<TrackKey, string> = {
   basic: '기본',
@@ -53,14 +64,27 @@ const initialExplanation = buildGroundedExplanation({
 
 function App() {
   const [scenarioId, setScenarioId] = useState(initialScenario.id)
-  const [selectedTrack, setSelectedTrack] = useState<TrackKey>(
+  const [requestedTrack, setRequestedTrack] = useState<TrackKey>(
     getPreferredTrack(initialExplanation),
   )
   const [showEvidence, setShowEvidence] = useState(true)
   const [panicMode, setPanicMode] = useState(false)
+  const [privacyPrefs, setPrivacyPrefs] = useState({
+    captureConsent: false,
+    clearOnStop: true,
+    retainCapturedMedia: false,
+  })
+  const [privacyNotice, setPrivacyNotice] = useState(
+    '기본 모드는 로컬 처리 우선이며 장기 저장은 꺼져 있습니다.',
+  )
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false)
+  const [pendingCaptureStart, setPendingCaptureStart] =
+    useState<PendingCaptureStart | null>(null)
+  const [cacheBusy, setCacheBusy] = useState(false)
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
   const capture = useCaptureController()
   const voicePlayback = useVoicePlayback()
+  const previousSessionIdRef = useRef<string | null>(null)
 
   const scenario = useMemo(
     () =>
@@ -89,7 +113,7 @@ function App() {
       }),
     [scenario, segment],
   )
-  const explanation = useMemo(
+  const groundedExplanation = useMemo(
     () =>
       buildGroundedExplanation({
         evidence: scenario.perceptionPacket,
@@ -98,6 +122,28 @@ function App() {
       }),
     [scenario, segment],
   )
+  const safetyView = useMemo(
+    () =>
+      applySafetyGuardrails({
+        evidenceVisible: showEvidence,
+        explanation: groundedExplanation,
+        panicMode,
+        privacyConsent: capture.state.activeSession
+          ? privacyPrefs.captureConsent
+          : true,
+        segment,
+      }),
+    [
+      capture.state.activeSession,
+      groundedExplanation,
+      panicMode,
+      privacyPrefs.captureConsent,
+      segment,
+      showEvidence,
+    ],
+  )
+  const explanation = safetyView.explanation
+  const safetyWarnings = safetyView.warnings
 
   const shadowScenario = useMemo(
     () => ({
@@ -121,16 +167,150 @@ function App() {
       ).filter(([, value]) => Boolean(value)) as Array<[TrackKey, string]>,
     [explanation],
   )
+  const selectedTrack = explanation.tracks[requestedTrack]
+    ? requestedTrack
+    : getPreferredTrack(explanation)
 
   const selectedTrackText =
     explanation.tracks[selectedTrack] ??
     explanation.tracks.easy ??
     explanation.tracks.basic
 
+  const clearRuntimeCache = useCallback(
+    async (reason: 'auto-stop' | 'manual') => {
+      setCacheBusy(true)
+      const result = await clearLocalRuntimeFiles()
+      setCacheBusy(false)
+
+      if (result.status === 'cleared') {
+        setPrivacyNotice(`로컬 캐시를 정리했습니다. 대상 경로: ${result.path}`)
+        return
+      }
+
+      if (result.status === 'browser-preview') {
+        setPrivacyNotice(
+          '브라우저 데모에서는 파일 캐시를 직접 지우지 않습니다. Tauri 실행 시 로컬 runtime 정리가 활성화됩니다.',
+        )
+        return
+      }
+
+      if (result.status === 'error') {
+        setPrivacyNotice(
+          '로컬 캐시를 지우지 못했습니다. 파일 권한과 runtime 경로를 확인해 주세요.',
+        )
+        return
+      }
+
+      setPrivacyNotice(
+        reason === 'auto-stop'
+          ? `종료 후 정리할 로컬 캐시가 없었습니다. 대상 경로: ${result.path}`
+          : `현재 지울 로컬 캐시가 없습니다. 대상 경로: ${result.path}`,
+      )
+    },
+    [],
+  )
+
+  useEffect(() => {
+    const currentSessionId = capture.state.activeSession?.id ?? null
+    const previousSessionId = previousSessionIdRef.current
+
+    if (previousSessionId && !currentSessionId && privacyPrefs.clearOnStop) {
+      const timer = window.setTimeout(() => {
+        void clearRuntimeCache('auto-stop')
+      }, 0)
+
+      previousSessionIdRef.current = currentSessionId
+      return () => window.clearTimeout(timer)
+    }
+
+    previousSessionIdRef.current = currentSessionId
+  }, [
+    capture.state.activeSession?.id,
+    clearRuntimeCache,
+    privacyPrefs.clearOnStop,
+  ])
+
   const handleVoice = (intent: VoiceIntent) => {
     const reply = buildVoiceReply({ explanation, intent })
     setVoiceReply(reply.text)
     voicePlayback.speak(reply.text)
+  }
+
+  const startCaptureWithConsent = async (mode: PendingCaptureStart) => {
+    setShowEvidence(true)
+    if (mode === 'native') {
+      await capture.actions.startNativeMonitor()
+    } else {
+      await capture.actions.startBrowserFallback()
+    }
+
+    setPrivacyNotice(
+      privacyPrefs.retainCapturedMedia
+        ? '캡처를 시작했습니다. 장기 저장 opt-in이 켜져 있어 종료 후 자동 삭제는 꺼져 있습니다.'
+        : '캡처를 시작했습니다. 기본은 로컬 처리 우선이며 장기 저장은 꺼져 있습니다.',
+    )
+  }
+
+  const requestCaptureStart = async (mode: PendingCaptureStart) => {
+    if (!privacyPrefs.captureConsent) {
+      setPendingCaptureStart(mode)
+      setPrivacyModalOpen(true)
+      setPrivacyNotice('화면 캡처는 사용자의 동의가 있어야 시작됩니다.')
+      return
+    }
+
+    await startCaptureWithConsent(mode)
+  }
+
+  const handleConsentConfirm = async () => {
+    const nextAction = pendingCaptureStart
+    setPrivacyPrefs((current) => ({
+      ...current,
+      captureConsent: true,
+    }))
+    setPrivacyModalOpen(false)
+    setPendingCaptureStart(null)
+    setPrivacyNotice(
+      '캡처 동의가 확인되었습니다. 기본 모드는 로컬 처리 우선으로 유지됩니다.',
+    )
+
+    if (nextAction) {
+      await startCaptureWithConsent(nextAction)
+    }
+  }
+
+  const handleToggleRetainCapturedMedia = (next: boolean) => {
+    setPrivacyPrefs((current) => ({
+      ...current,
+      clearOnStop: next ? false : current.clearOnStop,
+      retainCapturedMedia: next,
+    }))
+    setPrivacyNotice(
+      next
+        ? '장기 저장 opt-in을 켰습니다. 종료 후 자동 삭제는 꺼집니다.'
+        : '장기 저장을 껐습니다. 로컬 처리 우선 기본값으로 돌아갑니다.',
+    )
+  }
+
+  const handleToggleClearOnStop = (next: boolean) => {
+    setPrivacyPrefs((current) => ({
+      ...current,
+      clearOnStop: next,
+      retainCapturedMedia: next ? false : current.retainCapturedMedia,
+    }))
+    setPrivacyNotice(
+      next
+        ? '종료 시 캐시 자동 삭제를 켰습니다. 장기 저장 opt-in은 꺼집니다.'
+        : '종료 후 캐시를 남기도록 변경했습니다. 필요할 때 수동으로 지우세요.',
+    )
+  }
+
+  const handleStopCapture = async () => {
+    await capture.actions.stopCapture(
+      privacyPrefs.clearOnStop
+        ? '캡처를 중지했습니다. 종료 후 캐시 정리를 이어서 확인합니다.'
+        : '캡처를 중지했습니다.',
+    )
   }
 
   const handleScenarioToggle = () => {
@@ -148,7 +328,7 @@ function App() {
     })
 
     setScenarioId(nextId)
-    setSelectedTrack(getPreferredTrack(nextExplanation))
+    setRequestedTrack(getPreferredTrack(nextExplanation))
     setVoiceReply(defaultVoiceReply)
     setPanicMode(false)
   }
@@ -227,25 +407,21 @@ function App() {
                 <div className="flex flex-wrap gap-2">
                   <ActionButton
                     icon={<MonitorPlay className="size-4" />}
-                    onClick={capture.actions.startNativeMonitor}
+                    onClick={() => requestCaptureStart('native')}
                     variant="primary"
                   >
                     현재 모니터 읽기 시작
                   </ActionButton>
                   <ActionButton
                     icon={<ScreenShare className="size-4" />}
-                    onClick={capture.actions.startBrowserFallback}
+                    onClick={() => requestCaptureStart('browser')}
                   >
                     브라우저 공유 시작
                   </ActionButton>
                   <ActionButton
                     disabled={!capture.state.activeSession}
                     icon={<Square className="size-4" />}
-                    onClick={() =>
-                      capture.actions.stopCapture(
-                        '사용자가 live preview 캡처를 중지했습니다.',
-                      )
-                    }
+                    onClick={handleStopCapture}
                   >
                     캡처 중지
                   </ActionButton>
@@ -310,6 +486,18 @@ function App() {
                 status={capture.state.status}
                 stream={capture.state.previewStream}
               />
+
+              <PrivacyControlPanel
+                cacheBusy={cacheBusy}
+                cacheNotice={privacyNotice}
+                captureConsent={privacyPrefs.captureConsent}
+                clearOnStop={privacyPrefs.clearOnStop}
+                onClearCache={() => clearRuntimeCache('manual')}
+                onOpenConsent={() => setPrivacyModalOpen(true)}
+                onToggleClearOnStop={handleToggleClearOnStop}
+                onToggleRetainCapturedMedia={handleToggleRetainCapturedMedia}
+                retainCapturedMedia={privacyPrefs.retainCapturedMedia}
+              />
             </section>
 
             <section className="panel-edge flex min-h-[520px] flex-col gap-4">
@@ -356,7 +544,7 @@ function App() {
                             ? 'border-[var(--ink)] bg-[var(--ink)] text-white'
                             : 'border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--ink)]/40',
                         )}
-                        onClick={() => setSelectedTrack(track)}
+                        onClick={() => setRequestedTrack(track)}
                         type="button"
                       >
                         {trackLabels[track]}
@@ -425,6 +613,19 @@ function App() {
                 <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
                   근거가 약해서 행동 문장은 숨기고 공식 행동요령 확인을 먼저
                   안내합니다.
+                </div>
+              ) : null}
+
+              {safetyWarnings.length > 0 ? (
+                <div className="mt-4 grid gap-2">
+                  {safetyWarnings.map((warning) => (
+                    <NoticeBanner
+                      key={warning}
+                      tone={warning.includes('캡처 동의') ? 'danger' : 'review'}
+                    >
+                      {warning}
+                    </NoticeBanner>
+                  ))}
                 </div>
               ) : null}
 
@@ -540,6 +741,18 @@ function App() {
             ) : null}
           </section>
         </main>
+
+        <PrivacyConsentDialog
+          clearOnStop={privacyPrefs.clearOnStop}
+          onClose={() => {
+            setPrivacyModalOpen(false)
+            setPendingCaptureStart(null)
+          }}
+          onConfirm={handleConsentConfirm}
+          open={privacyModalOpen}
+          pendingActionLabel={getPendingCaptureActionLabel(pendingCaptureStart)}
+          retainCapturedMedia={privacyPrefs.retainCapturedMedia}
+        />
       </div>
     </div>
   )
@@ -654,6 +867,27 @@ function PanicLine({
   )
 }
 
+function NoticeBanner({
+  children,
+  tone,
+}: {
+  children: React.ReactNode
+  tone: 'danger' | 'review'
+}) {
+  const toneClass = {
+    danger: 'border-rose-200 bg-rose-50 text-rose-900',
+    review: 'border-amber-300 bg-amber-50 text-amber-900',
+  }[tone]
+
+  return (
+    <div
+      className={cn('rounded-md border px-4 py-3 text-sm leading-6', toneClass)}
+    >
+      {children}
+    </div>
+  )
+}
+
 function getCaptureTone(status: string) {
   switch (status) {
     case 'running':
@@ -678,9 +912,7 @@ function getPermissionTone(permission: string) {
   }
 }
 
-function getPreferredTrack(
-  explanation: ReturnType<typeof buildGroundedExplanation>,
-): TrackKey {
+function getPreferredTrack(explanation: SegmentExplanation): TrackKey {
   if (explanation.tracks.action) {
     return 'action'
   }
@@ -711,6 +943,19 @@ function getHazardName(hazard: string) {
       return '지진'
     default:
       return '미확정'
+  }
+}
+
+function getPendingCaptureActionLabel(
+  pendingAction: PendingCaptureStart | null,
+) {
+  switch (pendingAction) {
+    case 'native':
+      return '동의하고 현재 모니터 읽기 시작'
+    case 'browser':
+      return '동의하고 브라우저 공유 시작'
+    default:
+      return '동의하고 계속'
   }
 }
 

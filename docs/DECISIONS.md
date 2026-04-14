@@ -86,3 +86,8 @@
 
 - 이유: 현 단계에서 필요한 것은 앱 전체 persistence보다 세션 로그, export, job control의 계약을 먼저 고정하는 것이다.
 - 영향: `local-store`는 SQLite schema를 아티팩트로 남기고 실제 메타데이터는 JSONL/export 파일로 먼저 다룬다. 실제 앱 재시작 복원과 SQLite 연결은 후속 slice에서 붙인다.
+
+### D-018 action/report는 evidence drawer와 consent 상태에 종속
+
+- 이유: 재난안전 도메인에서는 행동 문장을 근거 없이 떼어 보여 주면 오해 가능성이 크다.
+- 영향: `applySafetyGuardrails`가 low-confidence/missing rule/privacy hold에서는 `review_official`로 강등하고, evidence drawer가 닫혀 있으면 grounded 상태여도 action/report 트랙을 숨긴다. 캡처 시작은 consent modal 확인 뒤에만 허용한다.

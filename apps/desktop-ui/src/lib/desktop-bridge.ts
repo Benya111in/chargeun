@@ -13,6 +13,12 @@ import {
   type NativeCaptureSourceRecord,
 } from './capture-contract'
 
+export type ClearLocalRuntimeResult = {
+  cleared: boolean
+  path: string
+  status: 'browser-preview' | 'cleared' | 'error' | 'noop'
+}
+
 export async function getCaptureBootstrapState(): Promise<CaptureBootstrapState> {
   if (!isTauri()) {
     return DEFAULT_CAPTURE_BOOTSTRAP_STATE
@@ -52,6 +58,26 @@ export async function stopNativeCapture(input: {
   sessionId: string
 }): Promise<{ stopped: boolean }> {
   return invoke<{ stopped: boolean }>('stop_native_capture', { input })
+}
+
+export async function clearLocalRuntimeFiles(): Promise<ClearLocalRuntimeResult> {
+  if (!isTauri()) {
+    return {
+      cleared: false,
+      path: '.slowlearner',
+      status: 'browser-preview',
+    }
+  }
+
+  try {
+    return await invoke<ClearLocalRuntimeResult>('clear_local_runtime')
+  } catch {
+    return {
+      cleared: false,
+      path: '.slowlearner',
+      status: 'error',
+    }
+  }
 }
 
 export async function listenToNativeCaptureEvents(

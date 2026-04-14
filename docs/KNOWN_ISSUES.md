@@ -17,3 +17,5 @@
 - 현재 voice path는 browser `speechSynthesis` fallback이며, 네이티브 TTS/ducking/마이크 intent 분류는 아직 미구현이다.
 - evidence drawer는 demo packet 기준으로는 정리됐지만, live capture 세션 로그/재시작 복원까지는 아직 앱 전체에 연결되지 않았다.
 - `packages/local-store`는 runtime path, schema, JSONL log/export, latest-only job queue까지 구현됐지만 실제 SQLite 연결과 restart restore UI는 아직 붙지 않았다.
+- privacy panel과 consent modal은 구현됐지만 사용자 설정을 재시작 후 복원하는 persistence는 아직 없다.
+- 브라우저 데모 모드에서는 filesystem cache clear를 직접 실행하지 않고, 실제 `clear_local_runtime` command는 Tauri 실행 경로에서만 동작한다.

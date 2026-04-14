@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { RuleRecord } from '@ansimtrack/shared-types'
 
 import {
+  applySafetyGuardrails,
   buildSegmentFromPerception,
   buildGroundedExplanation,
   buildVoiceReply,
@@ -144,6 +145,116 @@ describe('buildGroundedExplanation', () => {
     })
 
     expect(reply.text).toContain('탁자')
+  })
+})
+
+describe('applySafetyGuardrails', () => {
+  const groundedExplanation = {
+    segmentId: 'seg-guarded',
+    safetyMode: 'grounded' as const,
+    doNot: '엘리베이터를 타지 마세요.',
+    tracks: {
+      basic: '화재 상황으로 보입니다.',
+      easy: '연기가 보여서 공식 행동요령을 따라야 합니다.',
+      action: '계단으로 이동하세요.',
+      reason: '계단 대피가 더 안전합니다.',
+      report: '119에 화재와 현재 위치를 알리세요.',
+    },
+    overlayTargets: [],
+  }
+
+  const groundedSegment = {
+    confidence: 0.91,
+    officialRuleIds: ['KR_FIRE_03'],
+  }
+
+  it('keeps grounded action when evidence is visible and consent exists', () => {
+    const result = applySafetyGuardrails({
+      evidenceVisible: true,
+      explanation: groundedExplanation,
+      panicMode: false,
+      privacyConsent: true,
+      segment: groundedSegment,
+    })
+
+    expect(result.explanation.safetyMode).toBe('grounded')
+    expect(result.explanation.tracks.action).toBe('계단으로 이동하세요.')
+    expect(result.warnings).toHaveLength(0)
+  })
+
+  it('downgrades low-confidence segments to review mode', () => {
+    const result = applySafetyGuardrails({
+      evidenceVisible: true,
+      explanation: groundedExplanation,
+      panicMode: false,
+      privacyConsent: true,
+      segment: {
+        ...groundedSegment,
+        confidence: 0.61,
+      },
+    })
+
+    expect(result.explanation.safetyMode).toBe('review_official')
+    expect(result.explanation.tracks.action).toBeUndefined()
+    expect(result.explanation.doNot).toBeUndefined()
+    expect(
+      result.warnings.some((warning) => warning.includes('확신이 낮아')),
+    ).toBe(true)
+  })
+
+  it('downgrades explanations without official rule ids', () => {
+    const result = applySafetyGuardrails({
+      evidenceVisible: true,
+      explanation: groundedExplanation,
+      panicMode: false,
+      privacyConsent: true,
+      segment: {
+        ...groundedSegment,
+        officialRuleIds: [],
+      },
+    })
+
+    expect(result.explanation.safetyMode).toBe('review_official')
+    expect(result.explanation.tracks.report).toBeUndefined()
+    expect(
+      result.warnings.some((warning) => warning.includes('공식 rule id')),
+    ).toBe(true)
+  })
+
+  it('hides action/report until evidence is visible', () => {
+    const result = applySafetyGuardrails({
+      evidenceVisible: false,
+      explanation: groundedExplanation,
+      panicMode: false,
+      privacyConsent: true,
+      segment: groundedSegment,
+    })
+
+    expect(result.explanation.safetyMode).toBe('grounded')
+    expect(result.explanation.tracks.action).toBeUndefined()
+    expect(result.explanation.tracks.report).toBeUndefined()
+    expect(
+      result.warnings.some((warning) => warning.includes('근거 패널')),
+    ).toBe(true)
+  })
+
+  it('holds behavior guidance when privacy consent is missing', () => {
+    const result = applySafetyGuardrails({
+      evidenceVisible: true,
+      explanation: groundedExplanation,
+      panicMode: true,
+      privacyConsent: false,
+      segment: groundedSegment,
+    })
+
+    expect(result.explanation.safetyMode).toBe('review_official')
+    expect(result.explanation.tracks.action).toBeUndefined()
+    expect(
+      result.warnings.some((warning) => warning.includes('캡처 동의')),
+    ).toBe(true)
+    expect(
+      result.warnings.some((warning) => warning.includes('Panic Mode')),
+    ).toBe(true)
   })
 })
 

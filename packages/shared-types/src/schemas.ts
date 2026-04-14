@@ -62,12 +62,30 @@ export const segmentExplanationSchema = z
     overlayTargets: z.array(overlayTargetSchema),
   })
   .superRefine((value, ctx) => {
-    if (value.safetyMode === 'review_official' && value.tracks.action) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'review_official mode cannot expose action text',
-        path: ['tracks', 'action'],
-      })
+    if (value.safetyMode === 'review_official') {
+      if (value.tracks.action) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'review_official mode cannot expose action text',
+          path: ['tracks', 'action'],
+        })
+      }
+
+      if (value.tracks.report) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'review_official mode cannot expose report text',
+          path: ['tracks', 'report'],
+        })
+      }
+
+      if (value.doNot) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'review_official mode cannot expose do-not guidance',
+          path: ['doNot'],
+        })
+      }
     }
   })
 

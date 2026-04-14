@@ -2,6 +2,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
+    fs,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdout, Command, Stdio},
@@ -66,6 +67,14 @@ struct StopNativeCaptureInput {
 #[serde(rename_all = "camelCase")]
 struct StopNativeCaptureResult {
     stopped: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClearLocalRuntimeResult {
+    cleared: bool,
+    path: String,
+    status: String,
 }
 
 #[derive(Default)]
@@ -184,6 +193,27 @@ fn stop_native_capture(
         .unwrap_or(StopNativeCaptureResult { stopped: false });
 
         Ok(stopped)
+    }
+}
+
+#[tauri::command]
+fn clear_local_runtime() -> Result<ClearLocalRuntimeResult, String> {
+    let path = local_runtime_dir();
+
+    if path.exists() {
+        fs::remove_dir_all(&path).map_err(|error| error.to_string())?;
+
+        Ok(ClearLocalRuntimeResult {
+            cleared: true,
+            path: path.display().to_string(),
+            status: "cleared".into(),
+        })
+    } else {
+        Ok(ClearLocalRuntimeResult {
+            cleared: false,
+            path: path.display().to_string(),
+            status: "noop".into(),
+        })
     }
 }
 
@@ -411,6 +441,13 @@ fn mac_capture_package_dir() -> PathBuf {
         .to_path_buf()
 }
 
+fn local_runtime_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .join(".slowlearner")
+        .to_path_buf()
+}
+
 fn mac_capture_bridge_binary(package_dir: &Path) -> Option<PathBuf> {
     [
         package_dir.join(".build/arm64-apple-macosx/debug/MacCaptureBridge"),
@@ -440,7 +477,8 @@ pub fn run() {
             get_bootstrap_state,
             list_native_capture_sources,
             start_native_capture,
-            stop_native_capture
+            stop_native_capture,
+            clear_local_runtime
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
