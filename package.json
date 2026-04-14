@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter desktop-ui dev",
     "dev:desktop": "pnpm --filter desktop-ui tauri dev",
+    "check-env": "bash ./scripts/check-env.sh",
     "build": "pnpm --filter @ansimtrack/shared-types build && pnpm --filter @ansimtrack/shadow-buffer build && pnpm --filter @ansimtrack/local-store build && pnpm --filter @ansimtrack/perception-pipeline build && pnpm --filter @ansimtrack/llm-orchestrator build && pnpm --filter desktop-ui build",
     "test": "pnpm --filter @ansimtrack/shared-types test && pnpm --filter @ansimtrack/shadow-buffer test && pnpm --filter @ansimtrack/local-store test && pnpm --filter @ansimtrack/perception-pipeline test && pnpm --filter @ansimtrack/llm-orchestrator test && pnpm --filter desktop-ui test",
     "typecheck": "pnpm --filter @ansimtrack/shared-types build && pnpm --filter @ansimtrack/shadow-buffer build && pnpm --filter @ansimtrack/local-store build && pnpm --filter @ansimtrack/perception-pipeline build && pnpm --filter @ansimtrack/llm-orchestrator build && pnpm --filter desktop-ui typecheck",

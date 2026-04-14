@@ -4,22 +4,70 @@
 
 ## 현재 상태
 
-- Phase 0 부트스트랩 진행 중
-- `docs/`에 번들 문서 복사 완료
-- `packages/shared-types` 공통 계약 생성
-- `workers/llm-orchestrator` 로컬 오케스트레이션 스텁 생성
-- `apps/desktop-ui` 데모 가능한 Shadow Player UI 셸 생성 예정
+- macOS 우선 capture command, browser fallback preview, Shadow Player demo path 구현
+- fire/earthquake grounded rule matcher, segment engine, voice fallback, evidence drawer 구현
+- safety/privacy guardrail, QA audit, demo runbook/backup mode, runtime restore/export 경로 구현
+- 아직 남은 핵심은 live capture -> perception -> segment 실시간 연결과 SQLite restore, native audio 보강
 
-## 로컬 부팅
+## 권장 환경
 
 ```bash
-./scripts/check-env.sh
-pnpm install
-pnpm dev
-pnpm dev:desktop
+pnpm check-env
 ```
 
-`pnpm dev`는 웹 셸을 띄우고, `pnpm dev:desktop`는 Tauri 셸을 띄웁니다.
+- Apple Silicon MacBook
+- 최신 macOS
+- Xcode Command Line Tools
+- Homebrew
+- Node.js LTS / pnpm
+- Rust toolchain
+- FFmpeg
+- Python 3.11+
+- 글로벌 `tauri-cli`는 필수가 아닙니다. 이 저장소는 `@tauri-apps/cli`를 workspace dev dependency로 포함합니다.
+
+## 빠른 시작
+
+```bash
+pnpm check-env
+pnpm install
+cp .env.example .env.local
+pnpm dev # 브라우저 셸
+pnpm dev:desktop # Tauri 셸
+```
+
+`pnpm check-env`는 로컬 툴체인과 `.env.example` 존재 여부를 점검합니다.
+
+## 환경 파일
+
+```bash
+cp .env.example .env.local
+```
+
+`.env.local`에는 실제 비밀키를 넣되, 현재 저장소 기본 경로는 로컬 우선과 mock/demo path를 기본으로 둡니다. `ENABLE_DEMO_BACKUP_MODE=true`가 기본이라 모델 호출이 없어도 시연 경로를 바로 올릴 수 있습니다.
+
+## 실행 전 점검
+
+- macOS Screen Recording 권한 허용
+- 음성 질의 실험 시 마이크 권한 허용
+- 데모용 샘플 영상 준비
+- 외부 모니터 연결 여부 확인
+
+## 검증 명령
+
+- `pnpm test`
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm build`
+- `pnpm rules:validate`
+- `pnpm eval:audit`
+- `pnpm qa:smoke`
+- `pnpm demo:reset`
+
+## 데모 관련
+
+- `pnpm demo:reset`: 데모 캐시, export, `data/demo/last-session.json` 초기화
+- runbook source: [data/demo/runbook.json](data/demo/runbook.json)
+- backup preset source: [data/demo/prerecorded_sessions.json](data/demo/prerecorded_sessions.json)
 
 ## 기본 워크스페이스
 
@@ -27,14 +75,20 @@ pnpm dev:desktop
 apps/desktop-ui
 native/mac-capture
 native/windows-capture
+workers/perception-pipeline
 workers/llm-orchestrator
 data/rules
+data/demo
+data/eval
 docs
 packages/shared-types
+packages/shadow-buffer
+packages/local-store
 ```
 
 ## 주요 스크립트
 
+- `pnpm check-env`
 - `pnpm dev`
 - `pnpm dev:desktop`
 - `pnpm build`
@@ -42,4 +96,6 @@ packages/shared-types
 - `pnpm typecheck`
 - `pnpm lint`
 - `pnpm demo:reset`
+- `pnpm eval:audit`
+- `pnpm qa:smoke`
 - `pnpm rules:validate`

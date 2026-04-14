@@ -18,7 +18,7 @@
 3. Node.js LTS
 4. pnpm
 5. Rust toolchain
-6. Tauri CLI
+6. Tauri CLI 또는 workspace 내 `@tauri-apps/cli`
 7. FFmpeg
 8. Python 3.11+ (로컬 CV나 스크립트용)
 9. Git LFS(optional)
@@ -34,20 +34,13 @@ brew install node pnpm rustup-init ffmpeg python git-lfs
 rustup-init -y
 source "$HOME/.cargo/env"
 
-cargo install tauri-cli
-
 git lfs install
 ```
 
 ## 권장 로컬 체크
 
 ```bash
-node -v
-pnpm -v
-rustc -V
-cargo -V
-ffmpeg -version
-python3 --version
+pnpm check-env
 ```
 
 ## 환경 변수 파일
@@ -60,15 +53,19 @@ GOOGLE_API_KEY=
 ENABLE_BROWSER_FALLBACK=true
 ENABLE_SAM2=false
 DEFAULT_SHADOW_DELAY_MS=4000
+ENABLE_DEMO_BACKUP_MODE=true
 ```
 
 ## 초기 실행 플로우
 
 ```bash
+pnpm check-env
 pnpm install
 pnpm dev
 pnpm dev:desktop
 ```
+
+이 저장소는 `apps/desktop-ui`에 `@tauri-apps/cli`를 dev dependency로 포함하므로 글로벌 `cargo install tauri-cli`는 선택 사항이다.
 
 ## 필수 점검
 

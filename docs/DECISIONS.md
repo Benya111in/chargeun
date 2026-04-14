@@ -111,3 +111,8 @@
 
 - 이유: 데스크톱 실사용 경로에서는 파일로 남겨야 하고, 브라우저 preview에서도 같은 UX를 검증할 수 있어야 한다.
 - 영향: runtime state는 Tauri에서는 `.slowlearner/ui-state.json`, 브라우저에서는 `localStorage`를 사용한다. 발표 자료 export는 Tauri에서는 `.slowlearner/export`에 JSON/PNG를 저장하고, 브라우저에서는 다운로드 fallback을 사용한다.
+
+### D-023 로컬 셋업은 비밀키 없이도 바로 데모 부팅 가능해야 한다
+
+- 이유: 협업 환경에서는 개발자마다 API 키나 글로벌 CLI 준비 상태가 다르므로, 첫 부팅이 외부 의존성 때문에 막히면 진입 비용이 커진다.
+- 영향: `pnpm check-env`는 macOS 툴체인과 `.env.example` 존재만 확인하고, 글로벌 `tauri-cli` 대신 workspace의 `@tauri-apps/cli`를 기본 경로로 본다. `.env.example`은 demo backup 모드를 기본 활성화해 비밀키 없이도 시연 경로가 올라오게 유지한다.

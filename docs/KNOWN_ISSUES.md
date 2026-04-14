@@ -20,3 +20,4 @@
 - eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.
 - runtime state 복원은 demo/UI 상태와 last session metadata 기준이며, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
+- `pnpm check-env`는 로컬 툴체인과 env scaffold만 점검하며, Screen Recording/마이크 권한 허용 여부는 런타임에서 직접 확인해야 한다.

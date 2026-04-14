@@ -61,14 +61,16 @@
 - Tauri와 브라우저 fallback 모두에서 `AppRuntimeState`를 저장/복원하는 runtime bridge를 추가해 demo mode, scenario, selected track, privacy prefs, last session metadata가 재시작 후 복원되도록 정리
 - 발표용 export 경로를 추가해 현재 시연 상태 JSON과 스크린샷 PNG를 `.slowlearner/export` 또는 브라우저 다운로드로 저장할 수 있게 구현
 - `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 restore/export slice 검증 완료
+- `README.md`, `docs/24_LOCAL_SETUP_FOR_MACBOOK.md`, `.env.example`, `scripts/check-env.sh`를 현재 저장소 기준으로 정리해 로컬 부팅 순서, workspace 내 Tauri CLI 사용, demo backup 기본값을 문서와 스크립트에 반영
+- `pnpm check-env`, `bash -n scripts/check-env.sh`, `pnpm lint`로 local setup slice 검증 완료
 
 ### 진행 중
 
 - live capture `captureInput`를 perception/segment/session log로 실시간 연결
-- local setup 문서/스크립트 정비
+- domain prompt assets 정리
 
 ### 다음
 
-1. local setup 문서/스크립트 정비
-2. domain prompt assets 정리
-3. live capture -> perception -> segment 실시간 연결
+1. domain prompt assets 정리
+2. live capture -> perception -> segment 실시간 연결
+3. SQLite restore와 native audio 보강
