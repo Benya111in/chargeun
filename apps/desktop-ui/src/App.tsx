@@ -167,7 +167,7 @@ function App() {
   const [manualReviewDraft, setManualReviewDraft] = useState({
     notes: '',
     operator: 'Codex',
-    path: 'actual clip',
+    path: '',
   })
   const [rehearsalDraft, setRehearsalDraft] = useState<RehearsalRunRecord>(
     defaultRehearsalDraft,
@@ -363,9 +363,12 @@ function App() {
         selectedQaFixture.clipId,
       )
     : null
-  const selectedQaPreviewSrc = resolveLocalMediaSrc(
-    manualReviewDraft.path || selectedQaLatestRun?.path || '',
-  )
+  const selectedQaPreviewPath =
+    manualReviewDraft.path ||
+    selectedQaFixture?.localClipPath ||
+    selectedQaLatestRun?.path ||
+    ''
+  const selectedQaPreviewSrc = resolveLocalMediaSrc(selectedQaPreviewPath)
   const lastSessionMeta =
     buildPersistedSessionMeta(capture.state.activeSession) ??
     restoredRuntimeState.lastSession ??
@@ -653,7 +656,11 @@ function App() {
         date: formatDateInput(new Date()),
         notes: manualReviewDraft.notes || 'manual walkthrough result',
         operator: manualReviewDraft.operator || 'unknown',
-        path: manualReviewDraft.path || 'actual clip',
+        path:
+          manualReviewDraft.path ||
+          selectedQaFixture?.localClipPath ||
+          selectedQaLatestRun?.path ||
+          'actual clip',
         status,
       })
       setQaState(nextQaState)
@@ -1213,9 +1220,13 @@ function App() {
               busy={qaBusy}
               clipPreviewSrc={selectedQaPreviewSrc}
               clipPreviewTitle={
-                selectedQaFixture
-                  ? `${selectedQaFixture.clipId} clip preview`
-                  : 'clip preview'
+                manualReviewDraft.path
+                  ? `${selectedQaFixture?.clipId ?? 'fixture'} manual clip`
+                  : selectedQaFixture?.localClipPath
+                    ? `${selectedQaFixture.clipId} repo clip`
+                    : selectedQaFixture
+                      ? `${selectedQaFixture.clipId} clip preview`
+                      : 'clip preview'
               }
               manualReviewDraft={manualReviewDraft}
               notice={qaNotice}

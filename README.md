@@ -65,6 +65,7 @@ cp .env.example .env.local
 - `pnpm rules:validate`
 - `pnpm prompts:validate`
 - `pnpm eval:audit`
+- `pnpm qa:prepare-clips`
 - `pnpm qa:sync`
 - `pnpm qa:smoke`
 - `pnpm demo:reset`
@@ -74,6 +75,21 @@ cp .env.example .env.local
 - `pnpm demo:reset`: 데모 캐시, export, `data/demo/last-session.json` 초기화
 - runbook source: [data/demo/runbook.json](data/demo/runbook.json)
 - backup preset source: [data/demo/prerecorded_sessions.json](data/demo/prerecorded_sessions.json)
+
+## QA Clip Intake
+
+실제 QA clip은 저장소에 직접 커밋하지 않고, 로컬 source video에서 잘라서 `data/eval/clips`에 두는 경로를 기본으로 사용합니다.
+
+```bash
+cp data/eval/source_videos.example.json data/eval/source_videos.local.json
+cp data/eval/clip_windows.example.json data/eval/clip_windows.local.json
+pnpm qa:prepare-clips
+pnpm qa:prepare-clips -- --extract --fixture earthquake-desk-001
+```
+
+- `source_videos.local.json`: 팀원 각자의 로컬 원본 mp4/mov 경로
+- `clip_windows.local.json`: fixture별 source start/end ms
+- 추출된 clip은 QA workspace에서 자동 preview 후보로 잡힙니다.
 
 ## 기본 워크스페이스
 
@@ -104,6 +120,7 @@ packages/local-store
 - `pnpm prompts:validate`
 - `pnpm demo:reset`
 - `pnpm eval:audit`
+- `pnpm qa:prepare-clips`
 - `pnpm qa:sync`
 - `pnpm qa:smoke`
 - `pnpm rules:validate`

@@ -6,13 +6,22 @@ export type QaSourceReference = {
   url: string
 }
 
+export type QaSourceClipPlan = {
+  notes: string
+  outputRelativePath: string
+  searchHints: string[]
+  sourceId: string
+}
+
 export type QaFixtureRecord = {
   clipId: string
   description: string
   expectedRuleIds: string[]
   hasAudio: boolean
   hazard: string
+  localClipPath?: string | null
   phase: string
+  sourceClipPlan?: QaSourceClipPlan | null
   sourceReference?: QaSourceReference | null
 }
 

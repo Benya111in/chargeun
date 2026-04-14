@@ -1,0 +1,14 @@
+[
+  {
+    "clipId": "earthquake-desk-001",
+    "sourceStartMs": null,
+    "sourceEndMs": null,
+    "notes": "책상 아래로 들어가 머리를 보호하는 장면이 분명하게 보이는 시작/끝 시간을 채웁니다."
+  },
+  {
+    "clipId": "earthquake-after-shaking-001",
+    "sourceStartMs": null,
+    "sourceEndMs": null,
+    "notes": "흔들림 종료 뒤 가스/전기 차단과 출구 확보가 보이는 시작/끝 시간을 채웁니다."
+  }
+]

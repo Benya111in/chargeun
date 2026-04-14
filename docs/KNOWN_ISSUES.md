@@ -23,6 +23,7 @@
 - QA workspace의 local clip preview는 사용자가 직접 넣은 local path와 비디오 확장자(`mp4`, `mov`, `m4v`, `webm`, `ogg`)에 의존하며, 폴더 스캔이나 clip 존재 확인 UI는 아직 없다.
 - QA workspace의 release checklist snapshot은 현재 rehearsal JSON에 있는 항목만 파생하므로, Shadow Player pause/seek/replay marker 같은 세부 동작은 여전히 사람이 수동으로 확인해야 한다.
 - fixture에 외부 source reference를 붙일 수는 있지만, YouTube 원본에서 필요한 구간을 자동으로 잘라 주거나 duration/timestamp를 자동 태깅하는 intake 도구는 아직 없다.
+- `pnpm qa:prepare-clips`는 local source path와 source start/end timestamp가 채워져 있어야만 실제 clip을 뽑을 수 있으며, 현재 example 파일에는 그 값이 비어 있다.
 - 저장소에는 아직 실제 mp4/mov clip 자산이 없어서 `manual_review_runs.json`과 `rehearsal_runs.json`의 많은 항목이 `pending`/`blocked` 상태로 남아 있다.
 - eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.

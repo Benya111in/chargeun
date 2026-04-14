@@ -1,0 +1,11 @@
+[
+  {
+    "sourceId": "mois-earthquake-001",
+    "title": "🚨 지진 발생 시 이렇게 행동하세요!",
+    "url": "https://www.youtube.com/watch?v=yYwX3qqVMSE",
+    "credit": "행정안전부",
+    "durationSeconds": 594,
+    "localPath": "",
+    "notes": "로컬로 확보한 원본 mp4/mov 경로를 `data/eval/source_videos.local.json`에 넣고 사용합니다. tracked example에는 실제 사용자 경로를 넣지 않습니다."
+  }
+]

@@ -220,6 +220,45 @@ export function QaReviewPanel({
                 </div>
               ) : null}
 
+              {selectedFixture.sourceClipPlan ? (
+                <div className="grid gap-2 rounded-md border border-[var(--line)] bg-[var(--soft)] px-3 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                      Clip Intake
+                    </p>
+                    <SummaryBadge
+                      tone={
+                        selectedFixture.localClipPath ? 'grounded' : 'review'
+                      }
+                    >
+                      {selectedFixture.localClipPath
+                        ? 'repo clip ready'
+                        : 'clip missing'}
+                    </SummaryBadge>
+                  </div>
+                  <p className="text-sm leading-6 text-[var(--muted)]">
+                    {selectedFixture.sourceClipPlan.notes}
+                  </p>
+                  <p className="text-xs leading-5 text-[var(--muted)]">
+                    output: {selectedFixture.sourceClipPlan.outputRelativePath}
+                  </p>
+                  <p className="text-xs leading-5 text-[var(--muted)]">
+                    hints:{' '}
+                    {selectedFixture.sourceClipPlan.searchHints.join(', ') ||
+                      'none'}
+                  </p>
+                  {selectedFixture.localClipPath ? (
+                    <p className="text-xs leading-5 text-[var(--muted)]">
+                      local clip: {selectedFixture.localClipPath}
+                    </p>
+                  ) : (
+                    <p className="text-xs leading-5 text-[var(--muted)]">
+                      `pnpm qa:prepare-clips`로 추출 상태를 확인하세요.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
               <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--ink)]">
                 {clipPreviewSrc && isLikelyVideoPath(clipPreviewSrc) ? (
                   <video

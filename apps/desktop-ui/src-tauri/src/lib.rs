@@ -297,13 +297,27 @@ struct QaSourceReference {
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+struct QaSourceClipPlan {
+    notes: String,
+    output_relative_path: String,
+    search_hints: Vec<String>,
+    source_id: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct QaFixtureRecord {
     clip_id: String,
     description: String,
     expected_rule_ids: Vec<String>,
     has_audio: bool,
     hazard: String,
+    #[serde(default)]
+    local_clip_path: Option<String>,
     phase: String,
+    #[serde(default)]
+    source_clip_plan: Option<QaSourceClipPlan>,
+    #[serde(default)]
     source_reference: Option<QaSourceReference>,
 }
 
@@ -635,8 +649,10 @@ fn load_last_live_analysis_snapshot() -> Result<Option<LiveAnalysisSnapshotInput
 
 #[tauri::command]
 fn load_qa_review_state() -> Result<QaReviewState, String> {
+    let fixtures = hydrate_qa_fixtures(read_json_file(eval_fixtures_path())?);
+
     Ok(QaReviewState {
-        fixtures: read_json_file(eval_fixtures_path())?,
+        fixtures,
         manual_review_runs: read_json_file(manual_review_runs_path())?,
         rehearsal_runs: read_json_file(rehearsal_runs_path())?,
     })
@@ -1116,6 +1132,35 @@ fn rehearsal_runs_path() -> PathBuf {
 
 fn runtime_db_path() -> PathBuf {
     local_runtime_dir().join("runtime.sqlite3")
+}
+
+fn hydrate_qa_fixtures(fixtures: Vec<QaFixtureRecord>) -> Vec<QaFixtureRecord> {
+    fixtures
+        .into_iter()
+        .map(|mut fixture| {
+            fixture.local_clip_path = resolve_fixture_local_clip_path(&fixture);
+            fixture
+        })
+        .collect()
+}
+
+fn resolve_fixture_local_clip_path(fixture: &QaFixtureRecord) -> Option<String> {
+    let relative_path = fixture
+        .source_clip_plan
+        .as_ref()?
+        .output_relative_path
+        .trim();
+
+    if relative_path.is_empty() {
+        return None;
+    }
+
+    let absolute_path = repo_root_dir().join(relative_path);
+    if absolute_path.exists() {
+        Some(absolute_path.to_string_lossy().to_string())
+    } else {
+        None
+    }
 }
 
 fn default_app_runtime_state() -> AppRuntimeState {

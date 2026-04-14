@@ -74,6 +74,19 @@ pnpm dev:desktop
 - [ ] 데모용 샘플 영상 준비
 - [ ] 외부 모니터 연결 여부 확인
 
+## 실제 QA clip 준비
+
+```bash
+cp data/eval/source_videos.example.json data/eval/source_videos.local.json
+cp data/eval/clip_windows.example.json data/eval/clip_windows.local.json
+pnpm qa:prepare-clips
+pnpm qa:prepare-clips -- --extract --fixture earthquake-desk-001
+```
+
+- `source_videos.local.json`에는 팀원 각자의 로컬 원본 영상 경로를 넣는다.
+- `clip_windows.local.json`에는 fixture별 source start/end millisecond를 채운다.
+- 산출물은 `data/eval/clips/*.mp4`에 생성되며 git에는 올리지 않는다.
+
 ## Codex에게 바로 맡길 일
 
 - 설치 여부를 점검하는 `scripts/check-env.sh` 생성

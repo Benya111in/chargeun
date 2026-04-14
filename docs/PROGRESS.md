@@ -87,10 +87,14 @@
 - `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 QA readiness dashboard slice 검증 완료
 - 지진 fixture 2개에 사용자가 제안한 행정안전부 YouTube 원본 source reference를 등록하고, `QaReviewPanel`에서 source title/link/추출 메모를 바로 보게 해 실제 clip intake 경로를 명시적으로 고정
 - `pnpm eval:audit`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 source reference slice 검증 완료
+- `data/eval/source_videos.example.json`, `data/eval/clip_windows.example.json`, `scripts/prepare-eval-clips.ts`, `pnpm qa:prepare-clips`를 추가해 팀원별 local source path와 fixture timestamp를 git 밖의 local override로 관리하면서 `ffmpeg`로 실제 QA clip을 추출하는 intake workflow를 구현
+- earthquake fixture의 `sourceClipPlan`과 Tauri fixture hydration을 추가해 `data/eval/clips/<clipId>.mp4`가 존재하면 QA workspace가 repo clip을 자동 preview 후보로 잡도록 정리
+- `manualReviewDraft.path` 기본값을 비워 automatic repo clip / latest run fallback이 실제로 동작하도록 수정
+- `pnpm qa:prepare-clips`, `pnpm eval:audit`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 clip intake workflow slice 검증 완료
 
 ### 진행 중
 
-- 실제 mp4/mov 자산을 연결한 manual walkthrough와 rehearsal 반복
+- local source path와 timestamp를 채워 실제 mp4/mov clip을 추출하고 manual walkthrough/rehearsal을 누적하는 단계
 
 ### 다음
 

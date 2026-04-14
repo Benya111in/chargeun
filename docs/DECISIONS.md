@@ -161,3 +161,8 @@
 
 - 이유: YouTube 같은 외부 영상은 바로 저장소에 내려받아 넣기보다, 어떤 공식 원본에서 어떤 clip을 잘라야 하는지를 먼저 데이터로 남기는 편이 저작권과 협업 측면에서 안전하다.
 - 영향: `annotated_segments.json`의 fixture는 optional `sourceReference`를 가질 수 있고, QA 패널은 제목/링크/메모를 보여 준다. 실제 수동 검수는 여전히 로컬로 잘라 둔 mp4/mov path를 manual review input에 별도로 기록한다.
+
+### D-033 실제 QA clip 자산은 tracked template + local override로 관리한다
+
+- 이유: source video의 로컬 경로와 구간 timestamp는 팀원마다 다르고, 실제 mp4/mov clip은 용량과 저작권 측면에서 저장소에 직접 넣기 어렵다.
+- 영향: 저장소에는 `source_videos.example.json`, `clip_windows.example.json`, fixture의 `sourceClipPlan`만 tracked로 남기고, 실제 경로와 timestamp는 `*.local.json`에 둔다. `pnpm qa:prepare-clips`가 이를 읽어 `data/eval/clips/*.mp4`를 만들고, Tauri QA workspace는 그 산출물을 자동 preview 후보로 사용한다.
