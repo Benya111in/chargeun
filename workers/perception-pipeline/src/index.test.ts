@@ -1,0 +1,75 @@
+import { describe, expect, it } from 'vitest'
+
+import type { CaptureFrameSample } from '@ansimtrack/shared-types'
+
+import {
+  buildPerceptionFoundation,
+  buildPerceptionPacket,
+  deriveObjectHints,
+  selectFrameSamplingPlan,
+} from './index'
+
+describe('selectFrameSamplingPlan', () => {
+  it('switches to burst when hazard cues are present', () => {
+    const plan = selectFrameSamplingPlan({
+      asrText: '연기와 불꽃이 보여요',
+      ocrTokens: ['비상구'],
+    })
+
+    expect(plan.mode).toBe('burst')
+    expect(plan.fps).toBe(5)
+  })
+})
+
+describe('deriveObjectHints', () => {
+  it('extracts object hints from OCR and UI labels', () => {
+    const hints = deriveObjectHints({
+      ocrTokens: ['비상구', '계단'],
+      uiElements: [
+        { label: '비상구', bbox: [0, 0, 1, 1], conf: 0.8 },
+        { label: '계단', bbox: [0, 0, 1, 1], conf: 0.8 },
+      ],
+    })
+
+    expect(hints.map((hint) => hint.label)).toEqual(['비상구', '계단'])
+  })
+})
+
+describe('buildPerceptionPacket', () => {
+  it('creates a validated packet from sampled frames', () => {
+    const packet = buildPerceptionPacket({
+      asrText: '탁자 아래로 들어가요',
+      frames: createFrames(['frame-a', 'frame-b']),
+      ocrTokens: ['머리 보호'],
+    })
+
+    expect(packet.sessionId).toBe('session-1')
+    expect(packet.keyframes).toEqual(['frame-a', 'frame-b'])
+    expect(packet.objectHints.map((hint) => hint.label)).toContain('탁자')
+  })
+})
+
+describe('buildPerceptionFoundation', () => {
+  it('returns a cache key, plan, and packet together', () => {
+    const result = buildPerceptionFoundation({
+      asrText: '계단과 비상구를 따라 이동해요',
+      frames: createFrames(['frame-a', 'frame-b', 'frame-c', 'frame-d']),
+      ocrTokens: ['비상구', '계단'],
+    })
+
+    expect(result.cacheKey).toContain('session-1')
+    expect(result.packet.keyframes.length).toBeGreaterThan(0)
+    expect(result.plan.mode).toBe('base')
+  })
+})
+
+function createFrames(imageRefs: string[]): CaptureFrameSample[] {
+  return imageRefs.map((imageRef, index) => ({
+    sessionId: 'session-1',
+    tsMs: (index + 1) * 1_000,
+    width: 960,
+    height: 540,
+    imageRef,
+    origin: 'browser',
+  }))
+}

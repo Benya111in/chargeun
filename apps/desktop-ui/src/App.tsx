@@ -9,7 +9,12 @@ import {
   Square,
 } from 'lucide-react'
 
-import { buildExplanation, buildVoiceReply } from '@ansimtrack/llm-orchestrator'
+import {
+  buildGroundedExplanation,
+  buildSegmentFromPerception,
+  buildVoiceReply,
+  matchGroundedRules,
+} from '@ansimtrack/llm-orchestrator'
 import { voiceIntentLabels, type VoiceIntent } from '@ansimtrack/shared-types'
 
 import { LiveCapturePreview } from './components/LiveCapturePreview'
@@ -35,9 +40,13 @@ const trackLabels: Record<TrackKey, string> = {
 
 const defaultVoiceReply = '버튼으로 현재 세그먼트를 다시 들을 수 있습니다.'
 const initialScenario = demoScenarios[0]
-const initialExplanation = buildExplanation({
-  segment: initialScenario.segment,
-  matchedRules: initialScenario.matchedRules,
+const initialExplanation = buildGroundedExplanation({
+  evidence: initialScenario.perceptionPacket,
+  rules: initialScenario.rules,
+  segment: buildSegmentFromPerception({
+    packet: initialScenario.perceptionPacket,
+    rules: initialScenario.rules,
+  }),
 })
 
 function App() {
@@ -56,13 +65,49 @@ function App() {
     [scenarioId],
   )
 
+  const segment = useMemo(
+    () => ({
+      ...buildSegmentFromPerception({
+        packet: scenario.perceptionPacket,
+        rules: scenario.rules,
+      }),
+      title: scenario.title,
+      phaseLabel: scenario.phaseLabel,
+    }),
+    [scenario],
+  )
+
+  const matchedRules = useMemo(
+    () =>
+      matchGroundedRules({
+        evidence: scenario.perceptionPacket,
+        rules: scenario.rules,
+        segment,
+      }).map((candidate) => candidate.rule),
+    [scenario, segment],
+  )
+
   const explanation = useMemo(
     () =>
-      buildExplanation({
-        segment: scenario.segment,
-        matchedRules: scenario.matchedRules,
+      buildGroundedExplanation({
+        evidence: scenario.perceptionPacket,
+        rules: scenario.rules,
+        segment,
       }),
-    [scenario],
+    [scenario, segment],
+  )
+
+  const shadowScenario = useMemo(
+    () => ({
+      ...scenario,
+      segment: {
+        endMs: segment.endMs,
+        hazard: segment.hazard,
+        startMs: segment.startMs,
+        title: segment.title,
+      },
+    }),
+    [scenario, segment],
   )
 
   const availableTracks = useMemo(
@@ -75,7 +120,7 @@ function App() {
     [explanation],
   )
 
-  const currentRule = scenario.matchedRules[0]
+  const currentRule = matchedRules[0]
   const selectedTrackText =
     explanation.tracks[selectedTrack] ??
     explanation.tracks.easy ??
@@ -91,9 +136,13 @@ function App() {
       scenario.id === 'grounded-fire' ? 'review-earthquake' : 'grounded-fire'
     const nextScenario =
       demoScenarios.find((item) => item.id === nextId) ?? demoScenarios[0]
-    const nextExplanation = buildExplanation({
-      segment: nextScenario.segment,
-      matchedRules: nextScenario.matchedRules,
+    const nextExplanation = buildGroundedExplanation({
+      evidence: nextScenario.perceptionPacket,
+      rules: nextScenario.rules,
+      segment: buildSegmentFromPerception({
+        packet: nextScenario.perceptionPacket,
+        rules: nextScenario.rules,
+      }),
     })
 
     setScenarioId(nextId)
@@ -112,10 +161,8 @@ function App() {
                 <ShieldAlert className="size-4" />
                 안심트랙 Live
               </span>
-              <StatusPill
-                tone={scenario.segment.hazard === 'fire' ? 'danger' : 'calm'}
-              >
-                {scenario.segment.hazard === 'fire' ? '화재 인식' : '지진 검토'}
+              <StatusPill tone={segment.hazard === 'fire' ? 'danger' : 'calm'}>
+                {getHazardBadgeLabel(segment.hazard)}
               </StatusPill>
               <StatusPill
                 tone={
@@ -149,10 +196,7 @@ function App() {
               }
             />
             <Metric title="세그먼트 지연" value="04.0초" />
-            <Metric
-              title="신뢰도"
-              value={formatPercent(scenario.segment.confidence)}
-            />
+            <Metric title="신뢰도" value={formatPercent(segment.confidence)} />
           </section>
         </header>
 
@@ -265,7 +309,7 @@ function App() {
                     Shadow Player
                   </p>
                   <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-                    {scenario.segment.phaseLabel}
+                    {segment.phaseLabel}
                   </h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -273,8 +317,8 @@ function App() {
                     {scenario.session.hasAudio ? '오디오 있음' : '오디오 없음'}
                   </StatusPill>
                   <StatusPill tone="neutral">
-                    {formatClock(scenario.segment.startMs)} -{' '}
-                    {formatClock(scenario.segment.endMs)}
+                    {formatClock(segment.startMs)} -{' '}
+                    {formatClock(segment.endMs)}
                   </StatusPill>
                 </div>
               </div>
@@ -285,7 +329,7 @@ function App() {
                   onToggleEvidence={() => setShowEvidence((value) => !value)}
                   onTogglePanic={() => setPanicMode((value) => !value)}
                   panicMode={panicMode}
-                  scenario={scenario}
+                  scenario={shadowScenario}
                 />
 
                 <aside className="flex flex-col gap-3 rounded-md border border-[var(--line)] bg-[var(--panel)] p-4">
@@ -340,7 +384,7 @@ function App() {
                         세그먼트 상태
                       </p>
                       <p className="mt-1 leading-6">
-                        {scenario.segment.confidence < 0.72
+                        {segment.confidence < 0.72
                           ? '저신뢰 fallback으로 action을 숨겼습니다.'
                           : '공식 rule id가 있어 action과 report를 보여 줍니다.'}
                       </p>
@@ -359,7 +403,7 @@ function App() {
                     현재 세그먼트
                   </p>
                   <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-                    {scenario.segment.title}
+                    {segment.title}
                   </h2>
                 </div>
                 <StatusPill tone={panicMode ? 'danger' : 'neutral'}>
@@ -405,11 +449,11 @@ function App() {
                     </p>
                     <dl className="mt-4 grid gap-3 text-sm text-[var(--muted)]">
                       <MetaRow label="재난 유형">
-                        {scenario.segment.hazard === 'fire' ? '화재' : '지진'}
+                        {getHazardName(segment.hazard)}
                       </MetaRow>
-                      <MetaRow label="phase">{scenario.segment.phase}</MetaRow>
+                      <MetaRow label="phase">{segment.phase}</MetaRow>
                       <MetaRow label="rule id">
-                        {scenario.segment.officialRuleIds.join(', ') || '없음'}
+                        {segment.officialRuleIds.join(', ') || '없음'}
                       </MetaRow>
                     </dl>
                   </section>
@@ -672,7 +716,7 @@ function getPermissionTone(permission: string) {
 }
 
 function getPreferredTrack(
-  explanation: ReturnType<typeof buildExplanation>,
+  explanation: ReturnType<typeof buildGroundedExplanation>,
 ): TrackKey {
   if (explanation.tracks.action) {
     return 'action'
@@ -683,6 +727,28 @@ function getPreferredTrack(
   }
 
   return 'basic'
+}
+
+function getHazardBadgeLabel(hazard: string) {
+  switch (hazard) {
+    case 'fire':
+      return '화재 인식'
+    case 'earthquake':
+      return '지진 검토'
+    default:
+      return '공식 검토'
+  }
+}
+
+function getHazardName(hazard: string) {
+  switch (hazard) {
+    case 'fire':
+      return '화재'
+    case 'earthquake':
+      return '지진'
+    default:
+      return '미확정'
+  }
 }
 
 export default App

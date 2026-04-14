@@ -11,6 +11,34 @@ import {
 const lowConfidenceThreshold = 0.72
 const defaultRuleMatchLimit = 3
 const defaultRuleMatchThreshold = 4.2
+const fireCueWeights = {
+  '119': 1.6,
+  경보: 1.7,
+  계단: 1.4,
+  대피: 1.3,
+  문손잡이: 1.5,
+  복도: 1.1,
+  불꽃: 2.4,
+  비상구: 1.7,
+  연기: 2.2,
+  출구: 1.3,
+  화염: 2.4,
+  화재: 2.5,
+} as const
+const earthquakeCueWeights = {
+  가스: 1.4,
+  머리보호: 1.9,
+  문열기: 1.3,
+  밖으로: 1.1,
+  여진: 1.8,
+  전기: 1.2,
+  지진: 2.5,
+  출구: 1.2,
+  탁자: 2.2,
+  파편: 1.4,
+  흔들: 2.3,
+  흔들림: 2.4,
+} as const
 const stopKeywords = new Set([
   '합니다',
   '하세요',
@@ -44,6 +72,13 @@ export type GroundedRuleMatch = {
   matchedSignals: string[]
   rule: RuleRecord
   score: number
+}
+
+export type HazardClassification = {
+  confidence: number
+  hazard: Segment['hazard']
+  phase: string
+  signals: string[]
 }
 
 export const buildExplanation = (input: {
@@ -99,6 +134,115 @@ export const buildGroundedExplanation = (input: {
     },
     matchedRules,
   })
+}
+
+export const classifyHazard = (
+  packet: MatchableEvidence,
+): HazardClassification => {
+  const tokens = Array.from(collectEvidenceTokens(packet))
+  const fireScore = scoreCueSet(tokens, fireCueWeights)
+  const earthquakeScore = scoreCueSet(tokens, earthquakeCueWeights)
+  const strongestScore = Math.max(fireScore, earthquakeScore)
+  const delta = Math.abs(fireScore - earthquakeScore)
+
+  if (strongestScore < 2.8 || delta < 0.7) {
+    return {
+      confidence: Math.min(0.69, 0.45 + strongestScore * 0.05),
+      hazard: 'unknown',
+      phase: 'review_official',
+      signals: [],
+    }
+  }
+
+  if (fireScore > earthquakeScore) {
+    return {
+      confidence: clampConfidence(0.58 + fireScore * 0.08 + delta * 0.03),
+      hazard: 'fire',
+      phase: classifyFirePhase(tokens),
+      signals: collectCueSignals(tokens, fireCueWeights),
+    }
+  }
+
+  return {
+    confidence: clampConfidence(0.58 + earthquakeScore * 0.08 + delta * 0.03),
+    hazard: 'earthquake',
+    phase: classifyEarthquakePhase(tokens),
+    signals: collectCueSignals(tokens, earthquakeCueWeights),
+  }
+}
+
+export const detectSegmentBoundary = (input: {
+  next: Pick<Segment, 'endMs' | 'hazard' | 'phase' | 'startMs'>
+  previous?: Pick<Segment, 'endMs' | 'hazard' | 'phase'> | null
+}) => {
+  const previous = input.previous
+  if (!previous) {
+    return true
+  }
+
+  if (previous.hazard !== input.next.hazard) {
+    return true
+  }
+
+  if (previous.phase !== input.next.phase) {
+    return true
+  }
+
+  return input.next.startMs - previous.endMs > 1_500
+}
+
+export const buildSegmentFromPerception = (input: {
+  packet: PerceptionPacket
+  previousRuleIds?: string[]
+  previousSegment?: Segment | null
+  rules: RuleRecord[]
+}): Segment => {
+  const classification = classifyHazard(input.packet)
+  const provisionalSegment: Segment = {
+    id: `seg-${input.packet.sessionId}-${input.packet.tStartMs}`,
+    sessionId: input.packet.sessionId,
+    hazard: classification.hazard,
+    phase: classification.phase,
+    startMs: input.packet.tStartMs,
+    endMs: input.packet.tEndMs,
+    confidence: classification.confidence,
+    officialRuleIds: [],
+  }
+
+  if (classification.hazard === 'unknown') {
+    return provisionalSegment
+  }
+
+  const matches = matchGroundedRules({
+    evidence: input.packet,
+    previousRuleIds: input.previousRuleIds,
+    rules: input.rules,
+    segment: provisionalSegment,
+  })
+
+  const officialRuleIds = matches.map((match) => match.rule.rule_id)
+  const boundary = detectSegmentBoundary({
+    next: provisionalSegment,
+    previous: input.previousSegment,
+  })
+
+  return {
+    ...provisionalSegment,
+    confidence:
+      officialRuleIds.length > 0
+        ? provisionalSegment.confidence
+        : Math.min(
+            provisionalSegment.confidence,
+            lowConfidenceThreshold - 0.01,
+          ),
+    id: boundary
+      ? provisionalSegment.id
+      : (input.previousSegment?.id ?? provisionalSegment.id),
+    officialRuleIds,
+    startMs: boundary
+      ? provisionalSegment.startMs
+      : (input.previousSegment?.startMs ?? provisionalSegment.startMs),
+  }
 }
 
 export const matchGroundedRules = (input: {
@@ -324,3 +468,67 @@ const tokenize = (text: string) =>
       (token) =>
         token.length >= 2 && !stopKeywords.has(token) && !/^\d+$/.test(token),
     )
+
+const scoreCueSet = (tokens: string[], cueWeights: Record<string, number>) =>
+  Object.entries(cueWeights).reduce((score, [cue, weight]) => {
+    if (tokens.some((token) => token.includes(cue))) {
+      return score + weight
+    }
+
+    return score
+  }, 0)
+
+const collectCueSignals = (
+  tokens: string[],
+  cueWeights: Record<string, number>,
+) =>
+  Object.keys(cueWeights).filter((cue) =>
+    tokens.some((token) => token.includes(cue)),
+  )
+
+const classifyFirePhase = (tokens: string[]) => {
+  if (hasAnyToken(tokens, ['119', '신고'])) {
+    return 'report'
+  }
+
+  if (hasAnyToken(tokens, ['손잡이', '문손잡이', '뜨거운문'])) {
+    return 'door_assessment'
+  }
+
+  if (hasAnyToken(tokens, ['계단', '비상구', '출구', '복도', '문닫', '닫고'])) {
+    return 'route_selection'
+  }
+
+  if (hasAnyToken(tokens, ['경보', '연기', '불꽃', '화염', '화재'])) {
+    return 'alert_and_wake'
+  }
+
+  return 'route_selection'
+}
+
+const classifyEarthquakePhase = (tokens: string[]) => {
+  if (hasAnyToken(tokens, ['119', '신고'])) {
+    return 'report'
+  }
+
+  if (hasAnyToken(tokens, ['가스', '전기', '문열', '출구'])) {
+    return 'after_shaking'
+  }
+
+  if (hasAnyToken(tokens, ['탁자', '흔들', '머리보호', '방석'])) {
+    return 'protect'
+  }
+
+  if (hasAnyToken(tokens, ['대피소', '신발', '밖으로'])) {
+    return 'evacuation'
+  }
+
+  return 'protect'
+}
+
+const hasAnyToken = (tokens: string[], candidates: string[]) =>
+  candidates.some((candidate) =>
+    tokens.some((token) => token.includes(candidate)),
+  )
+
+const clampConfidence = (value: number) => Math.min(0.99, Math.max(0, value))

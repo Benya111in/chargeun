@@ -33,14 +33,22 @@
 - `workers/llm-orchestrator`에 grounded rule matcher와 `buildGroundedExplanation` 경로를 추가해 fire/earthquake evidence에서 실제 rule 1~3개를 고르도록 구현
 - `protect -> during_shaking`, `route_selection -> stair_evacuation/door_control/refuge_space` phase alias와 evidence gating을 넣어 공식 rule 없는 action 노출을 계속 막음
 - `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 matcher slice까지 루트 검증 완료
+- `workers/perception-pipeline` 패키지를 추가하고 frame sampling plan, text-driven object hint derivation, `PerceptionPacket` builder, cache key foundation을 구현
+- 루트 build/test/typecheck 스크립트에 perception worker를 편입하고 `pnpm install`, `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 workspace 검증 완료
+- `workers/llm-orchestrator`에 hazard classifier, phase heuristics, segment boundary detector, `buildSegmentFromPerception`을 추가해 `PerceptionPacket -> Segment` 경로를 구현
+- fire는 docs-level `route_selection`, earthquake는 `protect` 같은 사용자-facing phase를 유지하고, grounded matcher alias를 통해 실제 rule phase와 연결되도록 정리
+- `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`를 다시 통과시켜 segment slice까지 루트 검증 완료
+- demo scenario가 더 이상 mock `matchedRules`를 직접 들고 있지 않고, `PerceptionPacket -> Segment -> buildGroundedExplanation` 경로로 실제 grounded track을 만들도록 desktop UI를 교체
+- `matchGroundedRules` 결과를 근거 패널과 segment card에 연결해 rule id/action/report 노출이 실제 matcher 결과를 따르도록 정리
 
 ### 진행 중
 
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
-- perception packet foundation과 hazard/segment engine 실입력 연결
+- voice/TTS 최소 경로 구현
+- frontend evidence flow polish
 
 ### 다음
 
-1. perception packet foundation 구현
-2. hazard/segment engine 실입력 교체
-3. grounded track와 evidence 흐름을 실제 packet/rule 입력으로 치환
+1. voice/TTS path 최소 경로 연결
+2. frontend evidence flow polish
+3. storage/jobs skeleton

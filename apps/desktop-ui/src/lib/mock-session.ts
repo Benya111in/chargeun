@@ -1,7 +1,7 @@
 import type {
   CaptureSession,
+  PerceptionPacket,
   RuleRecord,
-  Segment,
 } from '@ansimtrack/shared-types'
 
 import earthquakeRules from '../../../../data/rules/earthquake_rules.json'
@@ -9,33 +9,21 @@ import fireRules from '../../../../data/rules/fire_rules.json'
 
 export type DemoScenario = {
   id: string
-  session: CaptureSession
-  segment: Segment & {
-    title: string
-    phaseLabel: string
-  }
-  matchedRules: RuleRecord[]
-  overlayTargets: Array<{ label: string }>
   overlaySummary: string
+  overlayTargets: Array<{ label: string }>
+  perceptionPacket: PerceptionPacket
+  phaseLabel: string
+  rules: RuleRecord[]
+  session: CaptureSession
+  title: string
   videoCaption: string
-}
-
-const fireRule = (fireRules as RuleRecord[]).find(
-  (rule) => rule.rule_id === 'KR_FIRE_04',
-)
-const earthquakeRule = (earthquakeRules as RuleRecord[]).find(
-  (rule) => rule.rule_id === 'KR_EQ_02',
-)
-
-if (!fireRule || !earthquakeRule) {
-  throw new Error(
-    'Required demo rules are missing from the local rules bundle.',
-  )
 }
 
 export const demoScenarios: DemoScenario[] = [
   {
     id: 'grounded-fire',
+    title: '연기를 보고 대피 경로를 고르는 장면',
+    phaseLabel: '세그먼트 04 | 대피 경로 선택',
     session: {
       id: 'session-fire-demo',
       sourceType: 'monitor',
@@ -44,19 +32,28 @@ export const demoScenarios: DemoScenario[] = [
       hasAudio: true,
       displayName: '화재 국민행동요령 영상',
     },
-    segment: {
-      id: 'segment-fire-route',
+    perceptionPacket: {
       sessionId: 'session-fire-demo',
-      hazard: 'fire',
-      phase: 'route_selection',
-      startMs: 34_000,
-      endMs: 41_000,
-      confidence: 0.91,
-      officialRuleIds: [fireRule.rule_id],
-      title: '연기를 보고 대피 경로를 고르는 장면',
-      phaseLabel: '세그먼트 04 | 대피 경로 선택',
+      tStartMs: 34_000,
+      tEndMs: 41_000,
+      asrText:
+        '연기가 보이면 비상구 표지를 보고 계단으로 이동하고 나가면서 문을 닫으세요.',
+      ocrTokens: ['비상구', '계단', '대피'],
+      uiElements: [
+        {
+          label: '비상구',
+          bbox: [0.82, 0.08, 0.12, 0.08],
+          conf: 0.92,
+        },
+      ],
+      objectHints: [
+        { label: '복도', bbox: [0.22, 0.28, 0.44, 0.3], conf: 0.84 },
+        { label: '출입문', bbox: [0.6, 0.24, 0.14, 0.34], conf: 0.78 },
+        { label: '계단 표지', bbox: [0.78, 0.06, 0.12, 0.09], conf: 0.91 },
+      ],
+      keyframes: ['demo://fire/frame-1', 'demo://fire/frame-2'],
     },
-    matchedRules: [fireRule],
+    rules: fireRules as RuleRecord[],
     overlayTargets: [{ label: '비상구 표지' }, { label: '계단 방향' }],
     overlaySummary: '연기, 비상구, 계단 방향',
     videoCaption:
@@ -64,6 +61,8 @@ export const demoScenarios: DemoScenario[] = [
   },
   {
     id: 'review-earthquake',
+    title: '흔들림은 보이지만 보호 행동 근거가 약한 장면',
+    phaseLabel: '세그먼트 02 | 공식 확인 우선',
     session: {
       id: 'session-earthquake-demo',
       sourceType: 'monitor',
@@ -72,19 +71,19 @@ export const demoScenarios: DemoScenario[] = [
       hasAudio: false,
       displayName: '지진 행동요령 데모 영상',
     },
-    segment: {
-      id: 'segment-earthquake-review',
+    perceptionPacket: {
       sessionId: 'session-earthquake-demo',
-      hazard: 'earthquake',
-      phase: 'protect',
-      startMs: 6_000,
-      endMs: 12_000,
-      confidence: 0.48,
-      officialRuleIds: [],
-      title: '흔들림은 보이지만 보호 행동 근거가 약한 장면',
-      phaseLabel: '세그먼트 02 | 공식 확인 우선',
+      tStartMs: 6_000,
+      tEndMs: 12_000,
+      asrText: '',
+      ocrTokens: [],
+      uiElements: [],
+      objectHints: [
+        { label: '가구 후보', bbox: [0.34, 0.34, 0.26, 0.2], conf: 0.52 },
+      ],
+      keyframes: ['demo://earthquake/frame-1', 'demo://earthquake/frame-2'],
     },
-    matchedRules: [],
+    rules: earthquakeRules as RuleRecord[],
     overlayTargets: [{ label: '책상 후보' }, { label: '흔들림 의심' }],
     overlaySummary: '탁자 후보, 흔들림 감지',
     videoCaption:

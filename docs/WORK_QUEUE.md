@@ -28,15 +28,15 @@
    - source docs: `docs/11_RULE_KB_AND_GROUNDING.md`, `docs/16_DATA_MODELS_AND_API_CONTRACTS.md`
    - goal: fire/earthquake rules를 실제 matcher로 연결
 
-5. `pending` perception pipeline foundation
+5. `done` perception pipeline foundation
    - source docs: `docs/09_PERCEPTION_PIPELINE.md`, `docs/16_DATA_MODELS_AND_API_CONTRACTS.md`
    - goal: frame sampler, OCR/ASR adapter shell, PerceptionPacket 생성
 
-6. `pending` hazard classifier + segment engine
+6. `done` hazard classifier + segment engine
    - source docs: `docs/10_HAZARD_CLASSIFIER_AND_SEGMENT_ENGINE.md`
    - goal: segment state machine과 low-confidence fallback
 
-7. `pending` grounded track generation
+7. `done` grounded track generation
    - source docs: `docs/12_LLM_ORCHESTRATION_AND_PROMPTS.md`, `docs/11_RULE_KB_AND_GROUNDING.md`
    - goal: segment + evidence + rules에서 track JSON 생성
 

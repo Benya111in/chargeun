@@ -11,12 +11,26 @@ import {
   Waves,
 } from 'lucide-react'
 
-import type { DemoScenario } from '../lib/mock-session'
+import type { HazardType } from '@ansimtrack/shared-types'
+
 import {
   shadowDemoDefaults,
   useShadowDemoPlayer,
 } from '../lib/useShadowDemoPlayer'
 import { cn, formatClock } from '../lib/utils'
+
+type ShadowStageScenario = {
+  id: string
+  overlaySummary: string
+  overlayTargets: Array<{ label: string }>
+  segment: {
+    endMs: number
+    hazard: HazardType
+    startMs: number
+    title: string
+  }
+  videoCaption: string
+}
 
 export function ShadowVideoStage({
   onToggleEvidence,
@@ -27,7 +41,7 @@ export function ShadowVideoStage({
   onToggleEvidence: () => void
   onTogglePanic: () => void
   panicMode: boolean
-  scenario: DemoScenario
+  scenario: ShadowStageScenario
 }) {
   const player = useShadowDemoPlayer({
     segmentStartMs: scenario.segment.startMs,

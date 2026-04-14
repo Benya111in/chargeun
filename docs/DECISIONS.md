@@ -56,3 +56,18 @@
 
 - 이유: 현재 eval/데모 문서에는 `protect`, `route_selection` 같은 표현이 남아 있고, 실제 rule JSON은 `during_shaking`, `door_control`, `stair_evacuation`처럼 더 구체적인 phase를 쓴다.
 - 영향: grounded matcher는 alias를 통해 후보군을 좁히되, phase만으로는 grounded 처리하지 않고 evidence token이 있어야 rule을 선택한다.
+
+### D-012 perception foundation은 로컬 결정론 경로부터 시작
+
+- 이유: 현재 단계에서는 ASR/OCR 정확도보다 packet 구조와 후속 엔진 연결이 더 중요하고, 외부 모델 호출 비용도 아껴야 한다.
+- 영향: perception worker는 우선 local frame sampling plan, OCR/ASR shell, text-driven object hint derivation, cache key 생성만 제공하고 실제 모델 adapter는 다음 단계에서 채운다.
+
+### D-013 segment phase는 docs-level 이름을 유지
+
+- 이유: 현재 UI, eval 문서, demo narrative는 `protect`, `route_selection` 같은 상위 phase를 중심으로 정리되어 있다.
+- 영향: segment engine은 docs-level phase를 출력하고, grounded matcher가 이를 실제 rule phase alias로 매핑한다.
+
+### D-014 데모 UI도 실제 packet/rule 경로를 사용
+
+- 이유: backend matcher와 segment engine이 따로 놀면 시연 중 안전 fallback과 근거 패널이 어긋난다.
+- 영향: demo scenario는 이제 mock `PerceptionPacket`과 rule bundle만 제공하고, 화면에서는 실제 `buildSegmentFromPerception` 및 `buildGroundedExplanation` 결과를 사용한다.

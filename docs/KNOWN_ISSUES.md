@@ -5,7 +5,7 @@
 - 음성 입력은 버튼 intent 우선이며 STT는 후속 단계다.
 - 데모 데이터는 mock 세션을 사용하므로 실제 캡처 drift는 아직 검증되지 않았다.
 - Shadow Player의 auto-pause는 현재 marker 기반 UI 검증 단계이며 실제 segment detector 연동은 후속 작업이다.
-- browser live preview fallback은 이제 frame sample window까지 만들지만, 실제 OCR/ASR/object hint가 붙은 `PerceptionPacket` 생성은 아직 미구현이다.
+- perception worker는 구현됐지만 현재 OCR/ASR adapter는 shell 수준이며 실제 모델 추론은 아직 연결되지 않았다.
 - native mac preview는 low-fps snapshot frame 이벤트까지 연결됐지만 실제 continuous video/audio stream과 Shadow buffer 직결은 아직 미구현이다.
 - `swift test`는 현재 로컬 툴체인에서 `XCTest`/`Testing` 모듈을 바로 찾지 못해 smoke executable 검증으로 대체하고 있다.
 - Tauri `list/start/stop` command는 이제 Swift `MacCaptureBridge`를 직접 호출하지만, executable subprocess 경로라 첫 호출 시 지연이 있을 수 있다.
@@ -13,3 +13,4 @@
 - 현재 로컬 macOS는 `swift run MacCaptureBridge bootstrap` 기준 Screen Recording 권한이 `denied` 상태라, 실제 native frame smoke는 권한 허용 후에만 검증할 수 있다.
 - Shadow Player replay lane은 아직 mock ring buffer 기반이며, 새 `captureInput` frame window와 직접 합쳐지지 않았다.
 - `data/eval/annotated_segments.json`는 현재 rule JSON보다 예전 phase/rule id를 일부 기대하고 있어, QA slice에서 fixture 정합성 재조정이 필요하다.
+- desktop UI는 demo scenario에서 새 grounded path를 쓰지만, 실제 live capture의 `captureInput`를 perception worker와 segment engine으로 흘리는 실시간 연결은 아직 미구현이다.
