@@ -64,6 +64,7 @@ cp .env.example .env.local
 - `pnpm rules:validate`
 - `pnpm prompts:validate`
 - `pnpm eval:audit`
+- `pnpm qa:sync`
 - `pnpm qa:smoke`
 - `pnpm demo:reset`
 
@@ -102,5 +103,6 @@ packages/local-store
 - `pnpm prompts:validate`
 - `pnpm demo:reset`
 - `pnpm eval:audit`
+- `pnpm qa:sync`
 - `pnpm qa:smoke`
 - `pnpm rules:validate`

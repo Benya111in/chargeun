@@ -1,0 +1,42 @@
+[
+  {
+    "clipId": "fire-door-control-001",
+    "date": "2026-04-14",
+    "operator": "Codex",
+    "path": "demo-fixture",
+    "status": "pending",
+    "notes": "evidence drawer에서 source title과 matched signals 확인 필요"
+  },
+  {
+    "clipId": "fire-stair-no-audio-001",
+    "date": "2026-04-14",
+    "operator": "Codex",
+    "path": "demo-fixture",
+    "status": "pending",
+    "notes": "OCR/object hint만으로 grounded 유지 확인 필요"
+  },
+  {
+    "clipId": "earthquake-desk-001",
+    "date": "2026-04-14",
+    "operator": "Codex",
+    "path": "demo-fixture",
+    "status": "pending",
+    "notes": "Panic Mode 한눈성 수동 점검 필요"
+  },
+  {
+    "clipId": "earthquake-after-shaking-001",
+    "date": "2026-04-14",
+    "operator": "Codex",
+    "path": "demo-fixture",
+    "status": "pending",
+    "notes": "after_shaking phase 자연스러움 확인 필요"
+  },
+  {
+    "clipId": "review-unknown-empty-001",
+    "date": "2026-04-14",
+    "operator": "Codex",
+    "path": "demo-fixture",
+    "status": "pending",
+    "notes": "action/report/do_not 숨김 정책 수동 점검 필요"
+  }
+]

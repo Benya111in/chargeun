@@ -136,3 +136,8 @@
 
 - 이유: 데모와 제품화 모두에서 macOS 경로의 일관된 음성 UX가 필요하지만, 마이크 권한/환경 차이 때문에 fallback이 없으면 협업과 시연이 불안정해진다.
 - 영향: TTS는 `VoiceRuntimeBridge`의 macOS 시스템 음성을 우선 사용하고, 실패 시 브라우저 `speechSynthesis`, 마지막에는 텍스트 카드로 내려간다. STT는 우선 지원 intent 5개에 맞춘 macOS command-style 인식을 사용하고, 실패 시 브라우저 음성 인식 또는 텍스트 명령 입력으로 전환한다. native preview audio는 ScreenCaptureKit audio callback을 실제 `capture/audio` 이벤트로 노출하되, 아직 PCM persistence나 live ASR 입력까지는 확장하지 않는다.
+
+### D-028 manual QA와 rehearsal 로그는 JSON을 단일 소스로 두고 markdown을 생성한다
+
+- 이유: 팀 단위 검수에서는 사람이 바로 수정할 수 있는 단순한 데이터 형식이 필요하지만, 발표용 체크리스트와 로그 문서도 항상 최신 상태를 유지해야 한다.
+- 영향: `data/eval/manual_review_runs.json`과 `data/eval/rehearsal_runs.json`을 단일 입력으로 두고, `pnpm qa:sync`가 `manual_review_log_2026-04-14.md`와 `demo_rehearsal_checklist.md`를 다시 생성한다. 실제 clip walkthrough가 없으면 status는 `pending`/`blocked`로 남기고, generated markdown에서 공백을 숨기지 않는다.

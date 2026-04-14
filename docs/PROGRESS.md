@@ -75,6 +75,8 @@
 - `VoiceRuntimeBridge`, Tauri voice command, `useVoiceRuntime`를 추가해 macOS native TTS/STT를 우선 사용하고 browser/text fallback으로 내려가는 voice runtime을 구현
 - Voice Prompt Bar에 마이크 intent, 텍스트 명령 fallback, native/browser/text 상태 배지, transcript 표시를 추가해 버튼-only voice path를 제품형 fallback 흐름으로 확장
 - `swift build`, `swift run VoiceRuntimeBridge status`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 native audio/voice slice 검증 완료
+- `data/eval/manual_review_runs.json`, `data/eval/rehearsal_runs.json`, `scripts/sync-qa-logs.ts`, `pnpm qa:sync`를 추가해 actual clip/manual review와 rehearsal 로그를 구조화된 JSON에서 markdown 보고서로 동기화하는 경로를 마련
+- `pnpm qa:sync`, `pnpm qa:smoke`, `pnpm lint`로 QA log sync slice 검증 완료
 
 ### 진행 중
 

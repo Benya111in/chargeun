@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2026-04-14",
+    "operator": "Codex",
+    "path": "demo scenario + automated checks",
+    "result": "in_progress",
+    "startupUnder10s": true,
+    "shadowPlayerPrimary": true,
+    "fallbackWorks": true,
+    "voiceOffWorks": true,
+    "permissionsRetryWorks": false,
+    "fullMonitorCaptureWorks": false,
+    "windowCaptureWorks": false,
+    "noAudioFallbackWorks": true,
+    "evidenceAndCacheWorks": true,
+    "lowConfidenceFallbackWorks": true,
+    "backupReady": true,
+    "notes": "actual native rehearsal blocked by macOS Screen Recording permission; native voice/audio runtime smoke only"
+  }
+]

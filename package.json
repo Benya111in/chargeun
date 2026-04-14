@@ -14,8 +14,9 @@
     "format": "pnpm exec prettier --write .",
     "demo:reset": "node --import tsx scripts/demo-reset.ts",
     "eval:audit": "node --import tsx scripts/grounding-audit.ts",
+    "qa:sync": "node --import tsx scripts/sync-qa-logs.ts",
     "prompts:validate": "node --import tsx scripts/validate-prompts.ts",
-    "qa:smoke": "pnpm eval:audit && pnpm --filter @ansimtrack/shared-types test && pnpm --filter @ansimtrack/llm-orchestrator test && pnpm --filter desktop-ui test",
+    "qa:smoke": "pnpm eval:audit && pnpm qa:sync && pnpm --filter @ansimtrack/shared-types test && pnpm --filter @ansimtrack/llm-orchestrator test && pnpm --filter desktop-ui test",
     "rules:validate": "node --import tsx scripts/validate-rules.ts"
   },
   "devDependencies": {

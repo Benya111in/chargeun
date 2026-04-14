@@ -18,6 +18,8 @@
 - evidence drawer는 live packet까지 보여 주고 마지막 live snapshot도 복원하지만, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
 - SQLite는 Tauri runtime에 붙었지만 `packages/local-store` 패키지가 아직 앱의 단일 persistence 구현체는 아니며, historical session browser/UI는 없다.
 - 브라우저 데모 모드에서는 filesystem cache clear를 직접 실행하지 않고, 실제 `clear_local_runtime` command는 Tauri 실행 경로에서만 동작한다.
+- `qa:sync`는 manual review/rehearsal markdown을 최신화하지만, 실제 clip을 재생하고 UI를 눈으로 검수하는 작업 자체를 자동화하지는 않는다.
+- 저장소에는 아직 실제 mp4/mov clip 자산이 없어서 `manual_review_runs.json`과 `rehearsal_runs.json`의 많은 항목이 `pending`/`blocked` 상태로 남아 있다.
 - eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.
 - runtime state 복원은 demo/UI 상태와 last session metadata 기준이며, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
