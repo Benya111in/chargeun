@@ -1011,7 +1011,7 @@ function App() {
 
         <main className="mt-4 grid flex-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.9fr)]">
           <section className="flex min-h-0 flex-col gap-4">
-            <section className="panel-edge flex flex-col gap-3">
+            <section className="order-2 panel-edge flex flex-col gap-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="max-w-3xl">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -1124,7 +1124,7 @@ function App() {
               />
             </section>
 
-            <section className="panel-edge flex min-h-[520px] flex-col gap-4">
+            <section className="order-1 panel-edge flex min-h-[520px] flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
