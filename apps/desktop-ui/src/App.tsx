@@ -31,6 +31,7 @@ import {
   PrivacyConsentDialog,
   PrivacyControlPanel,
 } from './components/PrivacyControlPanel'
+import { QaReviewPanel } from './components/QaReviewPanel'
 import { ShadowVideoStage } from './components/ShadowVideoStage'
 import { demoRunbookSteps, prerecordedBackupSessions } from './lib/demo-runbook'
 import {
@@ -39,8 +40,11 @@ import {
 } from './lib/capture-contract'
 import {
   appendSessionLogEntry,
+  appendManualReviewRun,
+  appendRehearsalRun,
   clearLocalRuntimeFiles,
   exportDemoArtifact,
+  loadQaReviewState,
   loadAppRuntimeState,
   loadLastLiveAnalysisSnapshot,
   saveLiveAnalysisSnapshot,
@@ -58,6 +62,11 @@ import {
 } from './lib/live-analysis'
 import type { LiveAnalysisSnapshotInput } from './lib/live-analysis-contract'
 import { demoScenarios } from './lib/mock-session'
+import {
+  defaultQaReviewState,
+  type QaReviewState,
+  type RehearsalRunRecord,
+} from './lib/qa-review'
 import { liveRuleCatalog } from './lib/rule-catalog'
 import { useCaptureController } from './lib/useCaptureController'
 import { cn, formatClock, formatPercent } from './lib/utils'
@@ -88,6 +97,25 @@ const initialExplanation = buildGroundedExplanation({
     rules: initialScenario.rules,
   }),
 })
+const todayDateLabel = formatDateInput(new Date())
+const defaultRehearsalDraft: RehearsalRunRecord = {
+  backupReady: true,
+  date: todayDateLabel,
+  evidenceAndCacheWorks: true,
+  fallbackWorks: true,
+  fullMonitorCaptureWorks: false,
+  lowConfidenceFallbackWorks: true,
+  noAudioFallbackWorks: true,
+  notes: '',
+  operator: 'Codex',
+  path: 'actual clip + native capture',
+  permissionsRetryWorks: false,
+  result: 'in_progress',
+  shadowPlayerPrimary: true,
+  startupUnder10s: true,
+  voiceOffWorks: true,
+  windowCaptureWorks: false,
+}
 
 function App() {
   const [demoMode, setDemoMode] = useState<'backup-replay' | 'live-priority'>(
@@ -126,6 +154,22 @@ function App() {
     useState(false)
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
   const [voiceCommandInput, setVoiceCommandInput] = useState('')
+  const [qaState, setQaState] = useState<QaReviewState>(defaultQaReviewState)
+  const [qaBusy, setQaBusy] = useState(false)
+  const [qaNotice, setQaNotice] = useState(
+    '실제 clip 검수 결과와 3분 rehearsal 로그를 여기서 누적합니다.',
+  )
+  const [selectedQaFixtureId, setSelectedQaFixtureId] = useState<string | null>(
+    null,
+  )
+  const [manualReviewDraft, setManualReviewDraft] = useState({
+    notes: '',
+    operator: 'Codex',
+    path: 'actual clip',
+  })
+  const [rehearsalDraft, setRehearsalDraft] = useState<RehearsalRunRecord>(
+    defaultRehearsalDraft,
+  )
   const capture = useCaptureController()
   const voiceRuntime = useVoiceRuntime()
   const appExportRef = useRef<HTMLDivElement | null>(null)
@@ -353,6 +397,34 @@ function App() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+
+    void (async () => {
+      const nextQaState = await loadQaReviewState()
+      if (cancelled) {
+        return
+      }
+
+      setQaState(nextQaState)
+      setQaNotice(
+        nextQaState.fixtures.length > 0
+          ? `manual review ${nextQaState.manualReviewRuns.length}건, rehearsal ${nextQaState.rehearsalRuns.length}건이 로드되었습니다.`
+          : 'QA fixture가 아직 비어 있습니다.',
+      )
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedQaFixtureId && qaState.fixtures[0]?.clipId) {
+      setSelectedQaFixtureId(qaState.fixtures[0].clipId)
+    }
+  }, [qaState.fixtures, selectedQaFixtureId])
+
+  useEffect(() => {
     if (!runtimeHydrated) {
       return
     }
@@ -547,6 +619,61 @@ function App() {
     }
 
     handleVoice(intent)
+  }
+
+  const handleSubmitManualReview = async (
+    status: 'blocked' | 'fail' | 'pass' | 'pending',
+  ) => {
+    if (!selectedQaFixtureId) {
+      return
+    }
+
+    setQaBusy(true)
+
+    try {
+      const nextQaState = await appendManualReviewRun({
+        clipId: selectedQaFixtureId,
+        date: formatDateInput(new Date()),
+        notes: manualReviewDraft.notes || 'manual walkthrough result',
+        operator: manualReviewDraft.operator || 'unknown',
+        path: manualReviewDraft.path || 'actual clip',
+        status,
+      })
+      setQaState(nextQaState)
+      setQaNotice(
+        `${selectedQaFixtureId} walkthrough를 ${status}로 기록했습니다.`,
+      )
+      setManualReviewDraft((current) => ({
+        ...current,
+        notes: '',
+      }))
+    } catch {
+      setQaNotice('manual review 로그 저장에 실패했습니다.')
+    } finally {
+      setQaBusy(false)
+    }
+  }
+
+  const handleSubmitRehearsal = async () => {
+    setQaBusy(true)
+
+    try {
+      const nextQaState = await appendRehearsalRun({
+        ...rehearsalDraft,
+        date: rehearsalDraft.date || formatDateInput(new Date()),
+      })
+      setQaState(nextQaState)
+      setQaNotice('rehearsal log를 추가했습니다.')
+      setRehearsalDraft((current) => ({
+        ...current,
+        date: formatDateInput(new Date()),
+        notes: '',
+      }))
+    } catch {
+      setQaNotice('rehearsal log 저장에 실패했습니다.')
+    } finally {
+      setQaBusy(false)
+    }
   }
 
   const startCaptureWithConsent = async (mode: PendingCaptureStart) => {
@@ -1065,6 +1192,29 @@ function App() {
               showEvidence={showEvidence}
               steps={demoRunbookSteps}
             />
+            <QaReviewPanel
+              busy={qaBusy}
+              manualReviewDraft={manualReviewDraft}
+              notice={qaNotice}
+              onChangeManualReviewDraft={(patch) =>
+                setManualReviewDraft((current) => ({
+                  ...current,
+                  ...patch,
+                }))
+              }
+              onChangeRehearsalDraft={(patch) =>
+                setRehearsalDraft((current) => ({
+                  ...current,
+                  ...patch,
+                }))
+              }
+              onSelectFixture={setSelectedQaFixtureId}
+              onSubmitManualReview={handleSubmitManualReview}
+              onSubmitRehearsal={handleSubmitRehearsal}
+              qaState={qaState}
+              rehearsalDraft={rehearsalDraft}
+              selectedFixtureId={selectedQaFixtureId}
+            />
             <section className="panel-edge">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -1467,6 +1617,10 @@ function getPendingCaptureActionLabel(
 
 function isTrackKey(value: string): value is TrackKey {
   return value in trackLabels
+}
+
+function formatDateInput(value: Date) {
+  return value.toISOString().slice(0, 10)
 }
 
 export default App

@@ -141,3 +141,8 @@
 
 - 이유: 팀 단위 검수에서는 사람이 바로 수정할 수 있는 단순한 데이터 형식이 필요하지만, 발표용 체크리스트와 로그 문서도 항상 최신 상태를 유지해야 한다.
 - 영향: `data/eval/manual_review_runs.json`과 `data/eval/rehearsal_runs.json`을 단일 입력으로 두고, `pnpm qa:sync`가 `manual_review_log_2026-04-14.md`와 `demo_rehearsal_checklist.md`를 다시 생성한다. 실제 clip walkthrough가 없으면 status는 `pending`/`blocked`로 남기고, generated markdown에서 공백을 숨기지 않는다.
+
+### D-029 actual clip QA는 앱 안에서 바로 기록 가능해야 한다
+
+- 이유: 실제 시연 직전에는 터미널로 JSON을 직접 열어 수정하는 것보다, 현재 세션을 보면서 같은 화면 안에서 walkthrough 결과를 남기는 편이 훨씬 빠르고 협업 실수가 적다.
+- 영향: desktop UI는 `QaReviewPanel`에서 fixture별 status/path/notes와 rehearsal checklist를 바로 기록하고, Tauri command가 `data/eval/*runs.json`을 갱신한 뒤 `pnpm qa:sync`를 실행해 markdown 로그까지 맞춘다. 이 경로는 현재 개발 저장소 기준이며, 독립 배포용 bundle persistence와는 아직 분리되어 있다.

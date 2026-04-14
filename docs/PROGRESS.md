@@ -77,6 +77,9 @@
 - `swift build`, `swift run VoiceRuntimeBridge status`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 native audio/voice slice 검증 완료
 - `data/eval/manual_review_runs.json`, `data/eval/rehearsal_runs.json`, `scripts/sync-qa-logs.ts`, `pnpm qa:sync`를 추가해 actual clip/manual review와 rehearsal 로그를 구조화된 JSON에서 markdown 보고서로 동기화하는 경로를 마련
 - `pnpm qa:sync`, `pnpm qa:smoke`, `pnpm lint`로 QA log sync slice 검증 완료
+- Tauri `load_qa_review_state`, `append_manual_review_run`, `append_rehearsal_run` command와 desktop bridge를 추가해 앱 내부에서 QA 로그를 읽고 기록할 수 있게 정리
+- `QaReviewPanel`과 `qa-review` helper를 추가해 fixture별 manual walkthrough status, clip path, notes, rehearsal checklist를 UI에서 바로 남기고 `data/eval`에 sync되도록 연결
+- `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm qa:sync`, `pnpm lint`, `pnpm build`로 in-app QA workspace slice 검증 완료
 
 ### 진행 중
 

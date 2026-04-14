@@ -285,6 +285,57 @@ struct VoiceIntentRecognitionResult {
     message: Option<String>,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct QaFixtureRecord {
+    clip_id: String,
+    description: String,
+    expected_rule_ids: Vec<String>,
+    has_audio: bool,
+    hazard: String,
+    phase: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ManualReviewRunRecord {
+    clip_id: String,
+    date: String,
+    notes: String,
+    operator: String,
+    path: String,
+    status: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RehearsalRunRecord {
+    backup_ready: bool,
+    date: String,
+    evidence_and_cache_works: bool,
+    fallback_works: bool,
+    full_monitor_capture_works: bool,
+    low_confidence_fallback_works: bool,
+    no_audio_fallback_works: bool,
+    notes: String,
+    operator: String,
+    path: String,
+    permissions_retry_works: bool,
+    result: String,
+    shadow_player_primary: bool,
+    startup_under10s: bool,
+    voice_off_works: bool,
+    window_capture_works: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct QaReviewState {
+    fixtures: Vec<QaFixtureRecord>,
+    manual_review_runs: Vec<ManualReviewRunRecord>,
+    rehearsal_runs: Vec<RehearsalRunRecord>,
+}
+
 #[derive(Default)]
 struct CaptureBridgeState {
     sessions: Mutex<HashMap<String, ManagedCaptureProcess>>,
@@ -569,6 +620,33 @@ fn load_last_live_analysis_snapshot() -> Result<Option<LiveAnalysisSnapshotInput
         .map_err(|error| error.to_string())?;
 
     Ok(Some(snapshot))
+}
+
+#[tauri::command]
+fn load_qa_review_state() -> Result<QaReviewState, String> {
+    Ok(QaReviewState {
+        fixtures: read_json_file(eval_fixtures_path())?,
+        manual_review_runs: read_json_file(manual_review_runs_path())?,
+        rehearsal_runs: read_json_file(rehearsal_runs_path())?,
+    })
+}
+
+#[tauri::command]
+fn append_manual_review_run(input: ManualReviewRunRecord) -> Result<QaReviewState, String> {
+    let mut runs: Vec<ManualReviewRunRecord> = read_json_file(manual_review_runs_path())?;
+    runs.push(input);
+    write_json_file(manual_review_runs_path(), &runs)?;
+    sync_qa_logs()?;
+    load_qa_review_state()
+}
+
+#[tauri::command]
+fn append_rehearsal_run(input: RehearsalRunRecord) -> Result<QaReviewState, String> {
+    let mut runs: Vec<RehearsalRunRecord> = read_json_file(rehearsal_runs_path())?;
+    runs.push(input);
+    write_json_file(rehearsal_runs_path(), &runs)?;
+    sync_qa_logs()?;
+    load_qa_review_state()
 }
 
 #[tauri::command]
@@ -1003,6 +1081,28 @@ fn live_analysis_snapshot_path() -> PathBuf {
         .join("live-analysis-latest.json")
 }
 
+fn repo_root_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .to_path_buf()
+}
+
+fn eval_dir() -> PathBuf {
+    repo_root_dir().join("data").join("eval")
+}
+
+fn eval_fixtures_path() -> PathBuf {
+    eval_dir().join("annotated_segments.json")
+}
+
+fn manual_review_runs_path() -> PathBuf {
+    eval_dir().join("manual_review_runs.json")
+}
+
+fn rehearsal_runs_path() -> PathBuf {
+    eval_dir().join("rehearsal_runs.json")
+}
+
 fn runtime_db_path() -> PathBuf {
     local_runtime_dir().join("runtime.sqlite3")
 }
@@ -1080,6 +1180,30 @@ fn append_json_line<T: Serialize>(path: &Path, value: &T) -> Result<(), String> 
         .map_err(|error| error.to_string())?;
     let line = serde_json::to_string(value).map_err(|error| error.to_string())?;
     writeln!(file, "{line}").map_err(|error| error.to_string())
+}
+
+fn read_json_file<T>(path: PathBuf) -> Result<T, String>
+where
+    T: Default + DeserializeOwned,
+{
+    if !path.exists() {
+        return Ok(T::default());
+    }
+
+    let raw = fs::read(path).map_err(|error| error.to_string())?;
+    serde_json::from_slice::<T>(&raw).map_err(|error| error.to_string())
+}
+
+fn write_json_file<T: Serialize>(path: PathBuf, value: &T) -> Result<(), String> {
+    ensure_parent_dir(&path)?;
+    fs::write(
+        path,
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(value).map_err(|error| error.to_string())?
+        ),
+    )
+    .map_err(|error| error.to_string())
 }
 
 fn open_runtime_db() -> Result<Connection, String> {
@@ -1266,6 +1390,22 @@ fn persist_live_analysis_snapshot(input: &LiveAnalysisSnapshotInput) -> Result<(
     Ok(())
 }
 
+fn sync_qa_logs() -> Result<(), String> {
+    let output = Command::new("pnpm")
+        .args(["qa:sync"])
+        .current_dir(repo_root_dir())
+        .output()
+        .map_err(|error| error.to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Err(if stderr.is_empty() { stdout } else { stderr })
+    }
+}
+
 fn json_string_field(value: &Value, key: &str) -> Option<String> {
     value
         .get(key)
@@ -1329,6 +1469,9 @@ pub fn run() {
             append_session_log_entry,
             save_live_analysis_snapshot,
             load_last_live_analysis_snapshot,
+            load_qa_review_state,
+            append_manual_review_run,
+            append_rehearsal_run,
             get_voice_runtime_status,
             speak_voice_reply,
             stop_voice_reply,

@@ -9,6 +9,7 @@
 - live capture frame window에서 local `PerceptionPacket -> Segment -> explanation` 갱신과 snapshot/session log 저장 경로 구현
 - Tauri runtime에 SQLite-backed app/session restore를 추가해 마지막 라이브 분석 요약과 runtime state를 재시작 후 복원 가능하게 정리
 - ScreenCaptureKit audio callback 기반 native preview audio 상태와 macOS TTS/STT + browser/text fallback voice runtime 구현
+- actual clip manual review와 3분 rehearsal 결과를 앱 안에서 기록하고 `data/eval` 로그로 동기화하는 QA workspace 구현
 - safety/privacy guardrail, QA audit, demo runbook/backup mode, runtime restore/export 경로 구현
 - 아직 남은 핵심은 실제 OCR/ASR 모델 연결, live audio의 ASR/Shadow buffer 직결, 실제 clip 기반 rehearsal 축적
 

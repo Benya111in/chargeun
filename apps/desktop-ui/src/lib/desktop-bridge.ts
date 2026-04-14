@@ -22,6 +22,11 @@ import type {
   LiveAnalysisSnapshotInput,
   SessionLogEntryPayload,
 } from './live-analysis-contract'
+import type {
+  ManualReviewRunRecord,
+  QaReviewState,
+  RehearsalRunRecord,
+} from './qa-review'
 
 export type ClearLocalRuntimeResult = {
   cleared: boolean
@@ -44,6 +49,7 @@ export type PersistLocalRecordResult = {
 const runtimeStateStorageKey = 'ansimtrack.runtime-state'
 const liveAnalysisSnapshotStorageKey = 'ansimtrack.live-analysis.latest'
 const sessionLogStorageKey = 'ansimtrack.session-log'
+const qaReviewStateStorageKey = 'ansimtrack.qa-review'
 
 export type VoiceRuntimeStatus = {
   nativeTtsAvailable: boolean
@@ -314,6 +320,42 @@ export async function listenToVoiceRuntimeEvents(
   }
 }
 
+export async function loadQaReviewState(): Promise<QaReviewState> {
+  if (!isTauri()) {
+    return loadQaReviewStateFromBrowser()
+  }
+
+  try {
+    return await invoke<QaReviewState>('load_qa_review_state')
+  } catch {
+    return {
+      fixtures: [],
+      manualReviewRuns: [],
+      rehearsalRuns: [],
+    }
+  }
+}
+
+export async function appendManualReviewRun(
+  input: ManualReviewRunRecord,
+): Promise<QaReviewState> {
+  if (!isTauri()) {
+    return appendManualReviewRunInBrowser(input)
+  }
+
+  return invoke<QaReviewState>('append_manual_review_run', { input })
+}
+
+export async function appendRehearsalRun(
+  input: RehearsalRunRecord,
+): Promise<QaReviewState> {
+  if (!isTauri()) {
+    return appendRehearsalRunInBrowser(input)
+  }
+
+  return invoke<QaReviewState>('append_rehearsal_run', { input })
+}
+
 function loadRuntimeStateFromBrowser() {
   if (typeof window === 'undefined') {
     return defaultAppRuntimeState
@@ -358,6 +400,35 @@ function loadLiveAnalysisSnapshotFromBrowser() {
   }
 }
 
+function loadQaReviewStateFromBrowser(): QaReviewState {
+  if (typeof window === 'undefined') {
+    return {
+      fixtures: [],
+      manualReviewRuns: [],
+      rehearsalRuns: [],
+    }
+  }
+
+  try {
+    const raw = window.localStorage.getItem(qaReviewStateStorageKey)
+    if (!raw) {
+      return {
+        fixtures: [],
+        manualReviewRuns: [],
+        rehearsalRuns: [],
+      }
+    }
+
+    return JSON.parse(raw) as QaReviewState
+  } catch {
+    return {
+      fixtures: [],
+      manualReviewRuns: [],
+      rehearsalRuns: [],
+    }
+  }
+}
+
 function appendSessionLogEntryInBrowser(
   input: SessionLogEntryPayload,
 ): PersistLocalRecordResult {
@@ -397,6 +468,40 @@ function saveLiveAnalysisSnapshotInBrowser(
   return {
     path: liveAnalysisSnapshotStorageKey,
     status: 'browser-preview',
+  }
+}
+
+function appendManualReviewRunInBrowser(
+  input: ManualReviewRunRecord,
+): QaReviewState {
+  const current = loadQaReviewStateFromBrowser()
+  const next = {
+    ...current,
+    manualReviewRuns: [...current.manualReviewRuns, input],
+  }
+  saveQaReviewStateToBrowser(next)
+  return next
+}
+
+function appendRehearsalRunInBrowser(input: RehearsalRunRecord): QaReviewState {
+  const current = loadQaReviewStateFromBrowser()
+  const next = {
+    ...current,
+    rehearsalRuns: [...current.rehearsalRuns, input],
+  }
+  saveQaReviewStateToBrowser(next)
+  return next
+}
+
+function saveQaReviewStateToBrowser(state: QaReviewState) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(qaReviewStateStorageKey, JSON.stringify(state))
+  } catch {
+    // Ignore preview-mode storage failures.
   }
 }
 

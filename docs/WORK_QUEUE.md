@@ -97,3 +97,4 @@
 21. `pending` 실제 clip 기반 manual QA + rehearsal 반복
     - source docs: `docs/18_EVALUATION_AND_QA.md`, `docs/19_DEMO_RUNBOOK_AND_PITCH.md`, `docs/21_RELEASE_CHECKLIST.md`, `docs/22_POST_DEMO_BACKLOG.md`
     - goal: 실제 clip 경계와 음성/근거/발표 흐름을 사람 기준으로 검증하고 rehearsal log를 누적한다
+    - current status: app 내 QA workspace와 `data/eval/*runs.json` log sync는 준비됨, 실제 clip walkthrough와 rehearsal 누적이 남음
