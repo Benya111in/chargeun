@@ -18,6 +18,9 @@
 - `native/mac-capture`에 permission/source/session foundation 추가
 - ScreenCaptureKit source enumerate와 session bookkeeping을 반영한 `MacCaptureCoordinator` 강화
 - `swift build`, `swift run MacCaptureSmoke`로 native foundation smoke 검증
+- Tauri에 `get_bootstrap_state`, `list_native_capture_sources`, `start_native_capture`, `stop_native_capture` command 추가
+- desktop UI capture controller가 Tauri native command를 우선 사용하도록 연결
+- `cargo check`까지 포함해 command/UI 경로 검증
 
 ### 진행 중
 
@@ -28,6 +31,6 @@
 ### 다음
 
 1. `native/mac-capture`를 ScreenCaptureKit 세션/권한/소스 열거 경로로 강화
-2. Tauri 셸에서 source enumerate, start, stop command를 실제 capture bridge와 연결
+2. Tauri command를 `native/mac-capture` Swift foundation과 직접 연결
 3. native frame/audio event를 preview/shadow 입력으로 전달하는 브리지 추가
 4. browser/native preview 입력을 shadow/perception lane으로 분기 연결

@@ -8,3 +8,5 @@
 - browser live preview fallback은 켜졌지만 아직 shadow buffer나 perception packet 입력으로는 연결되지 않았다.
 - native mac capture는 source enumerate와 logical session bookkeeping까지 구현됐지만 실제 frame/audio stream bridge는 아직 미구현이다.
 - `swift test`는 현재 로컬 툴체인에서 `XCTest`/`Testing` 모듈을 바로 찾지 못해 smoke executable 검증으로 대체하고 있다.
+- 현재 Tauri `list/start/stop` command는 UI 계약을 고정하기 위한 상태 레이어이며, 아직 Swift `MacCaptureCoordinator`를 직접 호출하지 않는다.
+- native source 목록은 현재 seeded 값이라 실제 OS display/window enumeration과 아직 1:1로 연결되지 않았다.

@@ -7,13 +7,20 @@ import {
   DEFAULT_CAPTURE_BOOTSTRAP_STATE,
   NATIVE_MONITOR_SOURCE_ID,
   buildCaptureSources,
+  captureSessionFromNativeRecord,
   createCaptureSession,
   type CaptureBootstrapState,
   type CaptureControllerStatus,
   type CapturePermissionState,
   type CaptureSourceOption,
+  type NativeCaptureSourceRecord,
 } from './capture-contract'
-import { getCaptureBootstrapState } from './desktop-bridge'
+import {
+  getCaptureBootstrapState,
+  listNativeCaptureSources,
+  startNativeCapture,
+  stopNativeCapture,
+} from './desktop-bridge'
 
 type CaptureControllerState = {
   activeSession: CaptureSession | null
@@ -44,12 +51,20 @@ export function useCaptureController() {
   const [activeSession, setActiveSession] = useState<CaptureSession | null>(
     null,
   )
+  const [nativeSources, setNativeSources] = useState<
+    NativeCaptureSourceRecord[]
+  >([])
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null)
   const previewStreamRef = useRef<MediaStream | null>(null)
 
   const sources = useMemo(
-    () => buildCaptureSources({ bootstrap, browserCaptureSupported }),
-    [bootstrap],
+    () =>
+      buildCaptureSources({
+        bootstrap,
+        browserCaptureSupported,
+        nativeSources,
+      }),
+    [bootstrap, nativeSources],
   )
 
   const selectedSource = useMemo(
@@ -71,12 +86,28 @@ export function useCaptureController() {
       }
 
       setBootstrap(nextBootstrap)
+      const nextNativeSources = await listNativeCaptureSources()
+
+      if (!isActive) {
+        return
+      }
+
+      setNativeSources(nextNativeSources)
       setStatus('idle')
       setNotice(
-        nextBootstrap.capturePath === 'screen-capture-kit-ready'
+        nextBootstrap.capturePath === 'screen-capture-kit-ready' ||
+          nextBootstrap.capturePath === 'screen-capture-kit-command-ready'
           ? 'macOS 우선 경로가 준비되었습니다. 브라우저 fallback은 보조 경로로 유지됩니다.'
           : 'macOS 우선 경로는 준비 중입니다. live preview는 브라우저 fallback으로 먼저 검증할 수 있습니다.',
       )
+
+      if (nextNativeSources[0]) {
+        setSelectedSourceId((current) =>
+          current === '' || current === NATIVE_MONITOR_SOURCE_ID
+            ? nextNativeSources[0]?.id || current
+            : current,
+        )
+      }
     })()
 
     return () => {
@@ -85,10 +116,21 @@ export function useCaptureController() {
     }
   }, [])
 
-  const stopCapture = (nextNotice = '캡처를 중지했습니다.') => {
+  const stopCapture = async (nextNotice = '캡처를 중지했습니다.') => {
     stopMediaStream(previewStreamRef.current)
     previewStreamRef.current = null
     setPreviewStream(null)
+
+    if (activeSession?.platform === 'mac') {
+      try {
+        await stopNativeCapture({ sessionId: activeSession.id })
+      } catch {
+        setStatus('error')
+        setNotice('native capture 세션을 정리하지 못했습니다.')
+        return
+      }
+    }
+
     setActiveSession(null)
     setStatus('idle')
     setNotice(nextNotice)
@@ -166,11 +208,46 @@ export function useCaptureController() {
   }
 
   const startNativeMonitor = async () => {
-    setSelectedSourceId(NATIVE_MONITOR_SOURCE_ID)
-    setStatus('error')
-    setNotice(
-      'ScreenCaptureKit bridge는 다음 slice에서 Tauri/native 명령으로 연결합니다. 지금은 브라우저 fallback preview로 live path를 검증하세요.',
-    )
+    const source =
+      selectedSource?.runtime === 'native-mac'
+        ? selectedSource
+        : (sources.find((candidate) => candidate.runtime === 'native-mac') ??
+          null)
+
+    if (!source?.ready) {
+      setStatus('error')
+      setNotice(
+        '현재 native capture 경로가 준비되지 않았습니다. 브라우저 fallback preview로 먼저 검증하세요.',
+      )
+      return
+    }
+
+    setSelectedSourceId(source.id)
+    setStatus('starting')
+    setNotice('native ScreenCaptureKit capture 세션을 시작하는 중입니다.')
+
+    try {
+      stopMediaStream(previewStreamRef.current)
+      previewStreamRef.current = null
+      setPreviewStream(null)
+
+      const session = await startNativeCapture({
+        sourceId: source.id,
+        includeAudio: true,
+      })
+
+      setPermission('granted')
+      setActiveSession(captureSessionFromNativeRecord(session))
+      setStatus('running')
+      setNotice(
+        'native capture 세션이 시작되었습니다. preview/frame bridge는 다음 slice에서 연결하고, 현재 Shadow Player replay lane은 mock buffer를 유지합니다.',
+      )
+    } catch {
+      setStatus('error')
+      setNotice(
+        'native capture 세션을 시작하지 못했습니다. 브라우저 fallback preview로 계속 검증할 수 있습니다.',
+      )
+    }
   }
 
   const state: CaptureControllerState = {

@@ -24,6 +24,26 @@ export type CaptureBootstrapState = {
   shadowDelayMs: number
 }
 
+export type NativeCaptureSourceRecord = {
+  id: string
+  displayName: string
+  sourceType: Extract<CaptureSourceType, 'monitor' | 'window'>
+  width: number
+  height: number
+}
+
+export type NativeCaptureSessionRecord = {
+  sessionId: string
+  sourceId: string
+  sourceType: Extract<CaptureSourceType, 'monitor' | 'window'>
+  displayName: string
+  hasAudio: boolean
+  platform: CaptureSession['platform']
+  startedAt: number
+  outputWidth: number
+  outputHeight: number
+}
+
 export type CaptureSourceOption = {
   id: string
   displayName: string
@@ -61,22 +81,37 @@ export const captureStatusLabels: Record<CaptureControllerStatus, string> = {
 export function buildCaptureSources(input: {
   bootstrap: CaptureBootstrapState
   browserCaptureSupported: boolean
+  nativeSources?: NativeCaptureSourceRecord[]
 }): CaptureSourceOption[] {
-  const { bootstrap, browserCaptureSupported } = input
+  const { bootstrap, browserCaptureSupported, nativeSources = [] } = input
+
+  const preferredNativeSources =
+    nativeSources.length > 0
+      ? nativeSources.map((source) => ({
+          id: source.id,
+          displayName: source.displayName,
+          sourceType: source.sourceType,
+          runtime: 'native-mac' as const,
+          priority: 'primary' as const,
+          description: `${source.width}x${source.height} ScreenCaptureKit source`,
+          ready: isNativeCapturePathReady(bootstrap.capturePath),
+        }))
+      : [
+          {
+            id: NATIVE_MONITOR_SOURCE_ID,
+            displayName: '현재 모니터',
+            sourceType: 'monitor' as const,
+            runtime: 'native-mac' as const,
+            priority: 'primary' as const,
+            description: isNativeCapturePathReady(bootstrap.capturePath)
+              ? 'macOS ScreenCaptureKit command path'
+              : 'ScreenCaptureKit bridge 연결 예정',
+            ready: isNativeCapturePathReady(bootstrap.capturePath),
+          },
+        ]
 
   return [
-    {
-      id: NATIVE_MONITOR_SOURCE_ID,
-      displayName: '현재 모니터',
-      sourceType: 'monitor',
-      runtime: 'native-mac',
-      priority: 'primary',
-      description:
-        bootstrap.capturePath === 'screen-capture-kit-ready'
-          ? 'macOS ScreenCaptureKit 우선 경로'
-          : 'ScreenCaptureKit bridge 연결 예정',
-      ready: bootstrap.capturePath === 'screen-capture-kit-ready',
-    },
+    ...preferredNativeSources,
     {
       id: BROWSER_FALLBACK_SOURCE_ID,
       displayName: '브라우저 화면 공유',
@@ -89,6 +124,13 @@ export function buildCaptureSources(input: {
       ready: browserCaptureSupported,
     },
   ]
+}
+
+export function isNativeCapturePathReady(capturePath: string) {
+  return (
+    capturePath === 'screen-capture-kit-ready' ||
+    capturePath === 'screen-capture-kit-command-ready'
+  )
 }
 
 export function createCaptureSession(
@@ -106,5 +148,18 @@ export function createCaptureSession(
     startedAt: Date.now(),
     hasAudio: input.hasAudio,
     displayName: input.displayName ?? source.displayName,
+  }
+}
+
+export function captureSessionFromNativeRecord(
+  session: NativeCaptureSessionRecord,
+): CaptureSession {
+  return {
+    id: session.sessionId,
+    sourceType: session.sourceType,
+    platform: session.platform,
+    startedAt: session.startedAt,
+    hasAudio: session.hasAudio,
+    displayName: session.displayName,
   }
 }
