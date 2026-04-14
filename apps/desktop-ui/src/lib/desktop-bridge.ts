@@ -51,6 +51,20 @@ export type ExtractOcrTokensResult = {
   tokens: string[]
 }
 
+export type TranscribeAudioSampleResult = {
+  status:
+    | 'browser-preview'
+    | 'recognized'
+    | 'no-match'
+    | 'unavailable'
+    | 'missing-file'
+    | 'error'
+  transcript: string
+  locale?: string | null
+  source: string
+  message?: string | null
+}
+
 const runtimeStateStorageKey = 'ansimtrack.runtime-state'
 const liveAnalysisSnapshotStorageKey = 'ansimtrack.live-analysis.latest'
 const sessionLogStorageKey = 'ansimtrack.session-log'
@@ -212,6 +226,36 @@ export async function extractOcrTokens(input: {
     return {
       status: 'browser-preview',
       tokens: [],
+    }
+  }
+}
+
+export async function transcribeAudioSample(input: {
+  pcmRef: string
+  locale?: string
+}): Promise<TranscribeAudioSampleResult> {
+  if (!isTauri()) {
+    return {
+      status: 'browser-preview',
+      transcript: '',
+      source: 'browser-preview',
+    }
+  }
+
+  try {
+    return await invoke<TranscribeAudioSampleResult>(
+      'transcribe_audio_sample',
+      {
+        input,
+      },
+    )
+  } catch (error) {
+    return {
+      status: 'error',
+      transcript: '',
+      source: 'speech',
+      message:
+        error instanceof Error ? error.message : 'audio transcription failed',
     }
   }
 }

@@ -1,9 +1,11 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use reqwest::blocking::multipart::{Form, Part};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
+    env,
     fs,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
@@ -195,6 +197,33 @@ struct BridgeOcrTokensResult {
 struct ExtractOcrTokensResult {
     status: String,
     tokens: Vec<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TranscribeAudioSampleInput {
+    pcm_ref: String,
+    locale: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BridgeAudioTranscriptionResult {
+    status: String,
+    transcript: String,
+    locale: Option<String>,
+    source: String,
+    message: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TranscribeAudioSampleResult {
+    status: String,
+    transcript: String,
+    locale: Option<String>,
+    source: String,
+    message: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -634,6 +663,73 @@ fn extract_ocr_tokens(
 }
 
 #[tauri::command]
+fn transcribe_audio_sample(input: TranscribeAudioSampleInput) -> Result<TranscribeAudioSampleResult, String> {
+    let mut args = vec![
+        "transcribe-audio".to_string(),
+        "--audio-path".to_string(),
+        input.pcm_ref.clone(),
+    ];
+
+    if let Some(locale) = input.locale.clone() {
+        args.push("--locale".to_string());
+        args.push(locale);
+    }
+
+    let arg_refs = args.iter().map(String::as_str).collect::<Vec<_>>();
+    let local_result = run_mac_capture_bridge_json::<BridgeAudioTranscriptionResult>(&arg_refs)
+        .unwrap_or(BridgeAudioTranscriptionResult {
+            status: "error".into(),
+            transcript: String::new(),
+            locale: input.locale.clone(),
+            source: "speech".into(),
+            message: Some("MacCaptureBridge audio transcription did not return JSON.".into()),
+        });
+
+    let local_status = local_result.status.as_str();
+    let needs_fallback = Path::new(&input.pcm_ref).exists()
+        && local_status != "recognized"
+        && local_status != "no-match"
+        && local_status != "missing-file";
+
+    if needs_fallback {
+        if let Some(api_key) = openai_api_key_from_env() {
+            match transcribe_audio_with_openai(&api_key, &input.pcm_ref, input.locale.as_deref()) {
+                Ok(mut fallback) => {
+                    if fallback.message.is_none() && local_result.message.is_some() {
+                        fallback.message = Some(format!(
+                            "macOS Speech unavailable, OpenAI fallback used: {}",
+                            local_result.message.clone().unwrap_or_default()
+                        ));
+                    }
+
+                    return Ok(fallback);
+                }
+                Err(error) => {
+                    return Ok(TranscribeAudioSampleResult {
+                        status: local_result.status,
+                        transcript: local_result.transcript,
+                        locale: local_result.locale,
+                        source: local_result.source,
+                        message: Some(match local_result.message {
+                            Some(message) => format!("{message} | OpenAI fallback failed: {error}"),
+                            None => format!("OpenAI fallback failed: {error}"),
+                        }),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(TranscribeAudioSampleResult {
+        status: local_result.status,
+        transcript: local_result.transcript,
+        locale: local_result.locale,
+        source: local_result.source,
+        message: local_result.message,
+    })
+}
+
+#[tauri::command]
 fn append_session_log_entry(
     app: AppHandle,
     input: SessionLogEntryPayload,
@@ -1068,6 +1164,154 @@ fn run_mac_capture_bridge(args: &[&str]) -> Result<Vec<u8>, String> {
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Err(if stderr.is_empty() { stdout } else { stderr })
     }
+}
+
+fn openai_api_key_from_env() -> Option<String> {
+    env::var("SLOWLEARNER_OPENAI_API_KEY")
+        .ok()
+        .or_else(|| env::var("OPENAI_API_KEY").ok())
+        .filter(|value| !value.trim().is_empty())
+}
+
+fn transcribe_audio_with_openai(
+    api_key: &str,
+    audio_path: &str,
+    locale: Option<&str>,
+) -> Result<TranscribeAudioSampleResult, String> {
+    let (upload_path, cleanup_path, mime_type) = prepare_audio_upload_for_openai(audio_path)?;
+    let upload_bytes = fs::read(&upload_path).map_err(|error| error.to_string())?;
+    let file_name = upload_path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("audio.wav")
+        .to_string();
+    let mut form = Form::new().text("model", "gpt-4o-mini-transcribe").part(
+        "file",
+        Part::bytes(upload_bytes)
+            .file_name(file_name)
+            .mime_str(&mime_type)
+            .map_err(|error| error.to_string())?,
+    );
+
+    if let Some(language) = locale.and_then(normalize_openai_language) {
+        form = form.text("language", language);
+    }
+
+    let client = reqwest::blocking::Client::builder()
+        .build()
+        .map_err(|error| error.to_string())?;
+    let response = client
+        .post("https://api.openai.com/v1/audio/transcriptions")
+        .bearer_auth(api_key)
+        .header(
+            "X-Client-Request-Id",
+            format!("slowlearner-asr-{}", current_timestamp_ms()),
+        )
+        .multipart(form)
+        .send()
+        .map_err(|error| error.to_string())?;
+    let status_code = response.status();
+    let payload = response.text().map_err(|error| error.to_string())?;
+
+    if let Some(temp_path) = cleanup_path {
+        let _ = fs::remove_file(temp_path);
+    }
+
+    let value = serde_json::from_str::<Value>(&payload).map_err(|error| error.to_string())?;
+    if !status_code.is_success() {
+        let message = value
+            .pointer("/error/message")
+            .and_then(Value::as_str)
+            .unwrap_or("OpenAI transcription request failed.")
+            .to_string();
+        return Err(message);
+    }
+
+    let transcript = value
+        .get("text")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    Ok(TranscribeAudioSampleResult {
+        status: if transcript.is_empty() {
+            "no-match".into()
+        } else {
+            "recognized".into()
+        },
+        transcript,
+        locale: locale.map(ToString::to_string),
+        source: "openai-transcribe".into(),
+        message: None,
+    })
+}
+
+fn prepare_audio_upload_for_openai(audio_path: &str) -> Result<(PathBuf, Option<PathBuf>, String), String> {
+    let path = PathBuf::from(audio_path);
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase())
+        .unwrap_or_default();
+
+    if matches!(
+        extension.as_str(),
+        "mp3" | "mp4" | "mpeg" | "mpga" | "m4a" | "wav" | "webm"
+    ) {
+        return Ok((path, None, mime_type_for_audio_extension(&extension).into()));
+    }
+
+    let converted_path = env::temp_dir().join(format!(
+        "slowlearner-openai-asr-{}.wav",
+        current_timestamp_ms()
+    ));
+    let output = Command::new("afconvert")
+        .args([
+            "-f",
+            "WAVE",
+            "-d",
+            "LEI16@16000",
+            audio_path,
+            converted_path
+                .to_str()
+                .ok_or_else(|| "Converted audio path was not valid UTF-8".to_string())?,
+        ])
+        .output()
+        .map_err(|error| error.to_string())?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        return Err(if stderr.is_empty() { stdout } else { stderr });
+    }
+
+    Ok((converted_path.clone(), Some(converted_path), "audio/wav".into()))
+}
+
+fn mime_type_for_audio_extension(extension: &str) -> &'static str {
+    match extension {
+        "mp3" => "audio/mpeg",
+        "mp4" | "m4a" => "audio/mp4",
+        "mpeg" | "mpga" => "audio/mpeg",
+        "webm" => "audio/webm",
+        _ => "audio/wav",
+    }
+}
+
+fn normalize_openai_language(locale: &str) -> Option<String> {
+    let normalized = locale.trim();
+    if normalized.is_empty() {
+        return None;
+    }
+
+    Some(
+        normalized
+            .split(['-', '_'])
+            .next()
+            .unwrap_or(normalized)
+            .to_ascii_lowercase(),
+    )
 }
 
 fn spawn_voice_runtime_bridge_speak(input: &SpeakVoiceReplyInput) -> Result<Child, String> {
@@ -1711,6 +1955,7 @@ pub fn run() {
             save_app_runtime_state,
             export_demo_artifact,
             extract_ocr_tokens,
+            transcribe_audio_sample,
             append_session_log_entry,
             save_live_analysis_snapshot,
             load_last_live_analysis_snapshot,

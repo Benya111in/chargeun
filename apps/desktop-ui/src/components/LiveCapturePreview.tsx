@@ -14,6 +14,9 @@ import type { NativePreviewState } from '../lib/native-preview'
 import { cn } from '../lib/utils'
 
 export function LiveCapturePreview({
+  asrMessage,
+  asrStatus,
+  asrText,
   notice,
   ocrStatus,
   ocrTokenCount,
@@ -24,6 +27,9 @@ export function LiveCapturePreview({
   captureInput,
   nativePreview,
 }: {
+  asrMessage: string | null
+  asrStatus: 'idle' | 'ready' | 'transcribing' | 'unavailable'
+  asrText: string
   notice: string
   captureInput: CaptureInputState
   ocrStatus: 'idle' | 'ready' | 'scanning'
@@ -162,6 +168,18 @@ export function LiveCapturePreview({
                 ? '인식 중'
                 : '대기 중'}
           </p>
+          <p>
+            ASR adapter:{' '}
+            {asrStatus === 'ready'
+              ? '전사 준비됨'
+              : asrStatus === 'transcribing'
+                ? '오디오 chunk 전사 중'
+                : asrStatus === 'unavailable'
+                  ? '미연결 또는 권한 필요'
+                  : '대기 중'}
+          </p>
+          {asrText ? <p>최근 ASR: {asrText}</p> : null}
+          {asrMessage ? <p>{asrMessage}</p> : null}
           {nativePreview.lastError ? <p>{nativePreview.lastError}</p> : null}
         </div>
       </div>

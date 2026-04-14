@@ -5,14 +5,15 @@
 - 음성 입력은 이제 네이티브/브라우저 경로가 있지만, 여전히 버튼 intent와 텍스트 fallback이 가장 안정적인 시연 경로다.
 - 데모 데이터는 mock 세션을 사용하므로 실제 캡처 drift는 아직 검증되지 않았다.
 - Shadow Player의 auto-pause는 현재 marker 기반 UI 검증 단계이며 실제 segment detector 연동은 후속 작업이다.
-- perception worker는 이제 live OCR token을 macOS Vision bridge에서 받을 수 있지만, ASR adapter는 아직 비어 있어 실제 모델 추론은 audio 쪽에서 남아 있다.
+- perception worker는 이제 live OCR token과 ASR text signal을 모두 받을 수 있지만, ASR는 현재 temp audio chunk + optional transcription fallback 조합이라 완전 로컬 제품 경로는 아직 아니다.
 - native mac preview는 low-fps snapshot frame 이벤트가 실제 Shadow replay에도 들어가지만, continuous video/audio stream을 그대로 sync playback하는 단계는 아직 미구현이다.
 - `swift test`는 현재 로컬 툴체인에서 `XCTest`/`Testing` 모듈을 바로 찾지 못해 smoke executable 검증으로 대체하고 있다.
 - Tauri `list/start/stop` command는 이제 Swift `MacCaptureBridge`를 직접 호출하지만, executable subprocess 경로라 첫 호출 시 지연이 있을 수 있다.
-- native audio preview는 이제 실제 ScreenCaptureKit audio callback을 내보내지만, PCM payload 저장/재생이나 live ASR 입력까지는 아직 연결되지 않았다.
+- native audio preview는 이제 실제 ScreenCaptureKit audio callback을 temp `.caf` chunk로 저장하고 live ASR 입력까지 연결하지만, chunk cleanup policy와 continuous audio playback UX는 아직 최소 수준이다.
 - 현재 로컬 macOS는 `swift run MacCaptureBridge bootstrap` 기준 Screen Recording 권한이 `denied` 상태라, 실제 native frame smoke는 권한 허용 후에만 검증할 수 있다.
 - Shadow Player replay lane은 이제 `captureInput.frameWindow` 기반 sampled-frame replay를 사용하지만, 실제 영상 코덱 단위의 연속 재생과 오디오 drift 보정은 아직 없다.
-- desktop UI는 이제 live capture의 `captureInput`와 Vision OCR token을 local perception/segment/explanation 경로에 흘리지만, ASR가 아직 없어 live path는 여전히 visual/OCR 중심 fallback으로 동작한다.
+- desktop UI는 이제 live capture의 `captureInput`, Vision OCR token, ASR transcript를 local perception/segment/explanation 경로에 흘리지만, OpenAI fallback key가 없으면 audio path는 `unavailable`로 남고 live 분석은 계속 visual/OCR 중심으로 동작한다.
+- `MacCaptureBridge transcribe-audio`는 CLI bridge에서 speech authorization prompt를 직접 띄우지 않는다. 현재 구조에서는 TCC privacy crash를 피하기 위한 선택이라, pure-local macOS Speech 전사는 별도 bundled native path가 생기기 전까지 자동 활성화되지 않는다.
 - 현재 voice path는 macOS native TTS와 command-style STT를 우선 사용하지만, STT는 5개 지원 intent 문장 중심이라 자유 dictation 수준은 아니다.
 - `VoiceRuntimeBridge`는 현재 `NSSpeechSynthesizer` 기반이라 macOS 14+ deprecation warning이 남아 있으며, 추후 `AVSpeechSynthesizer`로 교체하는 것이 맞다.
 - evidence drawer는 live packet까지 보여 주고 마지막 live snapshot도 복원하지만, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
@@ -20,6 +21,7 @@
 - 브라우저 데모 모드에서는 filesystem cache clear를 직접 실행하지 않고, 실제 `clear_local_runtime` command는 Tauri 실행 경로에서만 동작한다.
 - `qa:sync`는 manual review/rehearsal markdown을 최신화하지만, 실제 clip을 재생하고 UI를 눈으로 검수하는 작업 자체를 자동화하지는 않는다.
 - standalone release bundle은 이제 eval fixture와 seed QA JSON을 포함하고 app-local data로 복사해 쓰지만, local mp4/mov clip 자체를 번들에 포함하거나 자동으로 복사하지는 않는다.
+- OpenAI transcription fallback은 환경변수(`OPENAI_API_KEY` 또는 `SLOWLEARNER_OPENAI_API_KEY`)가 있어야만 동작하며, 현재 앱 내부 secure secret 입력/저장 UI는 없다.
 - QA workspace의 local clip preview는 사용자가 직접 넣은 local path와 비디오 확장자(`mp4`, `mov`, `m4v`, `webm`, `ogg`)에 의존하며, 폴더 스캔이나 clip 존재 확인 UI는 아직 없다.
 - QA workspace의 release checklist snapshot은 현재 rehearsal JSON에 있는 항목만 파생하므로, Shadow Player pause/seek/replay marker 같은 세부 동작은 여전히 사람이 수동으로 확인해야 한다.
 - fixture에 외부 source reference를 붙일 수는 있지만, YouTube 원본에서 필요한 구간을 자동으로 잘라 주거나 duration/timestamp를 자동 태깅하는 intake 도구는 아직 없다.

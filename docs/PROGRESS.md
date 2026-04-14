@@ -120,13 +120,19 @@
 - Tauri `extract_ocr_tokens` command와 `MacCaptureBridge ocr-image` Vision OCR 경로를 추가해 latest frame data URL을 임시 이미지로 풀고 실제 한글/영문 OCR token을 뽑아 live perception에 주입하도록 정리
 - `useLiveOcrTokens` hook과 preview OCR status를 추가해 current session frame window 기준 OCR token을 누적/표시하고, live analysis가 demo fixture 대신 실제 OCR token을 evidence로 사용하도록 연결
 - `swift build`, `./.build/debug/MacCaptureBridge ocr-image --image-path /tmp/slowlearner-ocr-smoke.png`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm --filter desktop-ui test`, `pnpm --filter desktop-ui typecheck`, `pnpm lint`, `pnpm build`로 OCR adapter slice 검증 완료
+- ScreenCaptureKit audio preview가 placeholder ref 대신 session별 temp `.caf` chunk를 실제로 저장하고, native preview state가 latest `pcmRef`를 유지하도록 정리
+- `MacCaptureBridge transcribe-audio`, Tauri `transcribe_audio_sample`, `useLiveAsrText` hook을 추가해 live audio chunk를 ASR 결과로 묶어 `buildLiveAnalysis`의 `asrText` signal에 주입하도록 연결
+- macOS CLI bridge에서 Speech authorization prompt가 TCC privacy crash를 일으키는 문제를 피하기 위해, bridge는 번들 식별자/usage description이 없으면 권한 요청을 하지 않고 `unavailable` 상태만 반환하도록 안전화했다
+- Tauri Rust는 local Speech 결과가 unavailable/error일 때 `OPENAI_API_KEY` 또는 `SLOWLEARNER_OPENAI_API_KEY`가 있으면 공식 audio transcription endpoint에 `gpt-4o-mini-transcribe`로 fallback하도록 정리했고, frontend preview에 ASR status/message를 표시하도록 확장했다
+- `apps/desktop-ui/src-tauri/Info.plist`를 추가해 `NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`를 bundle에 포함했고, debug bundle의 `Contents/Info.plist`에 실제 반영된 것을 확인했다
+- `swift build`, `./.build/debug/MacCaptureBridge transcribe-audio --audio-path /tmp/slowlearner-asr-smoke-en.aiff --locale en-US`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm --filter desktop-ui test`, `pnpm --filter desktop-ui typecheck`, `pnpm lint`, `pnpm build`, `pnpm --filter desktop-ui tauri build --debug`, `plutil -p apps/desktop-ui/src-tauri/target/debug/bundle/macos/AnsimTrack Live.app/Contents/Info.plist | rg 'NSMicrophoneUsageDescription|NSSpeechRecognitionUsageDescription'`로 ASR slice 검증 완료
 
 ### 진행 중
 
-- ASR adapter가 아직 비어 있어서 live 분석이 OCR + visual/frame-window summary 중심으로 동작하는 단계
+- fire/review fixture actual clip 확보와 실제 walkthrough/rehearsal 로그 누적 단계
 
 ### 다음
 
-1. live audio path를 ASR chunk와 Shadow replay 설명 흐름에 직접 연결
-2. 실제 ASR adapter를 로컬 추론 또는 저비용 모델 호출로 교체
-3. fire/review fixture actual clip 확보와 rehearsal log 누적
+1. fire/review fixture actual clip 확보와 source/clip metadata 정리
+2. 실제 clip 기반 walkthrough/pass-fail 기록과 rehearsal log 누적
+3. live ASR OpenAI fallback을 앱 설정 또는 secure local secret 주입 경로까지 제품형으로 다듬기

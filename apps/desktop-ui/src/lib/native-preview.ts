@@ -16,6 +16,7 @@ export type NativePreviewState = {
   isLive: boolean
   lastAudioAtMs: number | null
   lastAudioChannels: number | null
+  lastAudioPcmRef: string | null
   lastAudioSampleRate: number | null
   lastError: string | null
   lastFrame: NativePreviewFrame | null
@@ -29,6 +30,7 @@ export const initialNativePreviewState: NativePreviewState = {
   isLive: false,
   lastAudioAtMs: null,
   lastAudioChannels: null,
+  lastAudioPcmRef: null,
   lastAudioSampleRate: null,
   lastError: null,
   lastFrame: null,
@@ -48,6 +50,7 @@ export function reduceNativePreviewState(
         isLive: true,
         lastAudioAtMs: null,
         lastAudioChannels: null,
+        lastAudioPcmRef: null,
         lastAudioSampleRate: null,
         lastError: null,
         lastFrame: null,
@@ -85,6 +88,7 @@ export function reduceNativePreviewState(
         isLive: true,
         lastAudioAtMs: event.tsMs,
         lastAudioChannels: event.channels,
+        lastAudioPcmRef: event.pcmRef,
         lastAudioSampleRate: event.sampleRate,
         lastError: null,
         sessionId: event.sessionId,

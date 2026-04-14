@@ -74,6 +74,7 @@ describe('reduceNativePreviewState', () => {
     expect(next.lastAudioAtMs).toBe(3_400)
     expect(next.lastAudioSampleRate).toBe(48_000)
     expect(next.lastAudioChannels).toBe(2)
+    expect(next.lastAudioPcmRef).toBe('native-audio://native-voice/3400')
   })
 
   it('ignores frames from another session after one is active', () => {

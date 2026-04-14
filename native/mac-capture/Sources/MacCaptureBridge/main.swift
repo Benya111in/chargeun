@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import MacCapture
+import Speech
 import Vision
 
 @main
@@ -20,6 +21,7 @@ private enum BridgeCommand {
     case bootstrap
     case listSources
     case ocrImage(imagePath: String)
+    case transcribeAudio(audioPath: String, locale: String?)
     case start(sessionId: String?, sourceId: String, includeAudio: Bool, resolution: CaptureResolutionProfile)
     case stream(
         sessionId: String,
@@ -44,6 +46,10 @@ private enum BridgeCommand {
         case "ocr-image":
             let imagePath = try value(for: "--image-path", in: arguments)
             self = .ocrImage(imagePath: imagePath)
+        case "transcribe-audio":
+            let audioPath = try value(for: "--audio-path", in: arguments)
+            let locale = optionalValue(for: "--locale", in: arguments)
+            self = .transcribeAudio(audioPath: audioPath, locale: locale)
         case "start":
             let sessionId = optionalValue(for: "--session-id", in: arguments)
             let sourceId = try value(for: "--source-id", in: arguments)
@@ -99,6 +105,12 @@ private enum BridgeCommand {
         case let .ocrImage(imagePath):
             let result = try OCRImageRecognizer().recognizeTokens(imagePath: imagePath)
             try writeJSONLine(result)
+        case let .transcribeAudio(audioPath, locale):
+            let result = await AudioFileTranscriber().transcribeAudio(
+                audioPath: audioPath,
+                preferredLocale: locale
+            )
+            try writeJSONLine(result)
         case let .start(sessionId, sourceId, includeAudio, resolution):
             let started = try await startBridgeSession(
                 sessionId: sessionId ?? defaultSessionId(),
@@ -134,13 +146,14 @@ private enum BridgeCommand {
             if includeAudio {
                 do {
                     let monitor = SystemAudioPreviewMonitor(
+                        sessionId: started.storedSession.sessionId,
                         source: started.activeSession.source,
                         onAudioSample: { sample in
                             try? writeJSONLine(
                                 BridgeMacCaptureEvent.audio(
                                     sessionId: started.storedSession.sessionId,
                                     tsMs: sample.tsMs,
-                                    pcmRef: "native-audio://\(started.storedSession.sessionId)/\(sample.tsMs)",
+                                    pcmRef: sample.pcmRef,
                                     sampleRate: sample.sampleRate,
                                     channels: sample.channels
                                 )
@@ -306,6 +319,14 @@ private struct BridgeOcrTokensResult: Codable {
     let tokens: [String]
 }
 
+private struct BridgeAudioTranscriptionResult: Codable {
+    let status: String
+    let transcript: String
+    let locale: String?
+    let source: String
+    let message: String?
+}
+
 private enum BridgeMacCaptureEvent: Encodable {
     case sessionStarted(sessionId: String, width: Int, height: Int, hasAudio: Bool)
     case frame(sessionId: String, tsMs: Int64, width: Int, height: Int, pixelBufferRef: String)
@@ -405,12 +426,15 @@ private enum BridgeSessionRegistry {
 private enum BridgeError: Error, LocalizedError {
     case invalidArguments(String)
     case ocrUnavailable(String)
+    case transcriptionUnavailable(String)
 
     var errorDescription: String? {
         switch self {
         case let .invalidArguments(message):
             return message
         case let .ocrUnavailable(message):
+            return message
+        case let .transcriptionUnavailable(message):
             return message
         }
     }
@@ -440,6 +464,173 @@ private final class OCRImageRecognizer {
             .flatMap(tokenizeRecognizedText)
 
         return BridgeOcrTokensResult(tokens: uniqueTokens(tokens))
+    }
+}
+
+private final class AudioFileTranscriber {
+    func transcribeAudio(
+        audioPath: String,
+        preferredLocale: String?
+    ) async -> BridgeAudioTranscriptionResult {
+        let audioURL = URL(fileURLWithPath: audioPath)
+
+        guard FileManager.default.fileExists(atPath: audioURL.path) else {
+            return BridgeAudioTranscriptionResult(
+                status: "missing-file",
+                transcript: "",
+                locale: preferredLocale,
+                source: "speech",
+                message: "Audio chunk was not found at \(audioPath)."
+            )
+        }
+
+        let authorizationStatus = await requestAuthorizationIfNeeded()
+        guard authorizationStatus == .authorized else {
+            return BridgeAudioTranscriptionResult(
+                status: "unavailable",
+                transcript: "",
+                locale: preferredLocale,
+                source: "speech",
+                message: "Speech recognition authorization is \(authorizationLabel(authorizationStatus))."
+            )
+        }
+
+        let recognizer = resolveRecognizer(preferredLocale: preferredLocale)
+        guard let recognizer else {
+            return BridgeAudioTranscriptionResult(
+                status: "unavailable",
+                transcript: "",
+                locale: preferredLocale,
+                source: "speech",
+                message: "No macOS speech recognizer is available for the requested locale."
+            )
+        }
+
+        let request = SFSpeechURLRecognitionRequest(url: audioURL)
+        request.addsPunctuation = false
+        request.shouldReportPartialResults = false
+        if recognizer.supportsOnDeviceRecognition {
+            request.requiresOnDeviceRecognition = true
+        }
+
+        do {
+            let transcript = try await recognize(
+                recognizer: recognizer,
+                request: request
+            )
+
+            return BridgeAudioTranscriptionResult(
+                status: transcript.isEmpty ? "no-match" : "recognized",
+                transcript: transcript,
+                locale: recognizer.locale.identifier,
+                source: recognizer.supportsOnDeviceRecognition
+                    ? "speech-on-device"
+                    : "speech",
+                message: transcript.isEmpty
+                    ? "No spoken text was recognized from the audio chunk."
+                    : nil
+            )
+        } catch {
+            return BridgeAudioTranscriptionResult(
+                status: "error",
+                transcript: "",
+                locale: recognizer.locale.identifier,
+                source: "speech",
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    private func requestAuthorizationIfNeeded() async -> SFSpeechRecognizerAuthorizationStatus {
+        let currentStatus = SFSpeechRecognizer.authorizationStatus()
+        guard currentStatus == .notDetermined else {
+            return currentStatus
+        }
+
+        let hasBundleIdentifier = Bundle.main.bundleIdentifier != nil
+        let hasUsageDescription =
+            Bundle.main.object(forInfoDictionaryKey: "NSSpeechRecognitionUsageDescription")
+                as? String != nil
+
+        guard hasBundleIdentifier && hasUsageDescription else {
+            return currentStatus
+        }
+
+        return await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { status in
+                continuation.resume(returning: status)
+            }
+        }
+    }
+
+    private func resolveRecognizer(preferredLocale: String?) -> SFSpeechRecognizer? {
+        let supportedLocales = SFSpeechRecognizer.supportedLocales()
+        let localeCandidates = [
+            preferredLocale,
+            "ko-KR",
+            "en-US",
+        ]
+            .compactMap { $0 }
+            .map(Locale.init(identifier:))
+
+        for locale in localeCandidates where supportedLocales.contains(locale) {
+            if let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable {
+                return recognizer
+            }
+        }
+
+        return supportedLocales
+            .map { locale in
+                SFSpeechRecognizer(locale: locale)
+            }
+            .first { $0?.isAvailable == true } ?? nil
+    }
+
+    private func recognize(
+        recognizer: SFSpeechRecognizer,
+        request: SFSpeechURLRecognitionRequest
+    ) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            var didResume = false
+            var recognitionTask: SFSpeechRecognitionTask?
+            recognitionTask = recognizer.recognitionTask(with: request) { result, error in
+                if let error, !didResume {
+                    didResume = true
+                    recognitionTask?.cancel()
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                guard let result, result.isFinal, !didResume else {
+                    return
+                }
+
+                didResume = true
+                recognitionTask?.cancel()
+                continuation.resume(
+                    returning: result.bestTranscription.formattedString.trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+                )
+            }
+        }
+    }
+
+    private func authorizationLabel(
+        _ status: SFSpeechRecognizerAuthorizationStatus
+    ) -> String {
+        switch status {
+        case .authorized:
+            return "authorized"
+        case .denied:
+            return "denied"
+        case .restricted:
+            return "restricted"
+        case .notDetermined:
+            return "not-determined"
+        @unknown default:
+            return "unknown"
+        }
     }
 }
 

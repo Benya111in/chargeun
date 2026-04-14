@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>실시간 재난 영상의 음성 단서를 로컬 우선으로 분석하고, 마이크 fallback 명령을 인식하기 위해 필요합니다.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>재난 영상 오디오를 자막 형태로 전사해 OCR과 함께 근거 패널에 보여 주기 위해 필요합니다.</string>
+</dict>
+</plist>

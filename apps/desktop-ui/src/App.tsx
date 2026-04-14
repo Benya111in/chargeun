@@ -71,6 +71,7 @@ import {
 } from './lib/qa-review'
 import { liveRuleCatalog } from './lib/rule-catalog'
 import { useCaptureController } from './lib/useCaptureController'
+import { useLiveAsrText } from './lib/useLiveAsrText'
 import { useLiveOcrTokens } from './lib/useLiveOcrTokens'
 import { cn, formatClock, formatPercent } from './lib/utils'
 import {
@@ -175,6 +176,10 @@ function App() {
   )
   const capture = useCaptureController()
   const liveOcr = useLiveOcrTokens(capture.state.captureInput)
+  const liveAsr = useLiveAsrText(
+    capture.state.nativePreview,
+    capture.state.captureInput,
+  )
   const voiceRuntime = useVoiceRuntime()
   const appExportRef = useRef<HTMLDivElement | null>(null)
   const previousSessionIdRef = useRef<string | null>(null)
@@ -232,12 +237,14 @@ function App() {
         rules: liveRuleCatalog,
         session: capture.state.activeSession,
         signals: {
+          asrText: liveAsr.asrText,
           ocrTokens: liveOcr.ocrTokens,
         },
       }),
     [
       capture.state.activeSession,
       capture.state.captureInput,
+      liveAsr.asrText,
       liveOcr.ocrTokens,
     ],
   )
@@ -1090,6 +1097,9 @@ function App() {
               </div>
 
               <LiveCapturePreview
+                asrMessage={liveAsr.message}
+                asrStatus={liveAsr.status}
+                asrText={liveAsr.asrText}
                 captureInput={capture.state.captureInput}
                 nativePreview={capture.state.nativePreview}
                 notice={capture.state.notice}

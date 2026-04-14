@@ -186,3 +186,8 @@
 
 - 이유: 외부 모델 호출 없이도 한글/영문 자막·표지판 인식 신호를 바로 얻을 수 있고, 현재 저장소 구조에서는 latest frame data URL을 Tauri가 받아 네이티브 OCR로 넘기는 경로가 가장 구현 비용이 낮다.
 - 영향: frontend는 `useLiveOcrTokens`로 latest frame OCR을 누적하고, Tauri는 `extract_ocr_tokens` command에서 data URL을 임시 이미지로 푼 뒤 `MacCaptureBridge ocr-image`를 호출한다. 현재 live perception의 text signal은 OCR 우선이며, audio transcription은 별도 후속 slice로 남긴다.
+
+### D-038 live ASR은 chunk file + 안전 fallback 2단계로 둔다
+
+- 이유: ScreenCaptureKit audio callback은 metadata만으로는 ASR에 쓸 수 없고, macOS `Speech` 권한 요청은 현재 CLI bridge 구조에서 TCC privacy crash를 일으킬 수 있다.
+- 영향: native audio preview는 1.5초 내외 `.caf` chunk file을 temp에 저장하고 `pcmRef`로 UI에 전달한다. Tauri는 먼저 local Speech bridge 결과를 읽되, bridge가 번들 식별자/usage description 없이 실행되는 환경에서는 권한 요청을 시도하지 않고 `unavailable`로 안전하게 빠진다. `OPENAI_API_KEY` 또는 `SLOWLEARNER_OPENAI_API_KEY`가 있으면 `gpt-4o-mini-transcribe`로 fallback하고, 없으면 live path는 OCR/visual 중심으로 유지한다.
