@@ -17,3 +17,5 @@ data/eval/source_videos.local.json
 data/eval/clip_windows.local.json
 data/eval/clips/*
 !data/eval/clips/.gitkeep
+data/eval/sources/*
+!data/eval/sources/.gitkeep

@@ -91,10 +91,12 @@
 - earthquake fixture의 `sourceClipPlan`과 Tauri fixture hydration을 추가해 `data/eval/clips/<clipId>.mp4`가 존재하면 QA workspace가 repo clip을 자동 preview 후보로 잡도록 정리
 - `manualReviewDraft.path` 기본값을 비워 automatic repo clip / latest run fallback이 실제로 동작하도록 수정
 - `pnpm qa:prepare-clips`, `pnpm eval:audit`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 clip intake workflow slice 검증 완료
+- 로컬 환경에서 `yt-dlp` + `ffmpeg`로 행정안전부 지진 원본을 `data/eval/sources/yYwX3qqVMSE.webm`으로 확보하고, 자동 자막 기준 구간으로 `earthquake-desk-001.mp4`, `earthquake-after-shaking-001.mp4`를 실제 추출
+- `data/eval/manual_review_runs.json`에 두 earthquake fixture의 local clip 준비 상태를 pending run으로 추가하고 `pnpm qa:sync` 대상 로그가 실제 clip 기준 최신 path를 가리키도록 정리
 
 ### 진행 중
 
-- local source path와 timestamp를 채워 실제 mp4/mov clip을 추출하고 manual walkthrough/rehearsal을 누적하는 단계
+- 추출된 earthquake actual clip을 기준으로 UI walkthrough/pass-fail 기록을 남기고, fire/review fixture에도 실제 source/clip을 확보하는 단계
 
 ### 다음
 

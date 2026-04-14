@@ -97,4 +97,4 @@
 21. `pending` 실제 clip 기반 manual QA + rehearsal 반복
     - source docs: `docs/18_EVALUATION_AND_QA.md`, `docs/19_DEMO_RUNBOOK_AND_PITCH.md`, `docs/21_RELEASE_CHECKLIST.md`, `docs/22_POST_DEMO_BACKLOG.md`
     - goal: 실제 clip 경계와 음성/근거/발표 흐름을 사람 기준으로 검증하고 rehearsal log를 누적한다
-    - current status: app 내 QA workspace, `data/eval/*runs.json` log sync, local clip preview, 우선순위 fixture queue, release checklist snapshot, earthquake source reference 등록, local source video -> clip extraction workflow는 준비됨. 실제 source path/timestamp 입력과 walkthrough/rehearsal 누적이 남음
+    - current status: app 내 QA workspace, `data/eval/*runs.json` log sync, local clip preview, 우선순위 fixture queue, release checklist snapshot, earthquake source reference 등록, local source video -> clip extraction workflow는 준비됨. 현재 행정안전부 지진 원본에서 earthquake fixture 2개는 local clip 추출 완료, fire/review fixture의 실제 clip intake와 walkthrough/rehearsal 누적이 남음

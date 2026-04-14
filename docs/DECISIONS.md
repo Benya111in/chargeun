@@ -166,3 +166,8 @@
 
 - 이유: source video의 로컬 경로와 구간 timestamp는 팀원마다 다르고, 실제 mp4/mov clip은 용량과 저작권 측면에서 저장소에 직접 넣기 어렵다.
 - 영향: 저장소에는 `source_videos.example.json`, `clip_windows.example.json`, fixture의 `sourceClipPlan`만 tracked로 남기고, 실제 경로와 timestamp는 `*.local.json`에 둔다. `pnpm qa:prepare-clips`가 이를 읽어 `data/eval/clips/*.mp4`를 만들고, Tauri QA workspace는 그 산출물을 자동 preview 후보로 사용한다.
+
+### D-034 초기 clip window는 auto subtitle hit를 시드로 써도 된다
+
+- 이유: 실제 QA clip을 처음 따는 단계에서는 완전 수동 탐색보다 자동 생성 자막의 키워드 hit를 시작점으로 삼는 편이 훨씬 빠르다.
+- 영향: `earthquake-desk-001`, `earthquake-after-shaking-001`의 첫 local window는 `책상`, `흔들림이 멈춘 후`, `가스`, `전기` 같은 자막 hit를 기준으로 잡고, 최종 pass/fail은 여전히 사람이 clip과 UI를 보며 확정한다.

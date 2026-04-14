@@ -32,6 +32,22 @@
     "notes": "after_shaking phase 자연스러움 확인 필요"
   },
   {
+    "clipId": "earthquake-desk-001",
+    "date": "2026-04-15",
+    "operator": "Codex",
+    "path": "data/eval/clips/earthquake-desk-001.mp4",
+    "status": "pending",
+    "notes": "행정안전부 원본에서 local clip 추출 완료. 실제 UI walkthrough와 음성/근거 확인만 남음"
+  },
+  {
+    "clipId": "earthquake-after-shaking-001",
+    "date": "2026-04-15",
+    "operator": "Codex",
+    "path": "data/eval/clips/earthquake-after-shaking-001.mp4",
+    "status": "pending",
+    "notes": "행정안전부 원본에서 local clip 추출 완료. after_shaking 설명과 근거 흐름 확인만 남음"
+  },
+  {
     "clipId": "review-unknown-empty-001",
     "date": "2026-04-14",
     "operator": "Codex",
