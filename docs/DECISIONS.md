@@ -206,3 +206,8 @@
 
 - 이유: 운영자용 검증 UI는 상태와 패널이 많아야 하지만, 발표 순간에는 실제 영상과 핵심 설명만 크게 보여야 한다.
 - 영향: `/`는 기존 verification workspace로 유지하고, `/demo`는 실제 mp4 클립과 큰 설명만 노출하는 theater route로 분리한다. `/demo`의 재생 버튼은 Shadow mock control이 아니라 HTML5 `video.play()`에 직접 연결한다.
+
+### D-042 발표 화면은 QA 컷이 아니라 롱클립을 쓴다
+
+- 이유: QA fixture용 4~8초 clip은 검수에는 적합하지만, 발표 화면에 그대로 쓰면 영상이 너무 빨리 끝나 제품 인상이 불안정해진다.
+- 영향: `/demo`는 `data/eval/clips`의 짧은 QA 샘플이 아니라, 같은 원본에서 다시 추출한 24~30초 발표용 클립을 `public/demo-video`에 둔다. QA/eval 경로와 발표 경로의 clip 길이는 분리해서 관리한다.

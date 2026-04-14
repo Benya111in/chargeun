@@ -111,6 +111,7 @@
 - 발표용 `/demo` 전용 화면을 추가해, 기존 `/` 검증 워크스페이스는 유지하면서 실제 mp4 클립과 큰 행동 설명만 보이는 별도 demo theater를 분리했다
 - `apps/desktop-ui/public/demo-video/*.mp4`에 fire/earthquake actual clip을 배치하고, `/demo`가 HTML5 video 기반으로 실제 재생/일시정지/처음부터/음소거를 수행하도록 정리했다
 - Playwright로 `http://localhost:1420/demo`에서 `영상 재생` 클릭 후 `video.paused: false`, `currentTime > 1s`까지 확인해 "재생 버튼이 안 된다"는 문제를 발표 화면 기준으로 해소했다
+- 발표 화면이 6~9초 QA 컷으로 너무 짧게 끝나던 문제를 수정해, `/demo` 자산을 화재 28초/24초, 지진 28초/30초 길이의 발표용 롱클립으로 교체했다
 - localhost demo path에서 버튼 상태만 바뀌고 Shadow Player 화면이 비어 보이던 문제를 추적해, scenario별 정적 demo frame 자산(`apps/desktop-ui/public/demo/*.jpg`)과 replay/live thumbnail fallback을 연결했다
 - `mock-session`이 demo timeline용 frame 목록을 같이 들고 다니도록 확장하고, `ShadowVideoStage`가 live frame이 없을 때 scenario demo frame을 cursor 기준으로 고르도록 수정했다
 - 이후 localhost 브라우저 데모에서도 각 preset 버튼이 실제 scene image 변경으로 바로 드러나게 되어, "버튼은 눌리는데 아무것도 안 바뀐다"는 오해를 줄였다
