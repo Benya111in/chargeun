@@ -67,3 +67,17 @@
 14. `done` post-demo backlog triage
     - source docs: `docs/22_POST_DEMO_BACKLOG.md`
     - goal: 대회 이후 backlog 정리
+
+## Follow-up Queue (Docs 15-25)
+
+15. `done` restart restore + export artifact path
+    - source docs: `docs/15_BACKEND_STORAGE_AND_JOBS.md`, `docs/19_DEMO_RUNBOOK_AND_PITCH.md`, `docs/21_RELEASE_CHECKLIST.md`
+    - goal: 앱 재시작 후 demo/ui 상태 복원, 발표용 export 경로 추가
+
+16. `pending` local setup 문서/스크립트 정비
+    - source docs: `docs/24_LOCAL_SETUP_FOR_MACBOOK.md`
+    - goal: `README.md`, `scripts/check-env.sh`, `.env.example`를 현재 저장소 기준으로 정리
+
+17. `pending` domain prompt assets 정리
+    - source docs: `docs/25_CODEX_PROMPTS_BY_DOMAIN.md`
+    - goal: 도메인별 prompt asset과 사용 가이드 정리

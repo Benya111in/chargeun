@@ -14,6 +14,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "@ansimtrack/llm-orchestrator": "workspace:*",
     "@ansimtrack/shadow-buffer": "workspace:*",
     "@ansimtrack/shared-types": "workspace:*",

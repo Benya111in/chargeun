@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toPng } from 'html-to-image'
 import {
   Ear,
   Mic,
@@ -35,7 +36,17 @@ import {
   capturePermissionLabels,
   captureStatusLabels,
 } from './lib/capture-contract'
-import { clearLocalRuntimeFiles } from './lib/desktop-bridge'
+import {
+  clearLocalRuntimeFiles,
+  exportDemoArtifact,
+  loadAppRuntimeState,
+  saveAppRuntimeState,
+} from './lib/desktop-bridge'
+import {
+  buildPersistedSessionMeta,
+  defaultAppRuntimeState,
+  type PrivacyPrefsState,
+} from './lib/demo-runtime'
 import { demoScenarios } from './lib/mock-session'
 import { useCaptureController } from './lib/useCaptureController'
 import { cn, formatClock, formatPercent } from './lib/utils'
@@ -77,11 +88,9 @@ function App() {
   )
   const [showEvidence, setShowEvidence] = useState(true)
   const [panicMode, setPanicMode] = useState(false)
-  const [privacyPrefs, setPrivacyPrefs] = useState({
-    captureConsent: false,
-    clearOnStop: true,
-    retainCapturedMedia: false,
-  })
+  const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPrefsState>(
+    defaultAppRuntimeState.privacyPrefs,
+  )
   const [privacyNotice, setPrivacyNotice] = useState(
     '기본 모드는 로컬 처리 우선이며 장기 저장은 꺼져 있습니다.',
   )
@@ -89,9 +98,18 @@ function App() {
   const [pendingCaptureStart, setPendingCaptureStart] =
     useState<PendingCaptureStart | null>(null)
   const [cacheBusy, setCacheBusy] = useState(false)
+  const [artifactBusy, setArtifactBusy] = useState(false)
+  const [artifactNotice, setArtifactNotice] = useState(
+    '발표 자료 export를 실행하면 현재 시연 상태 JSON과 스크린샷을 저장합니다.',
+  )
+  const [runtimeHydrated, setRuntimeHydrated] = useState(false)
+  const [restoredRuntimeState, setRestoredRuntimeState] = useState(
+    defaultAppRuntimeState,
+  )
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
   const capture = useCaptureController()
   const voicePlayback = useVoicePlayback()
+  const appExportRef = useRef<HTMLDivElement | null>(null)
   const previousSessionIdRef = useRef<string | null>(null)
 
   const scenario = useMemo(
@@ -190,6 +208,75 @@ function App() {
     explanation.tracks[selectedTrack] ??
     explanation.tracks.easy ??
     explanation.tracks.basic
+  const lastSessionMeta =
+    buildPersistedSessionMeta(capture.state.activeSession) ??
+    restoredRuntimeState.lastSession
+
+  useEffect(() => {
+    let cancelled = false
+
+    void (async () => {
+      const nextState = await loadAppRuntimeState()
+      if (cancelled) {
+        return
+      }
+
+      setRestoredRuntimeState(nextState)
+      setDemoMode(nextState.demoMode)
+      setScenarioId(nextState.scenarioId)
+      if (isTrackKey(nextState.selectedTrack)) {
+        setRequestedTrack(nextState.selectedTrack)
+      }
+      setShowEvidence(nextState.showEvidence)
+      setPanicMode(nextState.panicMode)
+      setPrivacyPrefs(nextState.privacyPrefs)
+      if (nextState.lastSession?.displayName) {
+        setArtifactNotice(
+          `이전 세션 메타데이터를 복원했습니다: ${nextState.lastSession.displayName}`,
+        )
+      }
+      setRuntimeHydrated(true)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!runtimeHydrated) {
+      return
+    }
+
+    const nextState = {
+      demoMode,
+      lastSession: lastSessionMeta,
+      panicMode,
+      privacyPrefs,
+      scenarioId,
+      selectedSourceId: capture.state.selectedSourceId || null,
+      selectedTrack: requestedTrack,
+      showEvidence,
+      updatedAt: Date.now(),
+    }
+
+    const timer = window.setTimeout(() => {
+      setRestoredRuntimeState(nextState)
+      void saveAppRuntimeState(nextState)
+    }, 180)
+
+    return () => window.clearTimeout(timer)
+  }, [
+    capture.state.selectedSourceId,
+    demoMode,
+    lastSessionMeta,
+    panicMode,
+    privacyPrefs,
+    requestedTrack,
+    runtimeHydrated,
+    scenarioId,
+    showEvidence,
+  ])
 
   const clearRuntimeCache = useCallback(
     async (reason: 'auto-stop' | 'manual') => {
@@ -329,6 +416,63 @@ function App() {
     )
   }
 
+  const handleExportArtifacts = async () => {
+    setArtifactBusy(true)
+
+    try {
+      const screenshotDataUrl = appExportRef.current
+        ? await toPng(appExportRef.current, {
+            backgroundColor: '#f5f1ea',
+            cacheBust: true,
+            pixelRatio: 1.5,
+          })
+        : undefined
+
+      const result = await exportDemoArtifact({
+        artifactName: `${scenario.id}-${activeRunbookStep?.id ?? 'demo'}`,
+        payload: {
+          activeRunbookStep,
+          capture: {
+            lastSession: lastSessionMeta,
+            selectedSourceId: capture.state.selectedSourceId,
+            status: capture.state.status,
+          },
+          demoMode,
+          explanation,
+          privacyPrefs,
+          ruleMatches: ruleMatches.map((match) => ({
+            matchedSignals: match.matchedSignals,
+            ruleId: match.rule.rule_id,
+            score: match.score,
+            sourceTitle: match.rule.source_title,
+          })),
+          safetyWarnings,
+          scenario: {
+            id: scenario.id,
+            overlaySummary: scenario.overlaySummary,
+            title: scenario.title,
+          },
+          segment,
+          selectedTrack,
+          voiceReply,
+        },
+        screenshotDataUrl,
+      })
+
+      setArtifactNotice(
+        result.screenshotPath
+          ? `발표 자료를 저장했습니다. JSON: ${result.jsonPath} / PNG: ${result.screenshotPath}`
+          : `발표 자료 JSON을 저장했습니다: ${result.jsonPath}`,
+      )
+    } catch {
+      setArtifactNotice(
+        '발표 자료 export를 완료하지 못했습니다. 브라우저 권한과 파일 경로를 확인해 주세요.',
+      )
+    } finally {
+      setArtifactBusy(false)
+    }
+  }
+
   const handleSelectRunbookStep = (stepId: string) => {
     const step = demoRunbookSteps.find((candidate) => candidate.id === stepId)
     if (!step) {
@@ -401,7 +545,10 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface)] text-[var(--ink)]">
+    <div
+      className="min-h-screen bg-[var(--surface)] text-[var(--ink)]"
+      ref={appExportRef}
+    >
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col px-4 py-4 md:px-6 xl:px-8">
         <header className="grid gap-4 border-b border-[var(--line)] pb-4 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="flex flex-col gap-3">
@@ -453,6 +600,7 @@ function App() {
               value={
                 capture.state.activeSession?.displayName ??
                 capture.state.selectedSource?.displayName ??
+                lastSessionMeta?.displayName ??
                 scenario.session.displayName ??
                 '데모 모니터'
               }
@@ -668,9 +816,13 @@ function App() {
           <section className="flex min-h-0 flex-col gap-4">
             <DemoRunbookPanel
               activeStepId={activeRunbookStep?.id ?? activeRunbookStepId}
+              artifactBusy={artifactBusy}
+              artifactNotice={artifactNotice}
               backupSessions={prerecordedBackupSessions}
               currentScenarioTitle={scenario.title}
               demoMode={demoMode}
+              lastSessionLabel={lastSessionMeta?.displayName}
+              onExportArtifacts={handleExportArtifacts}
               onOpenEvidence={handleOpenEvidenceShortcut}
               onSelectBackupSession={handleSelectBackupSession}
               onSelectStep={handleSelectRunbookStep}
@@ -1041,6 +1193,10 @@ function getPendingCaptureActionLabel(
     default:
       return '동의하고 계속'
   }
+}
+
+function isTrackKey(value: string): value is TrackKey {
+  return value in trackLabels
 }
 
 export default App

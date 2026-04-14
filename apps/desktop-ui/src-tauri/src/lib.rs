@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -74,6 +75,62 @@ struct StopNativeCaptureResult {
 struct ClearLocalRuntimeResult {
     cleared: bool,
     path: String,
+    status: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PrivacyPrefs {
+    capture_consent: bool,
+    clear_on_stop: bool,
+    retain_captured_media: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistedSessionMeta {
+    id: String,
+    source_type: String,
+    platform: String,
+    started_at: u64,
+    has_audio: bool,
+    display_name: Option<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppRuntimeState {
+    demo_mode: String,
+    last_session: Option<PersistedSessionMeta>,
+    panic_mode: bool,
+    privacy_prefs: PrivacyPrefs,
+    scenario_id: String,
+    selected_source_id: Option<String>,
+    selected_track: String,
+    show_evidence: bool,
+    updated_at: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SaveAppRuntimeStateInput {
+    state: AppRuntimeState,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportDemoArtifactInput {
+    artifact_name: String,
+    payload: Value,
+    screenshot_data_url: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportDemoArtifactResult {
+    artifact_name: String,
+    json_path: String,
+    screenshot_path: Option<String>,
     status: String,
 }
 
@@ -215,6 +272,79 @@ fn clear_local_runtime() -> Result<ClearLocalRuntimeResult, String> {
             status: "noop".into(),
         })
     }
+}
+
+#[tauri::command]
+fn load_app_runtime_state() -> Result<AppRuntimeState, String> {
+    let path = app_runtime_state_path();
+
+    if !path.exists() {
+        return Ok(default_app_runtime_state());
+    }
+
+    let raw = fs::read(&path).map_err(|error| error.to_string())?;
+    serde_json::from_slice::<AppRuntimeState>(&raw).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn save_app_runtime_state(input: SaveAppRuntimeStateInput) -> Result<AppRuntimeState, String> {
+    let path = app_runtime_state_path();
+    let parent = path
+        .parent()
+        .ok_or_else(|| "App runtime state path did not have a parent directory".to_string())?;
+
+    fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    fs::write(
+        &path,
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&input.state).map_err(|error| error.to_string())?
+        ),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(input.state)
+}
+
+#[tauri::command]
+fn export_demo_artifact(
+    input: ExportDemoArtifactInput,
+) -> Result<ExportDemoArtifactResult, String> {
+    let export_dir = local_runtime_dir().join("export");
+    fs::create_dir_all(&export_dir).map_err(|error| error.to_string())?;
+
+    let artifact_name = sanitize_artifact_name(&input.artifact_name);
+    let timestamp = current_timestamp_ms();
+    let json_path = export_dir.join(format!("{artifact_name}-{timestamp}.json"));
+    let screenshot_path = export_dir.join(format!("{artifact_name}-{timestamp}.png"));
+
+    let mut payload = input.payload;
+    if let Value::Object(ref mut object) = payload {
+        object.insert("exportedAt".into(), Value::from(timestamp));
+    }
+
+    fs::write(
+        &json_path,
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?
+        ),
+    )
+    .map_err(|error| error.to_string())?;
+
+    let saved_screenshot_path = if let Some(data_url) = input.screenshot_data_url {
+        write_screenshot_data_url(&screenshot_path, &data_url)?;
+        Some(screenshot_path.display().to_string())
+    } else {
+        None
+    };
+
+    Ok(ExportDemoArtifactResult {
+        artifact_name,
+        json_path: json_path.display().to_string(),
+        screenshot_path: saved_screenshot_path,
+        status: "exported".into(),
+    })
 }
 
 fn read_stream_event(reader: &mut BufReader<ChildStdout>) -> Result<Option<Value>, String> {
@@ -448,6 +578,67 @@ fn local_runtime_dir() -> PathBuf {
         .to_path_buf()
 }
 
+fn app_runtime_state_path() -> PathBuf {
+    local_runtime_dir().join("ui-state.json")
+}
+
+fn default_app_runtime_state() -> AppRuntimeState {
+    AppRuntimeState {
+        demo_mode: "live-priority".into(),
+        last_session: None,
+        panic_mode: false,
+        privacy_prefs: PrivacyPrefs {
+            capture_consent: false,
+            clear_on_stop: true,
+            retain_captured_media: false,
+        },
+        scenario_id: "grounded-fire".into(),
+        selected_source_id: None,
+        selected_track: "action".into(),
+        show_evidence: true,
+        updated_at: 0,
+    }
+}
+
+fn sanitize_artifact_name(input: &str) -> String {
+    let sanitized = input
+        .trim()
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character.to_ascii_lowercase()
+            } else if ('가'..='힣').contains(&character) {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .split('-')
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+
+    if sanitized.is_empty() {
+        "ansimtrack-demo".into()
+    } else {
+        sanitized
+    }
+}
+
+fn write_screenshot_data_url(path: &Path, data_url: &str) -> Result<(), String> {
+    let encoded = data_url
+        .split_once(',')
+        .map(|(_, encoded)| encoded)
+        .ok_or_else(|| "Screenshot data URL was malformed".to_string())?;
+    let decoded = STANDARD
+        .decode(encoded)
+        .map_err(|error| error.to_string())?;
+
+    fs::write(path, decoded).map_err(|error| error.to_string())
+}
+
 fn mac_capture_bridge_binary(package_dir: &Path) -> Option<PathBuf> {
     [
         package_dir.join(".build/arm64-apple-macosx/debug/MacCaptureBridge"),
@@ -478,7 +669,10 @@ pub fn run() {
             list_native_capture_sources,
             start_native_capture,
             stop_native_capture,
-            clear_local_runtime
+            clear_local_runtime,
+            load_app_runtime_state,
+            save_app_runtime_state,
+            export_demo_artifact
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

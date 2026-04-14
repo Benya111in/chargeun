@@ -8,9 +8,13 @@ import { cn } from '../lib/utils'
 
 export function DemoRunbookPanel({
   activeStepId,
+  artifactBusy,
+  artifactNotice,
   backupSessions,
   currentScenarioTitle,
   demoMode,
+  lastSessionLabel,
+  onExportArtifacts,
   onOpenEvidence,
   onSelectBackupSession,
   onSelectStep,
@@ -19,9 +23,13 @@ export function DemoRunbookPanel({
   steps,
 }: {
   activeStepId: string
+  artifactBusy: boolean
+  artifactNotice: string
   backupSessions: PrerecordedBackupSession[]
   currentScenarioTitle: string
   demoMode: 'backup-replay' | 'live-priority'
+  lastSessionLabel?: string
+  onExportArtifacts: () => void | Promise<void>
   onOpenEvidence: () => void
   onSelectBackupSession: (sessionId: string) => void
   onSelectStep: (stepId: string) => void
@@ -64,6 +72,9 @@ export function DemoRunbookPanel({
           {showEvidence ? '근거 패널 열림' : '근거 패널 닫힘'}
         </PanelBadge>
         <PanelBadge tone="neutral">{currentScenarioTitle}</PanelBadge>
+        {lastSessionLabel ? (
+          <PanelBadge tone="neutral">최근 세션 · {lastSessionLabel}</PanelBadge>
+        ) : null}
       </div>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -111,6 +122,33 @@ export function DemoRunbookPanel({
               <ShieldQuestion className="size-4" />
               근거 패널 바로 열기
             </button>
+          </div>
+
+          <div className="rounded-md bg-[var(--soft)] px-4 py-4">
+            <div className="flex items-center gap-2 text-[var(--ink)]">
+              <Clapperboard className="size-4" />
+              <p className="text-sm font-semibold">발표 자료 export</p>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              현재 시연 상태를 JSON과 PNG로 저장해 플랜 B 자료로 남깁니다.
+            </p>
+            <button
+              className={cn(
+                'mt-3 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition',
+                artifactBusy
+                  ? 'cursor-not-allowed border-[var(--line)] bg-white text-[var(--muted)]'
+                  : 'border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--ink)]/40',
+              )}
+              disabled={artifactBusy}
+              onClick={onExportArtifacts}
+              type="button"
+            >
+              <Clapperboard className="size-4" />
+              {artifactBusy ? 'export 중' : '발표 자료 저장'}
+            </button>
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+              {artifactNotice}
+            </p>
           </div>
 
           <div className="grid gap-2">

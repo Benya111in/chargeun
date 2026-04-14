@@ -106,3 +106,8 @@
 
 - 이유: 현재 코드베이스의 가장 큰 리스크는 기능 부족보다 live capture와 persistence의 미연결이다.
 - 영향: `docs/22_POST_DEMO_BACKLOG.md`는 이제 확장 아이디어 목록이 아니라 우선순위 문서로 유지하고, P1은 live capture 실시간 연결, SQLite restore, native audio/TTS/STT, manual rehearsal에 배정한다.
+
+### D-022 runtime state와 발표 export는 Tauri command + 브라우저 fallback 이중 경로로 관리
+
+- 이유: 데스크톱 실사용 경로에서는 파일로 남겨야 하고, 브라우저 preview에서도 같은 UX를 검증할 수 있어야 한다.
+- 영향: runtime state는 Tauri에서는 `.slowlearner/ui-state.json`, 브라우저에서는 `localStorage`를 사용한다. 발표 자료 export는 Tauri에서는 `.slowlearner/export`에 JSON/PNG를 저장하고, 브라우저에서는 다운로드 fallback을 사용한다.
