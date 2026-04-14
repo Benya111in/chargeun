@@ -101,3 +101,8 @@
 
 - 이유: 발표 직전에는 시연 순서와 플랜 B를 빠르게 바꿀 수 있어야 하고, 프론트 코드 수정 없이도 발표 흐름을 조정할 수 있어야 한다.
 - 영향: `data/demo/runbook.json`과 `data/demo/prerecorded_sessions.json`이 시연 타임라인과 prerecorded preset의 단일 소스가 되고, UI는 이 데이터를 읽어 runbook 패널과 backup mode를 구성한다.
+
+### D-021 post-demo는 확장보다 live path 안정화가 먼저
+
+- 이유: 현재 코드베이스의 가장 큰 리스크는 기능 부족보다 live capture와 persistence의 미연결이다.
+- 영향: `docs/22_POST_DEMO_BACKLOG.md`는 이제 확장 아이디어 목록이 아니라 우선순위 문서로 유지하고, P1은 live capture 실시간 연결, SQLite restore, native audio/TTS/STT, manual rehearsal에 배정한다.

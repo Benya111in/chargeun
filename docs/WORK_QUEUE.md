@@ -64,6 +64,6 @@
     - source docs: `docs/19_DEMO_RUNBOOK_AND_PITCH.md`
     - goal: prerecorded backup path, demo script alignment
 
-14. `pending` post-demo backlog triage
+14. `done` post-demo backlog triage
     - source docs: `docs/22_POST_DEMO_BACKLOG.md`
     - goal: 대회 이후 backlog 정리

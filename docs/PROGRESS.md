@@ -57,12 +57,15 @@
 - `data/demo/runbook.json`, `data/demo/prerecorded_sessions.json`를 추가해 3분 시연 타임라인과 prerecorded backup 세션을 데이터로 고정
 - desktop UI에 `DemoRunbookPanel`을 추가해 live/backup mode 토글, 단계별 runbook 선택, Q&A용 근거 패널 바로가기, prerecorded backup 프리셋 선택을 제공
 - `mock-session`에 visual-only fire backup과 earthquake after-shaking backup 시나리오를 추가하고 `pnpm --filter desktop-ui test`, `pnpm demo:reset`, `pnpm lint`, `pnpm build`로 demo slice 검증 완료
+- `docs/22_POST_DEMO_BACKLOG.md`를 현재 구현 상태 기준 P1/P2/P3 triage 문서로 재구성해, live path 안정화와 persistence를 확장 아이디어보다 우선하는 기준을 고정
 
 ### 진행 중
 
 - live capture `captureInput`를 perception/segment/session log로 실시간 연결
-- post-demo backlog triage
+- post-demo P1 backlog 정리 기준에 따라 다음 구현 우선순위 선정
 
 ### 다음
 
-1. post-demo backlog triage
+1. live capture -> perception -> segment 실시간 연결
+2. SQLite 연결 + restart restore
+3. native audio/TTS/STT 보강
