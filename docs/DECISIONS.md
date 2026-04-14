@@ -71,3 +71,8 @@
 
 - 이유: backend matcher와 segment engine이 따로 놀면 시연 중 안전 fallback과 근거 패널이 어긋난다.
 - 영향: demo scenario는 이제 mock `PerceptionPacket`과 rule bundle만 제공하고, 화면에서는 실제 `buildSegmentFromPerception` 및 `buildGroundedExplanation` 결과를 사용한다.
+
+### D-015 voice는 우선 브라우저 TTS fallback으로 제공
+
+- 이유: 현재 단계에서 중요한 것은 intent 버튼을 눌렀을 때 1초 안에 반응이 시작되는 데모 흐름이다.
+- 영향: TTS는 우선 `speechSynthesis`를 사용하고, unavailable 환경에서는 transcript 카드만 유지한다. 외부 TTS 모델이나 비용 있는 API는 아직 붙이지 않는다.

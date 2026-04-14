@@ -14,3 +14,4 @@
 - Shadow Player replay lane은 아직 mock ring buffer 기반이며, 새 `captureInput` frame window와 직접 합쳐지지 않았다.
 - `data/eval/annotated_segments.json`는 현재 rule JSON보다 예전 phase/rule id를 일부 기대하고 있어, QA slice에서 fixture 정합성 재조정이 필요하다.
 - desktop UI는 demo scenario에서 새 grounded path를 쓰지만, 실제 live capture의 `captureInput`를 perception worker와 segment engine으로 흘리는 실시간 연결은 아직 미구현이다.
+- 현재 voice path는 browser `speechSynthesis` fallback이며, 네이티브 TTS/ducking/마이크 intent 분류는 아직 미구현이다.

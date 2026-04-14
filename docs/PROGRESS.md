@@ -40,15 +40,16 @@
 - `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`를 다시 통과시켜 segment slice까지 루트 검증 완료
 - demo scenario가 더 이상 mock `matchedRules`를 직접 들고 있지 않고, `PerceptionPacket -> Segment -> buildGroundedExplanation` 경로로 실제 grounded track을 만들도록 desktop UI를 교체
 - `matchGroundedRules` 결과를 근거 패널과 segment card에 연결해 rule id/action/report 노출이 실제 matcher 결과를 따르도록 정리
+- browser `speechSynthesis` 기반 TTS fallback과 재생 상태 관리를 추가해 5개 intent 버튼이 transcript + 음성 재생을 함께 제공하도록 연결
+- 음성 unavailable 환경에서는 자동으로 텍스트-only fallback으로 남기고, 재생 중지 버튼과 상태 배지를 추가
 
 ### 진행 중
 
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
-- voice/TTS 최소 경로 구현
 - frontend evidence flow polish
 
 ### 다음
 
-1. voice/TTS path 최소 경로 연결
-2. frontend evidence flow polish
-3. storage/jobs skeleton
+1. frontend evidence flow polish
+2. storage/jobs skeleton
+3. safety/privacy/compliance pass

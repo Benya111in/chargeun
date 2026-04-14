@@ -40,7 +40,7 @@
    - source docs: `docs/12_LLM_ORCHESTRATION_AND_PROMPTS.md`, `docs/11_RULE_KB_AND_GROUNDING.md`
    - goal: segment + evidence + rules에서 track JSON 생성
 
-8. `pending` voice/TTS path
+8. `done` voice/TTS path
    - source docs: `docs/13_VOICE_REALTIME_AND_TTS.md`
    - goal: 최소 4개 intent에 대한 near-realtime voice explain
 

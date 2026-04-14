@@ -26,6 +26,7 @@ import {
 import { demoScenarios } from './lib/mock-session'
 import { useCaptureController } from './lib/useCaptureController'
 import { cn, formatClock, formatPercent } from './lib/utils'
+import { useVoicePlayback } from './lib/voice-playback'
 
 type TrackKey = 'basic' | 'easy' | 'action' | 'reason' | 'caregiver' | 'report'
 
@@ -58,6 +59,7 @@ function App() {
   const [panicMode, setPanicMode] = useState(false)
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
   const capture = useCaptureController()
+  const voicePlayback = useVoicePlayback()
 
   const scenario = useMemo(
     () =>
@@ -129,6 +131,7 @@ function App() {
   const handleVoice = (intent: VoiceIntent) => {
     const reply = buildVoiceReply({ explanation, intent })
     setVoiceReply(reply.text)
+    voicePlayback.speak(reply.text)
   }
 
   const handleScenarioToggle = () => {
@@ -470,7 +473,20 @@ function App() {
                         시연할 수 있습니다.
                       </p>
                     </div>
-                    <Mic className="size-5 text-[var(--muted)]" />
+                    <div className="flex items-center gap-2">
+                      <StatusPill
+                        tone={
+                          voicePlayback.state.speaking ? 'grounded' : 'neutral'
+                        }
+                      >
+                        {voicePlayback.state.speaking
+                          ? '음성 재생 중'
+                          : voicePlayback.state.available
+                            ? 'TTS 대기'
+                            : '텍스트만'}
+                      </StatusPill>
+                      <Mic className="size-5 text-[var(--muted)]" />
+                    </div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {(Object.keys(voiceIntentLabels) as VoiceIntent[]).map(
@@ -484,6 +500,13 @@ function App() {
                         </ActionButton>
                       ),
                     )}
+                    <ActionButton
+                      disabled={!voicePlayback.state.speaking}
+                      icon={<Square className="size-4" />}
+                      onClick={voicePlayback.stop}
+                    >
+                      음성 중지
+                    </ActionButton>
                   </div>
                   <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--soft)] px-4 py-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -491,6 +514,9 @@ function App() {
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[var(--ink)]">
                       {voiceReply}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                      {voicePlayback.state.notice}
                     </p>
                   </div>
                 </section>
