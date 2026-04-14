@@ -7,6 +7,9 @@
     "module": "esnext",
     "baseUrl": ".",
     "paths": {
+      "@ansimtrack/shadow-buffer": [
+        "../../packages/shadow-buffer/src/index.ts"
+      ],
       "@ansimtrack/shared-types": ["../../packages/shared-types/src/index.ts"],
       "@ansimtrack/llm-orchestrator": [
         "../../workers/llm-orchestrator/src/index.ts"

@@ -1,22 +1,17 @@
 import { useMemo, useState } from 'react'
 import {
   Ear,
-  Flame,
   Mic,
   MonitorPlay,
-  PanelRightOpen,
-  Pause,
-  Play,
   RotateCcw,
   ScreenShare,
   ShieldAlert,
-  SkipBack,
-  Waves,
 } from 'lucide-react'
 
 import { buildExplanation, buildVoiceReply } from '@ansimtrack/llm-orchestrator'
 import { voiceIntentLabels, type VoiceIntent } from '@ansimtrack/shared-types'
 
+import { ShadowVideoStage } from './components/ShadowVideoStage'
 import { demoScenarios } from './lib/mock-session'
 import { cn, formatClock, formatPercent } from './lib/utils'
 
@@ -45,7 +40,9 @@ function App() {
   )
   const [showEvidence, setShowEvidence] = useState(true)
   const [panicMode, setPanicMode] = useState(false)
-  const [lastAction, setLastAction] = useState('현재 모니터 읽기 대기 중')
+  const [captureNotice, setCaptureNotice] = useState(
+    '실제 캡처 브리지는 다음 단계에서 연결됩니다. 현재는 검증 가능한 mock replay lane으로 동작합니다.',
+  )
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
 
   const scenario = useMemo(
@@ -82,7 +79,6 @@ function App() {
   const handleVoice = (intent: VoiceIntent) => {
     const reply = buildVoiceReply({ explanation, intent })
     setVoiceReply(reply.text)
-    setLastAction(`${voiceIntentLabels[intent]} 재설명`)
   }
 
   const handleScenarioToggle = () => {
@@ -99,7 +95,9 @@ function App() {
     setSelectedTrack(getPreferredTrack(nextExplanation))
     setVoiceReply(defaultVoiceReply)
     setPanicMode(false)
-    setLastAction('데모 시나리오 전환')
+    setCaptureNotice(
+      '시나리오를 전환했고 Shadow Player 버퍼도 새 세그먼트 기준으로 다시 시작합니다.',
+    )
   }
 
   return (
@@ -166,14 +164,22 @@ function App() {
               <div className="flex flex-wrap gap-2">
                 <ActionButton
                   icon={<MonitorPlay className="size-4" />}
-                  onClick={() => setLastAction('현재 모니터 읽기 시작')}
+                  onClick={() =>
+                    setCaptureNotice(
+                      'macOS ScreenCaptureKit bridge가 아직 스텁이라 현재는 mock capture lane으로 시연합니다.',
+                    )
+                  }
                   variant="primary"
                 >
                   현재 모니터 읽기 시작
                 </ActionButton>
                 <ActionButton
                   icon={<ScreenShare className="size-4" />}
-                  onClick={() => setLastAction('브라우저 공유 보조 모드')}
+                  onClick={() =>
+                    setCaptureNotice(
+                      '브라우저 fallback 어댑터는 다음 slice에서 연결합니다. 지금은 동일한 replay shell로 시연합니다.',
+                    )
+                  }
                 >
                   브라우저 공유 시작
                 </ActionButton>
@@ -184,6 +190,9 @@ function App() {
                   저신뢰 데모 전환
                 </ActionButton>
               </div>
+              <p className="w-full text-sm leading-6 text-[var(--muted)]">
+                {captureNotice}
+              </p>
             </section>
 
             <section className="panel-edge flex min-h-[520px] flex-col gap-4">
@@ -208,112 +217,13 @@ function App() {
               </div>
 
               <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                <div className="relative overflow-hidden rounded-md border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(210,34,63,0.28),_transparent_28%),linear-gradient(180deg,#1a1c20_0%,#101215_100%)]">
-                  <div className="absolute inset-x-0 top-0 flex items-center justify-between border-b border-white/10 px-4 py-3 text-sm text-white/75">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-400" />
-                      live edge - 4초
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {scenario.segment.hazard === 'fire' ? (
-                        <Flame className="size-4 text-rose-300" />
-                      ) : (
-                        <Waves className="size-4 text-teal-300" />
-                      )}
-                      {scenario.overlaySummary}
-                    </div>
-                  </div>
-
-                  <div className="flex h-full min-h-[380px] flex-col justify-between px-5 pb-5 pt-18">
-                    <div className="grid grid-cols-[1fr_auto] gap-3">
-                      <div className="max-w-[420px] rounded-md border border-white/10 bg-black/22 px-4 py-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
-                          현재 장면
-                        </p>
-                        <p className="mt-2 text-2xl font-semibold text-white">
-                          {scenario.segment.title}
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-white/75">
-                          {scenario.videoCaption}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {scenario.overlayTargets.map((target) => (
-                          <div
-                            key={target.label}
-                            className="rounded-md border border-white/12 bg-black/28 px-3 py-2 text-sm text-white/85"
-                          >
-                            {target.label}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="rounded-md border border-white/10 bg-black/28 p-3">
-                        <div className="flex justify-between text-xs uppercase tracking-[0.12em] text-white/55">
-                          <span>세그먼트 마커</span>
-                          <span>{lastAction}</span>
-                        </div>
-                        <div className="relative mt-3 h-2 rounded-full bg-white/8">
-                          <div className="absolute inset-y-0 left-0 w-[76%] rounded-full bg-white/10" />
-                          <div className="absolute inset-y-[-4px] left-[58%] w-1 rounded-full bg-rose-300" />
-                          <div className="absolute inset-y-[-4px] left-[73%] w-1 rounded-full bg-teal-300" />
-                          <div className="absolute inset-y-[-5px] left-[84%] w-3 rounded-full border border-white/70 bg-[var(--ink)]" />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-white/10 bg-black/24 px-4 py-3 text-white">
-                        <div className="flex items-center gap-2 text-sm text-white/75">
-                          <button
-                            className="icon-button"
-                            type="button"
-                            aria-label="재생"
-                          >
-                            <Play className="size-4" />
-                          </button>
-                          <button
-                            className="icon-button"
-                            type="button"
-                            aria-label="일시정지"
-                          >
-                            <Pause className="size-4" />
-                          </button>
-                          <button
-                            className="icon-button"
-                            type="button"
-                            aria-label="5초 되감기"
-                          >
-                            <SkipBack className="size-4" />
-                          </button>
-                          <button
-                            className="icon-button"
-                            type="button"
-                            aria-label="현재 세그먼트 다시 보기"
-                          >
-                            <RotateCcw className="size-4" />
-                          </button>
-                          <span>재생 제어</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <ActionButton
-                            icon={<ShieldAlert className="size-4" />}
-                            onClick={() => setPanicMode((value) => !value)}
-                            variant="danger"
-                          >
-                            Panic Mode
-                          </ActionButton>
-                          <ActionButton
-                            icon={<PanelRightOpen className="size-4" />}
-                            onClick={() => setShowEvidence((value) => !value)}
-                          >
-                            근거 패널
-                          </ActionButton>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ShadowVideoStage
+                  key={scenario.id}
+                  onToggleEvidence={() => setShowEvidence((value) => !value)}
+                  onTogglePanic={() => setPanicMode((value) => !value)}
+                  panicMode={panicMode}
+                  scenario={scenario}
+                />
 
                 <aside className="flex flex-col gap-3 rounded-md border border-[var(--line)] bg-[var(--panel)] p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">

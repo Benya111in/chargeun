@@ -7,7 +7,7 @@ import type {
 import earthquakeRules from '../../../../data/rules/earthquake_rules.json'
 import fireRules from '../../../../data/rules/fire_rules.json'
 
-type DemoScenario = {
+export type DemoScenario = {
   id: string
   session: CaptureSession
   segment: Segment & {

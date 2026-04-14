@@ -8,6 +8,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      '@ansimtrack/shadow-buffer': path.resolve(
+        __dirname,
+        '../../packages/shadow-buffer/src/index.ts',
+      ),
       '@ansimtrack/shared-types': path.resolve(
         __dirname,
         '../../packages/shared-types/src/index.ts',

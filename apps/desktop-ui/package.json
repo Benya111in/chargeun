@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@ansimtrack/llm-orchestrator": "workspace:*",
+    "@ansimtrack/shadow-buffer": "workspace:*",
     "@ansimtrack/shared-types": "workspace:*",
     "@tauri-apps/api": "^2.8.0",
     "clsx": "^2.1.1",
