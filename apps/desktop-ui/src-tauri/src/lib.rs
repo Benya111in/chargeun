@@ -11,7 +11,7 @@ use std::{
     sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Emitter, State};
+use tauri::{path::BaseDirectory, AppHandle, Emitter, Manager, State};
 
 const CAPTURE_EVENT_SESSION_STARTED: &str = "capture/session-started";
 const CAPTURE_EVENT_FRAME: &str = "capture/frame";
@@ -492,8 +492,8 @@ fn stop_native_capture(
 }
 
 #[tauri::command]
-fn clear_local_runtime() -> Result<ClearLocalRuntimeResult, String> {
-    let path = local_runtime_dir();
+fn clear_local_runtime(app: AppHandle) -> Result<ClearLocalRuntimeResult, String> {
+    let path = local_runtime_dir(&app);
 
     if path.exists() {
         fs::remove_dir_all(&path).map_err(|error| error.to_string())?;
@@ -513,15 +513,15 @@ fn clear_local_runtime() -> Result<ClearLocalRuntimeResult, String> {
 }
 
 #[tauri::command]
-fn load_app_runtime_state() -> Result<AppRuntimeState, String> {
-    let path = app_runtime_state_path();
+fn load_app_runtime_state(app: AppHandle) -> Result<AppRuntimeState, String> {
+    let path = app_runtime_state_path(&app);
 
     if path.exists() {
         let raw = fs::read(&path).map_err(|error| error.to_string())?;
         return serde_json::from_slice::<AppRuntimeState>(&raw).map_err(|error| error.to_string());
     }
 
-    if let Some(state) = load_app_setting_json::<AppRuntimeState>("app_runtime_state")? {
+    if let Some(state) = load_app_setting_json::<AppRuntimeState>(&app, "app_runtime_state")? {
         return Ok(state);
     }
 
@@ -529,8 +529,11 @@ fn load_app_runtime_state() -> Result<AppRuntimeState, String> {
 }
 
 #[tauri::command]
-fn save_app_runtime_state(input: SaveAppRuntimeStateInput) -> Result<AppRuntimeState, String> {
-    let path = app_runtime_state_path();
+fn save_app_runtime_state(
+    app: AppHandle,
+    input: SaveAppRuntimeStateInput,
+) -> Result<AppRuntimeState, String> {
+    let path = app_runtime_state_path(&app);
     let parent = path
         .parent()
         .ok_or_else(|| "App runtime state path did not have a parent directory".to_string())?;
@@ -544,16 +547,17 @@ fn save_app_runtime_state(input: SaveAppRuntimeStateInput) -> Result<AppRuntimeS
         ),
     )
     .map_err(|error| error.to_string())?;
-    save_app_setting_json("app_runtime_state", &input.state)?;
+    save_app_setting_json(&app, "app_runtime_state", &input.state)?;
 
     Ok(input.state)
 }
 
 #[tauri::command]
 fn export_demo_artifact(
+    app: AppHandle,
     input: ExportDemoArtifactInput,
 ) -> Result<ExportDemoArtifactResult, String> {
-    let export_dir = local_runtime_dir().join("export");
+    let export_dir = local_runtime_dir(&app).join("export");
     fs::create_dir_all(&export_dir).map_err(|error| error.to_string())?;
 
     let artifact_name = sanitize_artifact_name(&input.artifact_name);
@@ -592,11 +596,12 @@ fn export_demo_artifact(
 
 #[tauri::command]
 fn append_session_log_entry(
+    app: AppHandle,
     input: SessionLogEntryPayload,
 ) -> Result<PersistLocalRecordResult, String> {
-    let path = session_logs_path();
+    let path = session_logs_path(&app);
     append_json_line(&path, &input)?;
-    persist_session_log_entry(&input)?;
+    persist_session_log_entry(&app, &input)?;
 
     Ok(PersistLocalRecordResult {
         path: path.display().to_string(),
@@ -606,9 +611,10 @@ fn append_session_log_entry(
 
 #[tauri::command]
 fn save_live_analysis_snapshot(
+    app: AppHandle,
     input: LiveAnalysisSnapshotInput,
 ) -> Result<PersistLocalRecordResult, String> {
-    let path = live_analysis_snapshot_path();
+    let path = live_analysis_snapshot_path(&app);
     ensure_parent_dir(&path)?;
     fs::write(
         &path,
@@ -618,8 +624,8 @@ fn save_live_analysis_snapshot(
         ),
     )
     .map_err(|error| error.to_string())?;
-    persist_session_log_entry(&input.session)?;
-    persist_live_analysis_snapshot(&input)?;
+    persist_session_log_entry(&app, &input.session)?;
+    persist_live_analysis_snapshot(&app, &input)?;
 
     Ok(PersistLocalRecordResult {
         path: path.display().to_string(),
@@ -628,14 +634,16 @@ fn save_live_analysis_snapshot(
 }
 
 #[tauri::command]
-fn load_last_live_analysis_snapshot() -> Result<Option<LiveAnalysisSnapshotInput>, String> {
+fn load_last_live_analysis_snapshot(
+    app: AppHandle,
+) -> Result<Option<LiveAnalysisSnapshotInput>, String> {
     if let Some(snapshot) =
-        load_app_setting_json::<LiveAnalysisSnapshotInput>("last_live_analysis_snapshot")?
+        load_app_setting_json::<LiveAnalysisSnapshotInput>(&app, "last_live_analysis_snapshot")?
     {
         return Ok(Some(snapshot));
     }
 
-    let path = live_analysis_snapshot_path();
+    let path = live_analysis_snapshot_path(&app);
     if !path.exists() {
         return Ok(None);
     }
@@ -648,32 +656,48 @@ fn load_last_live_analysis_snapshot() -> Result<Option<LiveAnalysisSnapshotInput
 }
 
 #[tauri::command]
-fn load_qa_review_state() -> Result<QaReviewState, String> {
-    let fixtures = hydrate_qa_fixtures(read_json_file(eval_fixtures_path())?);
+fn load_qa_review_state(app: AppHandle) -> Result<QaReviewState, String> {
+    let fixtures = hydrate_qa_fixtures(&app, read_json_file(eval_fixtures_path(&app))?);
 
     Ok(QaReviewState {
         fixtures,
-        manual_review_runs: read_json_file(manual_review_runs_path())?,
-        rehearsal_runs: read_json_file(rehearsal_runs_path())?,
+        manual_review_runs: load_qa_run_records::<ManualReviewRunRecord>(
+            qa_manual_review_runs_path(&app),
+            qa_manual_review_seed_path(&app),
+        )?,
+        rehearsal_runs: load_qa_run_records::<RehearsalRunRecord>(
+            qa_rehearsal_runs_path(&app),
+            qa_rehearsal_seed_path(&app),
+        )?,
     })
 }
 
 #[tauri::command]
-fn append_manual_review_run(input: ManualReviewRunRecord) -> Result<QaReviewState, String> {
-    let mut runs: Vec<ManualReviewRunRecord> = read_json_file(manual_review_runs_path())?;
+fn append_manual_review_run(
+    app: AppHandle,
+    input: ManualReviewRunRecord,
+) -> Result<QaReviewState, String> {
+    let path = qa_manual_review_runs_path(&app);
+    let seed_path = qa_manual_review_seed_path(&app);
+    let mut runs: Vec<ManualReviewRunRecord> = load_qa_run_records(&path, &seed_path)?;
     runs.push(input);
-    write_json_file(manual_review_runs_path(), &runs)?;
-    sync_qa_logs()?;
-    load_qa_review_state()
+    write_json_file(&path, &runs)?;
+    sync_qa_logs_if_dev_repo()?;
+    load_qa_review_state(app)
 }
 
 #[tauri::command]
-fn append_rehearsal_run(input: RehearsalRunRecord) -> Result<QaReviewState, String> {
-    let mut runs: Vec<RehearsalRunRecord> = read_json_file(rehearsal_runs_path())?;
+fn append_rehearsal_run(
+    app: AppHandle,
+    input: RehearsalRunRecord,
+) -> Result<QaReviewState, String> {
+    let path = qa_rehearsal_runs_path(&app);
+    let seed_path = qa_rehearsal_seed_path(&app);
+    let mut runs: Vec<RehearsalRunRecord> = load_qa_run_records(&path, &seed_path)?;
     runs.push(input);
-    write_json_file(rehearsal_runs_path(), &runs)?;
-    sync_qa_logs()?;
-    load_qa_review_state()
+    write_json_file(&path, &runs)?;
+    sync_qa_logs_if_dev_repo()?;
+    load_qa_review_state(app)
 }
 
 #[tauri::command]
@@ -1087,64 +1111,111 @@ fn mac_capture_package_dir() -> PathBuf {
         .to_path_buf()
 }
 
-fn local_runtime_dir() -> PathBuf {
+fn use_dev_repo_layout() -> bool {
+    cfg!(debug_assertions)
+}
+
+fn dev_repo_root_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
-        .join(".slowlearner")
         .to_path_buf()
 }
 
-fn app_runtime_state_path() -> PathBuf {
-    local_runtime_dir().join("ui-state.json")
+fn dev_local_runtime_dir() -> PathBuf {
+    dev_repo_root_dir().join(".slowlearner")
 }
 
-fn session_logs_path() -> PathBuf {
-    local_runtime_dir().join("logs").join("sessions.jsonl")
+fn local_runtime_dir(app: &AppHandle) -> PathBuf {
+    if use_dev_repo_layout() {
+        return dev_local_runtime_dir();
+    }
+
+    app.path()
+        .app_local_data_dir()
+        .unwrap_or_else(|_| dev_local_runtime_dir())
 }
 
-fn live_analysis_snapshot_path() -> PathBuf {
-    local_runtime_dir()
+fn app_runtime_state_path(app: &AppHandle) -> PathBuf {
+    local_runtime_dir(app).join("ui-state.json")
+}
+
+fn session_logs_path(app: &AppHandle) -> PathBuf {
+    local_runtime_dir(app).join("logs").join("sessions.jsonl")
+}
+
+fn live_analysis_snapshot_path(app: &AppHandle) -> PathBuf {
+    local_runtime_dir(app)
         .join("cache")
         .join("live-analysis-latest.json")
 }
 
-fn repo_root_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../..")
-        .to_path_buf()
+fn bundled_or_dev_resource_path(app: &AppHandle, relative_path: &str) -> PathBuf {
+    if use_dev_repo_layout() {
+        return dev_repo_root_dir().join(relative_path);
+    }
+
+    app.path()
+        .resolve(relative_path, BaseDirectory::Resource)
+        .unwrap_or_else(|_| dev_repo_root_dir().join(relative_path))
 }
 
-fn eval_dir() -> PathBuf {
-    repo_root_dir().join("data").join("eval")
+fn qa_runtime_dir(app: &AppHandle) -> PathBuf {
+    local_runtime_dir(app).join("qa")
 }
 
-fn eval_fixtures_path() -> PathBuf {
-    eval_dir().join("annotated_segments.json")
+fn qa_runtime_clips_dir(app: &AppHandle) -> PathBuf {
+    qa_runtime_dir(app).join("clips")
 }
 
-fn manual_review_runs_path() -> PathBuf {
-    eval_dir().join("manual_review_runs.json")
+fn eval_fixtures_path(app: &AppHandle) -> PathBuf {
+    bundled_or_dev_resource_path(app, "data/eval/annotated_segments.json")
 }
 
-fn rehearsal_runs_path() -> PathBuf {
-    eval_dir().join("rehearsal_runs.json")
+fn qa_manual_review_runs_path(app: &AppHandle) -> PathBuf {
+    if use_dev_repo_layout() {
+        dev_repo_root_dir()
+            .join("data")
+            .join("eval")
+            .join("manual_review_runs.json")
+    } else {
+        qa_runtime_dir(app).join("manual_review_runs.json")
+    }
 }
 
-fn runtime_db_path() -> PathBuf {
-    local_runtime_dir().join("runtime.sqlite3")
+fn qa_manual_review_seed_path(app: &AppHandle) -> PathBuf {
+    bundled_or_dev_resource_path(app, "data/eval/manual_review_runs.json")
 }
 
-fn hydrate_qa_fixtures(fixtures: Vec<QaFixtureRecord>) -> Vec<QaFixtureRecord> {
+fn qa_rehearsal_runs_path(app: &AppHandle) -> PathBuf {
+    if use_dev_repo_layout() {
+        dev_repo_root_dir()
+            .join("data")
+            .join("eval")
+            .join("rehearsal_runs.json")
+    } else {
+        qa_runtime_dir(app).join("rehearsal_runs.json")
+    }
+}
+
+fn qa_rehearsal_seed_path(app: &AppHandle) -> PathBuf {
+    bundled_or_dev_resource_path(app, "data/eval/rehearsal_runs.json")
+}
+
+fn runtime_db_path(app: &AppHandle) -> PathBuf {
+    local_runtime_dir(app).join("runtime.sqlite3")
+}
+
+fn hydrate_qa_fixtures(app: &AppHandle, fixtures: Vec<QaFixtureRecord>) -> Vec<QaFixtureRecord> {
     fixtures
         .into_iter()
         .map(|mut fixture| {
-            fixture.local_clip_path = resolve_fixture_local_clip_path(&fixture);
+            fixture.local_clip_path = resolve_fixture_local_clip_path(app, &fixture);
             fixture
         })
         .collect()
 }
 
-fn resolve_fixture_local_clip_path(fixture: &QaFixtureRecord) -> Option<String> {
+fn resolve_fixture_local_clip_path(app: &AppHandle, fixture: &QaFixtureRecord) -> Option<String> {
     let relative_path = fixture
         .source_clip_plan
         .as_ref()?
@@ -1155,12 +1226,17 @@ fn resolve_fixture_local_clip_path(fixture: &QaFixtureRecord) -> Option<String> 
         return None;
     }
 
-    let absolute_path = repo_root_dir().join(relative_path);
-    if absolute_path.exists() {
-        Some(absolute_path.to_string_lossy().to_string())
+    let runtime_clip_path = qa_runtime_clips_dir(app).join(Path::new(relative_path).file_name()?);
+    let candidates = if use_dev_repo_layout() {
+        vec![dev_repo_root_dir().join(relative_path)]
     } else {
-        None
-    }
+        vec![runtime_clip_path, dev_repo_root_dir().join(relative_path)]
+    };
+
+    candidates
+        .into_iter()
+        .find(|candidate| candidate.exists())
+        .map(|path| path.to_string_lossy().to_string())
 }
 
 fn default_app_runtime_state() -> AppRuntimeState {
@@ -1238,10 +1314,12 @@ fn append_json_line<T: Serialize>(path: &Path, value: &T) -> Result<(), String> 
     writeln!(file, "{line}").map_err(|error| error.to_string())
 }
 
-fn read_json_file<T>(path: PathBuf) -> Result<T, String>
+fn read_json_file<T>(path: impl AsRef<Path>) -> Result<T, String>
 where
     T: Default + DeserializeOwned,
 {
+    let path = path.as_ref();
+
     if !path.exists() {
         return Ok(T::default());
     }
@@ -1250,7 +1328,8 @@ where
     serde_json::from_slice::<T>(&raw).map_err(|error| error.to_string())
 }
 
-fn write_json_file<T: Serialize>(path: PathBuf, value: &T) -> Result<(), String> {
+fn write_json_file<T: Serialize>(path: impl AsRef<Path>, value: &T) -> Result<(), String> {
+    let path = path.as_ref();
     ensure_parent_dir(&path)?;
     fs::write(
         path,
@@ -1262,8 +1341,39 @@ fn write_json_file<T: Serialize>(path: PathBuf, value: &T) -> Result<(), String>
     .map_err(|error| error.to_string())
 }
 
-fn open_runtime_db() -> Result<Connection, String> {
-    let path = runtime_db_path();
+fn load_seeded_json_file<T>(runtime_path: &Path, seed_path: &Path) -> Result<T, String>
+where
+    T: Default + DeserializeOwned + Serialize,
+{
+    if runtime_path.exists() {
+        return read_json_file(runtime_path);
+    }
+
+    if seed_path.exists() {
+        let value = read_json_file(seed_path)?;
+        write_json_file(runtime_path, &value)?;
+        return Ok(value);
+    }
+
+    Ok(T::default())
+}
+
+fn load_qa_run_records<T>(
+    runtime_path: impl AsRef<Path>,
+    seed_path: impl AsRef<Path>,
+) -> Result<Vec<T>, String>
+where
+    T: DeserializeOwned + Serialize,
+{
+    if use_dev_repo_layout() {
+        read_json_file(runtime_path)
+    } else {
+        load_seeded_json_file(runtime_path.as_ref(), seed_path.as_ref())
+    }
+}
+
+fn open_runtime_db(app: &AppHandle) -> Result<Connection, String> {
+    let path = runtime_db_path(app);
     ensure_parent_dir(&path)?;
 
     let connection = Connection::open(path).map_err(|error| error.to_string())?;
@@ -1274,8 +1384,12 @@ fn open_runtime_db() -> Result<Connection, String> {
     Ok(connection)
 }
 
-fn save_app_setting_json<T: Serialize>(key: &str, value: &T) -> Result<(), String> {
-    let connection = open_runtime_db()?;
+fn save_app_setting_json<T: Serialize>(
+    app: &AppHandle,
+    key: &str,
+    value: &T,
+) -> Result<(), String> {
+    let connection = open_runtime_db(app)?;
     let value_json = serde_json::to_string(value).map_err(|error| error.to_string())?;
 
     connection
@@ -1292,8 +1406,11 @@ fn save_app_setting_json<T: Serialize>(key: &str, value: &T) -> Result<(), Strin
     Ok(())
 }
 
-fn load_app_setting_json<T: DeserializeOwned>(key: &str) -> Result<Option<T>, String> {
-    let connection = open_runtime_db()?;
+fn load_app_setting_json<T: DeserializeOwned>(
+    app: &AppHandle,
+    key: &str,
+) -> Result<Option<T>, String> {
+    let connection = open_runtime_db(app)?;
     let raw = connection
         .query_row(
             "SELECT value_json FROM app_settings WHERE key = ?1",
@@ -1311,8 +1428,11 @@ fn load_app_setting_json<T: DeserializeOwned>(key: &str) -> Result<Option<T>, St
     }
 }
 
-fn persist_session_log_entry(entry: &SessionLogEntryPayload) -> Result<(), String> {
-    let connection = open_runtime_db()?;
+fn persist_session_log_entry(
+    app: &AppHandle,
+    entry: &SessionLogEntryPayload,
+) -> Result<(), String> {
+    let connection = open_runtime_db(app)?;
 
     connection
         .execute(
@@ -1350,8 +1470,11 @@ fn persist_session_log_entry(entry: &SessionLogEntryPayload) -> Result<(), Strin
     Ok(())
 }
 
-fn persist_live_analysis_snapshot(input: &LiveAnalysisSnapshotInput) -> Result<(), String> {
-    let connection = open_runtime_db()?;
+fn persist_live_analysis_snapshot(
+    app: &AppHandle,
+    input: &LiveAnalysisSnapshotInput,
+) -> Result<(), String> {
+    let connection = open_runtime_db(app)?;
     let packet_id = format!(
         "{}:{}:{}",
         input.packet_summary.session_id,
@@ -1441,15 +1564,19 @@ fn persist_live_analysis_snapshot(input: &LiveAnalysisSnapshotInput) -> Result<(
         )
         .map_err(|error| error.to_string())?;
 
-    save_app_setting_json("last_live_analysis_snapshot", input)?;
+    save_app_setting_json(app, "last_live_analysis_snapshot", input)?;
 
     Ok(())
 }
 
-fn sync_qa_logs() -> Result<(), String> {
+fn sync_qa_logs_if_dev_repo() -> Result<(), String> {
+    if !use_dev_repo_layout() {
+        return Ok(());
+    }
+
     let output = Command::new("pnpm")
         .args(["qa:sync"])
-        .current_dir(repo_root_dir())
+        .current_dir(dev_repo_root_dir())
         .output()
         .map_err(|error| error.to_string())?;
 

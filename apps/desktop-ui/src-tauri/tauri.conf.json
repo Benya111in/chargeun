@@ -28,6 +28,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all"
+    "targets": "all",
+    "resources": {
+      "../../../data/eval/annotated_segments.json": "data/eval/annotated_segments.json",
+      "../../../data/eval/manual_review_runs.json": "data/eval/manual_review_runs.json",
+      "../../../data/eval/rehearsal_runs.json": "data/eval/rehearsal_runs.json"
+    }
   }
 }

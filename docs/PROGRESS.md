@@ -103,3 +103,24 @@
 1. 실제 clip 기반 rehearsal log 축적
 2. live OCR/ASR adapter를 실제 모델 호출 또는 로컬 추론으로 교체
 3. Shadow buffer live 입력과 audio/ASR 경로 직결
+
+## 2026-04-15
+
+### 완료
+
+- Tauri runtime/storage/QA 경로를 release bundle 기준으로 재정리해, debug에서는 기존 저장소 `.slowlearner` 및 `data/eval` 흐름을 유지하고 release/package에서는 `app_local_data_dir` 기반 로컬 runtime을 사용하도록 수정
+- `load_app_runtime_state`, `save_app_runtime_state`, `append_session_log_entry`, `save_live_analysis_snapshot`, `load_last_live_analysis_snapshot`, QA review command들이 모두 `AppHandle` 기반 path resolver를 사용하도록 정리
+- release bundle이 `annotated_segments.json`, `manual_review_runs.json`, `rehearsal_runs.json`을 `Contents/Resources/data/eval/*`에 포함하고, standalone 앱이 최초 실행 시 이를 app-local QA JSON seed로 복사해 쓰도록 정리
+- `scripts/sync-qa-logs.ts`가 generated markdown을 쓰고 바로 Prettier로 정리하도록 보강해 `pnpm qa:sync` 이후에도 lint baseline이 다시 깨지지 않게 수정
+- debug bundle 빌드까지 확인해 packaged app 안에 `data/eval/*.json` 리소스가 실제로 들어가는 것을 검증
+- `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm build`, `pnpm --filter desktop-ui tauri build --debug` 검증 완료
+
+### 진행 중
+
+- Shadow Player가 여전히 mock/demo ring buffer 위주라 실제 live capture 입력과 4초 지연 재생을 직접 묶는 단계
+
+### 다음
+
+1. live capture frame window를 Shadow Player ring buffer에 직접 주입
+2. 실제 OCR/ASR adapter를 로컬 추론 또는 저비용 모델 호출로 교체
+3. fire/review fixture actual clip 확보와 rehearsal log 누적

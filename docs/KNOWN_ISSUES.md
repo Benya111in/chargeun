@@ -19,7 +19,7 @@
 - SQLite는 Tauri runtime에 붙었지만 `packages/local-store` 패키지가 아직 앱의 단일 persistence 구현체는 아니며, historical session browser/UI는 없다.
 - 브라우저 데모 모드에서는 filesystem cache clear를 직접 실행하지 않고, 실제 `clear_local_runtime` command는 Tauri 실행 경로에서만 동작한다.
 - `qa:sync`는 manual review/rehearsal markdown을 최신화하지만, 실제 clip을 재생하고 UI를 눈으로 검수하는 작업 자체를 자동화하지는 않는다.
-- QA workspace의 기록 경로는 현재 개발 저장소의 `data/eval` JSON과 `pnpm qa:sync`에 의존하므로, standalone 배포 bundle에서 그대로 쓰는 구조는 아직 아니다.
+- standalone release bundle은 이제 eval fixture와 seed QA JSON을 포함하고 app-local data로 복사해 쓰지만, local mp4/mov clip 자체를 번들에 포함하거나 자동으로 복사하지는 않는다.
 - QA workspace의 local clip preview는 사용자가 직접 넣은 local path와 비디오 확장자(`mp4`, `mov`, `m4v`, `webm`, `ogg`)에 의존하며, 폴더 스캔이나 clip 존재 확인 UI는 아직 없다.
 - QA workspace의 release checklist snapshot은 현재 rehearsal JSON에 있는 항목만 파생하므로, Shadow Player pause/seek/replay marker 같은 세부 동작은 여전히 사람이 수동으로 확인해야 한다.
 - fixture에 외부 source reference를 붙일 수는 있지만, YouTube 원본에서 필요한 구간을 자동으로 잘라 주거나 duration/timestamp를 자동 태깅하는 intake 도구는 아직 없다.

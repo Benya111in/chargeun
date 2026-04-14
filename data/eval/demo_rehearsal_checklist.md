@@ -22,6 +22,6 @@
 
 ## Run Log
 
-| date | operator | path | result | notes |
-| ---- | -------- | ---- | ------ | ----- |
-| `2026-04-14` | Codex | demo scenario + automated checks | in_progress | actual native rehearsal blocked by macOS Screen Recording permission; native voice/audio runtime smoke only |
+| date         | operator | path                             | result      | notes                                                                                                       |
+| ------------ | -------- | -------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `2026-04-14` | Codex    | demo scenario + automated checks | in_progress | actual native rehearsal blocked by macOS Screen Recording permission; native voice/audio runtime smoke only |

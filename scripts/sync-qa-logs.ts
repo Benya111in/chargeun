@@ -1,5 +1,7 @@
+import { execFile } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { promisify } from 'node:util'
 
 type EvalFixture = {
   clipId: string
@@ -35,6 +37,15 @@ type RehearsalRun = {
 }
 
 const root = process.cwd()
+const execFileAsync = promisify(execFile)
+const manualReviewLogPath = path.join(
+  root,
+  'data/eval/manual_review_log_2026-04-14.md',
+)
+const rehearsalChecklistPath = path.join(
+  root,
+  'data/eval/demo_rehearsal_checklist.md',
+)
 
 const main = async () => {
   const fixtures = await loadJson<EvalFixture[]>(
@@ -50,14 +61,12 @@ const main = async () => {
   const manualReviewLog = buildManualReviewLog({ fixtures, reviewRuns })
   const rehearsalChecklist = buildRehearsalChecklist(rehearsalRuns)
 
-  await writeFile(
-    path.join(root, 'data/eval/manual_review_log_2026-04-14.md'),
-    `${manualReviewLog}\n`,
-  )
-  await writeFile(
-    path.join(root, 'data/eval/demo_rehearsal_checklist.md'),
-    `${rehearsalChecklist}\n`,
-  )
+  await writeFile(manualReviewLogPath, `${manualReviewLog}\n`)
+  await writeFile(rehearsalChecklistPath, `${rehearsalChecklist}\n`)
+  await formatGeneratedMarkdown([
+    path.relative(root, manualReviewLogPath),
+    path.relative(root, rehearsalChecklistPath),
+  ])
 
   console.log(
     `QA sync complete: ${countStatuses(reviewRuns, 'pass')}/${fixtures.length} manual walkthroughs passed, ${countPassedRehearsals(rehearsalRuns)}/10 rehearsal runs passed`,
@@ -67,6 +76,12 @@ const main = async () => {
 async function loadJson<T>(relativeFile: string) {
   const file = path.join(root, relativeFile)
   return JSON.parse(await readFile(file, 'utf8')) as T
+}
+
+async function formatGeneratedMarkdown(files: string[]) {
+  await execFileAsync('pnpm', ['exec', 'prettier', '--write', ...files], {
+    cwd: root,
+  })
 }
 
 function buildManualReviewLog(input: {

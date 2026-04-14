@@ -171,3 +171,8 @@
 
 - 이유: 실제 QA clip을 처음 따는 단계에서는 완전 수동 탐색보다 자동 생성 자막의 키워드 hit를 시작점으로 삼는 편이 훨씬 빠르다.
 - 영향: `earthquake-desk-001`, `earthquake-after-shaking-001`의 첫 local window는 `책상`, `흔들림이 멈춘 후`, `가스`, `전기` 같은 자막 hit를 기준으로 잡고, 최종 pass/fail은 여전히 사람이 clip과 UI를 보며 확정한다.
+
+### D-035 release runtime은 source tree가 아니라 app-local data를 쓴다
+
+- 이유: 지금까지의 Tauri runtime/QA 경로는 개발 저장소 상대경로에 기대고 있어서, 실제로 번들된 `.app`를 다른 맥북에 옮기면 persistence와 QA workspace가 바로 깨질 위험이 컸다.
+- 영향: debug build는 기존 협업 흐름을 위해 저장소 `.slowlearner`와 `data/eval`을 계속 사용하지만, release/package build는 `app_local_data_dir` 아래 runtime/SQLite/QA JSON을 쓴다. eval fixture와 seed QA JSON은 `bundle.resources`로 앱 리소스에 포함하고, standalone 앱은 첫 실행 시 이를 local seed로 복사해 사용한다.
