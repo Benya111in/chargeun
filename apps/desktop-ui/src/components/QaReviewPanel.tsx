@@ -21,6 +21,8 @@ import { cn } from '../lib/utils'
 
 export function QaReviewPanel({
   busy,
+  clipPreviewSrc,
+  clipPreviewTitle,
   manualReviewDraft,
   notice,
   onChangeManualReviewDraft,
@@ -33,6 +35,8 @@ export function QaReviewPanel({
   selectedFixtureId,
 }: {
   busy: boolean
+  clipPreviewSrc: string | null
+  clipPreviewTitle: string
   manualReviewDraft: {
     notes: string
     operator: string
@@ -148,6 +152,26 @@ export function QaReviewPanel({
                   {selectedFixture.description}
                 </p>
               </div>
+
+              <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--ink)]">
+                {clipPreviewSrc && isLikelyVideoPath(clipPreviewSrc) ? (
+                  <video
+                    className="aspect-video w-full bg-black object-contain"
+                    controls
+                    preload="metadata"
+                    src={clipPreviewSrc}
+                  />
+                ) : (
+                  <div className="flex aspect-video items-center justify-center px-6 text-center text-sm leading-6 text-white/72">
+                    local clip path를 넣으면 여기서 바로 preview 할 수 있습니다.
+                  </div>
+                )}
+              </div>
+              <p className="text-xs leading-5 text-[var(--muted)]">
+                {clipPreviewSrc
+                  ? `${clipPreviewTitle}: ${clipPreviewSrc}`
+                  : 'actual clip path가 아직 없습니다.'}
+              </p>
 
               <LabeledInput
                 label="operator"
@@ -556,4 +580,8 @@ function RunBadge({
       {status}
     </span>
   )
+}
+
+function isLikelyVideoPath(path: string) {
+  return /\.(mp4|mov|m4v|webm|ogg)$/i.test(path)
 }

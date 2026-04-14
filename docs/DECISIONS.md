@@ -146,3 +146,8 @@
 
 - 이유: 실제 시연 직전에는 터미널로 JSON을 직접 열어 수정하는 것보다, 현재 세션을 보면서 같은 화면 안에서 walkthrough 결과를 남기는 편이 훨씬 빠르고 협업 실수가 적다.
 - 영향: desktop UI는 `QaReviewPanel`에서 fixture별 status/path/notes와 rehearsal checklist를 바로 기록하고, Tauri command가 `data/eval/*runs.json`을 갱신한 뒤 `pnpm qa:sync`를 실행해 markdown 로그까지 맞춘다. 이 경로는 현재 개발 저장소 기준이며, 독립 배포용 bundle persistence와는 아직 분리되어 있다.
+
+### D-030 local clip preview는 QA 입력 path를 그대로 재사용한다
+
+- 이유: 실제 clip 검수에서는 별도 asset registry를 또 관리하기보다, 검수자가 지금 보고 있는 로컬 파일 path를 그대로 preview와 로그에 같이 남기는 편이 가장 빠르고 협업 중 실수가 적다.
+- 영향: `QaReviewPanel`은 manual review의 `path` 값을 우선 사용하고, Tauri 실행 시에는 `convertFileSrc`로 `asset:` URL을 만들어 영상 preview를 연다. 브라우저 preview에서는 path 문자열만 유지하며, 실제 자산 배포/복사는 후속 범위로 남긴다.

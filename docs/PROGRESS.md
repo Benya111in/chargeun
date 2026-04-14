@@ -80,10 +80,12 @@
 - Tauri `load_qa_review_state`, `append_manual_review_run`, `append_rehearsal_run` command와 desktop bridge를 추가해 앱 내부에서 QA 로그를 읽고 기록할 수 있게 정리
 - `QaReviewPanel`과 `qa-review` helper를 추가해 fixture별 manual walkthrough status, clip path, notes, rehearsal checklist를 UI에서 바로 남기고 `data/eval`에 sync되도록 연결
 - `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm qa:sync`, `pnpm lint`, `pnpm build`로 in-app QA workspace slice 검증 완료
+- QA workspace가 operator가 입력한 local clip path를 Tauri `asset:` URL 또는 브라우저 path fallback으로 바로 preview하도록 확장돼, 실제 clip walkthrough 시 같은 화면에서 영상 확인과 로그 기록을 같이 할 수 있게 정리
+- `resolveLocalMediaSrc` helper test를 추가하고 `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 local clip preview slice 검증 완료
 
 ### 진행 중
 
-- 실제 clip 기반 manual QA와 rehearsal 반복
+- 실제 mp4/mov 자산을 연결한 manual walkthrough와 rehearsal 반복
 
 ### 다음
 

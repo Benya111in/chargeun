@@ -47,6 +47,7 @@ import {
   loadQaReviewState,
   loadAppRuntimeState,
   loadLastLiveAnalysisSnapshot,
+  resolveLocalMediaSrc,
   saveLiveAnalysisSnapshot,
   saveAppRuntimeState,
 } from './lib/desktop-bridge'
@@ -64,6 +65,7 @@ import type { LiveAnalysisSnapshotInput } from './lib/live-analysis-contract'
 import { demoScenarios } from './lib/mock-session'
 import {
   defaultQaReviewState,
+  getLatestManualReviewRun,
   type QaReviewState,
   type RehearsalRunRecord,
 } from './lib/qa-review'
@@ -349,6 +351,21 @@ function App() {
     explanation.tracks[selectedTrack] ??
     explanation.tracks.easy ??
     explanation.tracks.basic
+  const selectedQaFixture =
+    qaState.fixtures.find(
+      (fixture) => fixture.clipId === selectedQaFixtureId,
+    ) ??
+    qaState.fixtures[0] ??
+    null
+  const selectedQaLatestRun = selectedQaFixture
+    ? getLatestManualReviewRun(
+        qaState.manualReviewRuns,
+        selectedQaFixture.clipId,
+      )
+    : null
+  const selectedQaPreviewSrc = resolveLocalMediaSrc(
+    manualReviewDraft.path || selectedQaLatestRun?.path || '',
+  )
   const lastSessionMeta =
     buildPersistedSessionMeta(capture.state.activeSession) ??
     restoredRuntimeState.lastSession ??
@@ -1194,6 +1211,12 @@ function App() {
             />
             <QaReviewPanel
               busy={qaBusy}
+              clipPreviewSrc={selectedQaPreviewSrc}
+              clipPreviewTitle={
+                selectedQaFixture
+                  ? `${selectedQaFixture.clipId} clip preview`
+                  : 'clip preview'
+              }
               manualReviewDraft={manualReviewDraft}
               notice={qaNotice}
               onChangeManualReviewDraft={(patch) =>

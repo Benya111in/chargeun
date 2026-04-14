@@ -3,7 +3,7 @@ import {
   macCaptureEventSchema,
   type MacCaptureEvent,
 } from '@ansimtrack/shared-types'
-import { invoke, isTauri } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
 import {
@@ -354,6 +354,18 @@ export async function appendRehearsalRun(
   }
 
   return invoke<QaReviewState>('append_rehearsal_run', { input })
+}
+
+export function resolveLocalMediaSrc(path: string) {
+  if (!path) {
+    return null
+  }
+
+  if (/^(https?:|data:|blob:|asset:)/.test(path)) {
+    return path
+  }
+
+  return isTauri() ? convertFileSrc(path) : path
 }
 
 function loadRuntimeStateFromBrowser() {
