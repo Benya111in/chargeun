@@ -121,3 +121,8 @@
 
 - 이유: 앱 내부에서 쓰는 짧은 deterministic prompt와 저장소 구현 작업을 위임하는 긴 Codex prompt는 목적과 변경 주기가 다르다.
 - 영향: `prompts/*.md`는 segment/track/voice runtime prompt 골격으로 유지하고, `prompts/codex/*.md`는 문서 25의 도메인별 작업 지시문을 파일로 관리한다. `scripts/validate-prompts.ts`는 핵심 grounding/safety 제약과 파일 누락을 빠르게 점검한다.
+
+### D-025 live analysis snapshot은 raw frame 대신 요약 패킷을 저장한다
+
+- 이유: active capture frame의 data URL 전체를 매 refresh마다 저장하면 브라우저 preview와 Tauri runtime 모두에서 용량과 쓰기 비용이 급격히 커진다.
+- 영향: live session log는 `sessions.jsonl`에 세션 메타데이터만 append하고, 최신 analysis snapshot은 keyframe count/OCR/ASR/object hint label 중심 summary로 저장한다. 실제 raw frame cache는 capture input window와 runtime export 경로에서만 일시적으로 유지한다.

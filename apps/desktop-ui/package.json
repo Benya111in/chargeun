@@ -16,6 +16,7 @@
   "dependencies": {
     "html-to-image": "^1.11.13",
     "@ansimtrack/llm-orchestrator": "workspace:*",
+    "@ansimtrack/perception-pipeline": "workspace:*",
     "@ansimtrack/shadow-buffer": "workspace:*",
     "@ansimtrack/shared-types": "workspace:*",
     "@tauri-apps/api": "^2.8.0",

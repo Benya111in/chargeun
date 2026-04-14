@@ -1,7 +1,10 @@
 import {
   captureEvents,
   macCaptureEventSchema,
+  type CaptureSession,
   type MacCaptureEvent,
+  type Segment,
+  type SegmentExplanation,
 } from '@ansimtrack/shared-types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
@@ -32,7 +35,50 @@ export type ExportDemoArtifactResult = {
   status: 'browser-download' | 'exported'
 }
 
+export type PersistLocalRecordResult = {
+  path: string
+  status: 'browser-preview' | 'saved'
+}
+
+export type SessionLogEntryPayload = {
+  endedAt?: number
+  selectedSourceId?: string | null
+  selectedTrack?: string | null
+  session: CaptureSession
+  voiceEnabled?: boolean
+}
+
+export type LiveAnalysisPacketSummary = {
+  asrText: string
+  keyframeCount: number
+  objectHintLabels: string[]
+  ocrTokens: string[]
+  sessionId: string
+  tEndMs: number
+  tStartMs: number
+  uiElementLabels: string[]
+}
+
+export type LiveAnalysisPlanSummary = {
+  fps: number
+  holdMs: number
+  mode: string
+  reason: string
+}
+
+export type LiveAnalysisSnapshotInput = {
+  createdAt: number
+  explanation: SegmentExplanation
+  packetSummary: LiveAnalysisPacketSummary
+  plan: LiveAnalysisPlanSummary
+  segment: Segment
+  session: SessionLogEntryPayload
+  sourceId?: string | null
+}
+
 const runtimeStateStorageKey = 'ansimtrack.runtime-state'
+const liveAnalysisSnapshotStorageKey = 'ansimtrack.live-analysis.latest'
+const sessionLogStorageKey = 'ansimtrack.session-log'
 
 export async function getCaptureBootstrapState(): Promise<CaptureBootstrapState> {
   if (!isTauri()) {
@@ -141,6 +187,28 @@ export async function exportDemoArtifact(input: {
   return invoke<ExportDemoArtifactResult>('export_demo_artifact', { input })
 }
 
+export async function appendSessionLogEntry(
+  input: SessionLogEntryPayload,
+): Promise<PersistLocalRecordResult> {
+  if (!isTauri()) {
+    return appendSessionLogEntryInBrowser(input)
+  }
+
+  return invoke<PersistLocalRecordResult>('append_session_log_entry', { input })
+}
+
+export async function saveLiveAnalysisSnapshot(
+  input: LiveAnalysisSnapshotInput,
+): Promise<PersistLocalRecordResult> {
+  if (!isTauri()) {
+    return saveLiveAnalysisSnapshotInBrowser(input)
+  }
+
+  return invoke<PersistLocalRecordResult>('save_live_analysis_snapshot', {
+    input,
+  })
+}
+
 export async function listenToNativeCaptureEvents(
   onEvent: (event: MacCaptureEvent) => void,
 ) {
@@ -204,6 +272,48 @@ function saveRuntimeStateToBrowser(state: AppRuntimeState) {
   }
 
   return state
+}
+
+function appendSessionLogEntryInBrowser(
+  input: SessionLogEntryPayload,
+): PersistLocalRecordResult {
+  if (typeof window !== 'undefined') {
+    try {
+      const current = window.localStorage.getItem(sessionLogStorageKey)
+      const parsed = current
+        ? (JSON.parse(current) as SessionLogEntryPayload[])
+        : []
+      const next = [...parsed, input].slice(-25)
+      window.localStorage.setItem(sessionLogStorageKey, JSON.stringify(next))
+    } catch {
+      // Ignore browser preview storage errors.
+    }
+  }
+
+  return {
+    path: sessionLogStorageKey,
+    status: 'browser-preview',
+  }
+}
+
+function saveLiveAnalysisSnapshotInBrowser(
+  input: LiveAnalysisSnapshotInput,
+): PersistLocalRecordResult {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(
+        liveAnalysisSnapshotStorageKey,
+        JSON.stringify(input),
+      )
+    } catch {
+      // Ignore browser preview storage errors.
+    }
+  }
+
+  return {
+    path: liveAnalysisSnapshotStorageKey,
+    status: 'browser-preview',
+  }
 }
 
 async function exportDemoArtifactInBrowser(input: {

@@ -81,3 +81,7 @@
 17. `done` domain prompt assets 정리
     - source docs: `docs/25_CODEX_PROMPTS_BY_DOMAIN.md`
     - goal: 도메인별 prompt asset과 사용 가이드 정리
+
+18. `done` live capture -> perception -> segment -> session log 실시간 연결
+    - source docs: `docs/09_PERCEPTION_PIPELINE.md`, `docs/10_HAZARD_CLASSIFIER_AND_SEGMENT_ENGINE.md`, `docs/15_BACKEND_STORAGE_AND_JOBS.md`, `docs/22_POST_DEMO_BACKLOG.md`
+    - goal: active capture frame window에서 live packet/segment/explanation을 만들고 로컬 snapshot/session log를 남긴다

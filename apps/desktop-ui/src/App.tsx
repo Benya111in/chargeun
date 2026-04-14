@@ -18,6 +18,7 @@ import {
   matchGroundedRules,
 } from '@ansimtrack/llm-orchestrator'
 import {
+  type CaptureSession,
   type SegmentExplanation,
   voiceIntentLabels,
   type VoiceIntent,
@@ -37,9 +38,11 @@ import {
   captureStatusLabels,
 } from './lib/capture-contract'
 import {
+  appendSessionLogEntry,
   clearLocalRuntimeFiles,
   exportDemoArtifact,
   loadAppRuntimeState,
+  saveLiveAnalysisSnapshot,
   saveAppRuntimeState,
 } from './lib/desktop-bridge'
 import {
@@ -47,7 +50,9 @@ import {
   defaultAppRuntimeState,
   type PrivacyPrefsState,
 } from './lib/demo-runtime'
+import { buildLiveAnalysis, summarizePacket } from './lib/live-analysis'
 import { demoScenarios } from './lib/mock-session'
+import { liveRuleCatalog } from './lib/rule-catalog'
 import { useCaptureController } from './lib/useCaptureController'
 import { cn, formatClock, formatPercent } from './lib/utils'
 import { useVoicePlayback } from './lib/voice-playback'
@@ -111,6 +116,16 @@ function App() {
   const voicePlayback = useVoicePlayback()
   const appExportRef = useRef<HTMLDivElement | null>(null)
   const previousSessionIdRef = useRef<string | null>(null)
+  const previousLoggedSessionRef = useRef<CaptureSession | null>(null)
+  const sessionLogMetaRef = useRef<{
+    selectedSourceId: string | null
+    selectedTrack: TrackKey
+    voiceEnabled: boolean
+  }>({
+    selectedSourceId: null,
+    selectedTrack: 'action',
+    voiceEnabled: false,
+  })
 
   const scenario = useMemo(
     () =>
@@ -118,7 +133,7 @@ function App() {
     [scenarioId],
   )
 
-  const segment = useMemo(
+  const demoSegment = useMemo(
     () => ({
       ...buildSegmentFromPerception({
         packet: scenario.perceptionPacket,
@@ -130,41 +145,77 @@ function App() {
     [scenario],
   )
 
-  const ruleMatches = useMemo(
+  const demoRuleMatches = useMemo(
     () =>
       matchGroundedRules({
         evidence: scenario.perceptionPacket,
         rules: scenario.rules,
-        segment,
+        segment: demoSegment,
       }),
-    [scenario, segment],
+    [demoSegment, scenario],
   )
-  const groundedExplanation = useMemo(
+  const demoGroundedExplanation = useMemo(
     () =>
       buildGroundedExplanation({
         evidence: scenario.perceptionPacket,
         rules: scenario.rules,
-        segment,
+        segment: demoSegment,
       }),
-    [scenario, segment],
+    [demoSegment, scenario],
+  )
+  const liveAnalysis = useMemo(
+    () =>
+      buildLiveAnalysis({
+        captureInput: capture.state.captureInput,
+        rules: liveRuleCatalog,
+        session: capture.state.activeSession,
+      }),
+    [capture.state.activeSession, capture.state.captureInput],
+  )
+  const analysis = useMemo(
+    () =>
+      liveAnalysis ?? {
+        cacheKey: scenario.id,
+        explanation: demoGroundedExplanation,
+        overlaySummary: scenario.overlaySummary,
+        overlayTargets: scenario.overlayTargets,
+        packet: scenario.perceptionPacket,
+        packetSummary: summarizePacket(scenario.perceptionPacket),
+        phaseLabel: demoSegment.phaseLabel,
+        plan: null,
+        ruleMatches: demoRuleMatches,
+        segment: demoSegment,
+        videoCaption: scenario.videoCaption,
+      },
+    [
+      demoGroundedExplanation,
+      demoRuleMatches,
+      demoSegment,
+      liveAnalysis,
+      scenario.id,
+      scenario.overlaySummary,
+      scenario.overlayTargets,
+      scenario.perceptionPacket,
+      scenario.videoCaption,
+    ],
   )
   const safetyView = useMemo(
     () =>
       applySafetyGuardrails({
         evidenceVisible: showEvidence,
-        explanation: groundedExplanation,
+        explanation: analysis.explanation,
         panicMode,
         privacyConsent: capture.state.activeSession
           ? privacyPrefs.captureConsent
           : true,
-        segment,
+        segment: analysis.segment,
       }),
     [
+      analysis.explanation,
+      analysis.segment,
       capture.state.activeSession,
-      groundedExplanation,
       panicMode,
       privacyPrefs.captureConsent,
-      segment,
       showEvidence,
     ],
   )
@@ -180,16 +231,24 @@ function App() {
 
   const shadowScenario = useMemo(
     () => ({
-      ...scenario,
+      id: liveAnalysis
+        ? `live-${capture.state.activeSession?.id ?? 'preview'}`
+        : scenario.id,
+      overlaySummary: analysis.overlaySummary,
+      overlayTargets: analysis.overlayTargets,
       segment: {
-        endMs: segment.endMs,
-        hazard: segment.hazard,
-        startMs: segment.startMs,
-        title: segment.title,
+        endMs: analysis.segment.endMs,
+        hazard: analysis.segment.hazard,
+        startMs: analysis.segment.startMs,
+        title: analysis.segment.title,
       },
+      videoCaption: analysis.videoCaption,
     }),
-    [scenario, segment],
+    [analysis, capture.state.activeSession?.id, liveAnalysis, scenario.id],
   )
+  const segment = analysis.segment
+  const ruleMatches = analysis.ruleMatches
+  const isLiveAnalysis = Boolean(liveAnalysis)
 
   const availableTracks = useMemo(
     () =>
@@ -276,6 +335,84 @@ function App() {
     runtimeHydrated,
     scenarioId,
     showEvidence,
+  ])
+
+  useEffect(() => {
+    sessionLogMetaRef.current = {
+      selectedSourceId: capture.state.selectedSourceId || null,
+      selectedTrack: requestedTrack,
+      voiceEnabled: voicePlayback.state.available,
+    }
+  }, [
+    capture.state.selectedSourceId,
+    requestedTrack,
+    voicePlayback.state.available,
+  ])
+
+  useEffect(() => {
+    const currentSession = capture.state.activeSession
+    const previousSession = previousLoggedSessionRef.current
+
+    if (previousSession && previousSession.id !== currentSession?.id) {
+      const meta = sessionLogMetaRef.current
+      void appendSessionLogEntry({
+        endedAt: Date.now(),
+        selectedSourceId: meta.selectedSourceId,
+        selectedTrack: meta.selectedTrack,
+        session: previousSession,
+        voiceEnabled: meta.voiceEnabled,
+      })
+    }
+
+    if (currentSession && previousSession?.id !== currentSession.id) {
+      void appendSessionLogEntry({
+        selectedSourceId: capture.state.selectedSourceId || null,
+        selectedTrack: requestedTrack,
+        session: currentSession,
+        voiceEnabled: voicePlayback.state.available,
+      })
+    }
+
+    previousLoggedSessionRef.current = currentSession
+  }, [
+    capture.state.activeSession,
+    capture.state.selectedSourceId,
+    requestedTrack,
+    voicePlayback.state.available,
+  ])
+
+  useEffect(() => {
+    const activeSession = capture.state.activeSession
+    if (!liveAnalysis || !activeSession) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      void saveLiveAnalysisSnapshot({
+        createdAt: Date.now(),
+        explanation,
+        packetSummary: liveAnalysis.packetSummary,
+        plan: liveAnalysis.plan,
+        segment,
+        session: {
+          selectedSourceId: capture.state.selectedSourceId || null,
+          selectedTrack: requestedTrack,
+          session: activeSession,
+          voiceEnabled: voicePlayback.state.available,
+        },
+        sourceId: capture.state.selectedSourceId || null,
+      })
+    }, 220)
+
+    return () => window.clearTimeout(timer)
+  }, [
+    capture.state.activeSession,
+    capture.state.selectedSourceId,
+    explanation,
+    liveAnalysis,
+    requestedTrack,
+    segment,
+    voicePlayback.state.available,
   ])
 
   const clearRuntimeCache = useCallback(
@@ -429,9 +566,14 @@ function App() {
         : undefined
 
       const result = await exportDemoArtifact({
-        artifactName: `${scenario.id}-${activeRunbookStep?.id ?? 'demo'}`,
+        artifactName: `${
+          isLiveAnalysis
+            ? `live-${capture.state.activeSession?.id ?? 'capture'}`
+            : scenario.id
+        }-${activeRunbookStep?.id ?? 'demo'}`,
         payload: {
           activeRunbookStep,
+          analysisSource: isLiveAnalysis ? 'live-capture' : 'demo-scenario',
           capture: {
             lastSession: lastSessionMeta,
             selectedSourceId: capture.state.selectedSourceId,
@@ -439,6 +581,7 @@ function App() {
           },
           demoMode,
           explanation,
+          packetSummary: analysis.packetSummary,
           privacyPrefs,
           ruleMatches: ruleMatches.map((match) => ({
             matchedSignals: match.matchedSignals,
@@ -448,9 +591,11 @@ function App() {
           })),
           safetyWarnings,
           scenario: {
-            id: scenario.id,
-            overlaySummary: scenario.overlaySummary,
-            title: scenario.title,
+            id: isLiveAnalysis
+              ? `live-${capture.state.activeSession?.id ?? 'capture'}`
+              : scenario.id,
+            overlaySummary: analysis.overlaySummary,
+            title: segment.title,
           },
           segment,
           selectedTrack,
@@ -732,7 +877,10 @@ function App() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusPill tone="neutral">
-                    {scenario.session.hasAudio ? '오디오 있음' : '오디오 없음'}
+                    {(capture.state.activeSession?.hasAudio ??
+                    scenario.session.hasAudio)
+                      ? '오디오 있음'
+                      : '오디오 없음'}
                   </StatusPill>
                   <StatusPill tone="neutral">
                     {formatClock(segment.startMs)} -{' '}
@@ -743,7 +891,7 @@ function App() {
 
               <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
                 <ShadowVideoStage
-                  key={scenario.id}
+                  key={shadowScenario.id}
                   onToggleEvidence={() => setShowEvidence((value) => !value)}
                   onTogglePanic={() => setPanicMode((value) => !value)}
                   panicMode={panicMode}
@@ -819,7 +967,7 @@ function App() {
               artifactBusy={artifactBusy}
               artifactNotice={artifactNotice}
               backupSessions={prerecordedBackupSessions}
-              currentScenarioTitle={scenario.title}
+              currentScenarioTitle={segment.title}
               demoMode={demoMode}
               lastSessionLabel={lastSessionMeta?.displayName}
               onExportArtifacts={handleExportArtifacts}
@@ -969,7 +1117,7 @@ function App() {
 
             {showEvidence ? (
               <EvidenceDrawer
-                packet={scenario.perceptionPacket}
+                packet={analysis.packet}
                 reviewMode={explanation.safetyMode === 'review_official'}
                 ruleMatches={ruleMatches}
                 segment={segment}

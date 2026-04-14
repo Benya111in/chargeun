@@ -65,13 +65,16 @@
 - `pnpm check-env`, `bash -n scripts/check-env.sh`, `pnpm lint`로 local setup slice 검증 완료
 - `prompts/README.md`, runtime prompt 3종, `prompts/codex/*.md` 10종, `scripts/validate-prompts.ts`, `pnpm prompts:validate` 스크립트를 추가해 도메인 prompt 자산을 저장소 안에서 버전 관리하도록 정리
 - `pnpm prompts:validate`, `pnpm lint`로 prompt asset slice 검증 완료
+- live capture frame window를 `buildPerceptionFoundation -> buildSegmentFromPerception -> buildGroundedExplanation` 경로에 연결해 active capture 중에는 demo fixture 대신 실시간 local packet/segment/explanation이 화면에 반영되도록 정리
+- Tauri `.slowlearner/logs/sessions.jsonl` / `.slowlearner/cache/live-analysis-latest.json` 및 브라우저 preview localStorage fallback을 추가해 session log와 최신 live analysis snapshot을 남기도록 구현
+- `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 live capture analysis slice 검증 완료
 
 ### 진행 중
 
-- live capture `captureInput`를 perception/segment/session log로 실시간 연결
+- SQLite restore와 native audio 보강
 
 ### 다음
 
-1. live capture -> perception -> segment 실시간 연결
-2. SQLite restore와 native audio 보강
-3. 실제 clip 기반 rehearsal log 축적
+1. SQLite restore와 native audio 보강
+2. 실제 clip 기반 rehearsal log 축적
+3. live OCR/ASR adapter를 실제 모델 호출 또는 로컬 추론으로 교체

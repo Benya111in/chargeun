@@ -20,6 +20,10 @@ export default defineConfig({
         __dirname,
         '../../workers/llm-orchestrator/src/index.ts',
       ),
+      '@ansimtrack/perception-pipeline': path.resolve(
+        __dirname,
+        '../../workers/perception-pipeline/src/index.ts',
+      ),
     },
   },
   server: {

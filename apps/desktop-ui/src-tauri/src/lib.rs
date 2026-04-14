@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use std::{
     collections::HashMap,
     fs,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdout, Command, Stdio},
     sync::Mutex,
@@ -132,6 +132,68 @@ struct ExportDemoArtifactResult {
     json_path: String,
     screenshot_path: Option<String>,
     status: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistLocalRecordResult {
+    path: String,
+    status: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SessionLogCaptureSession {
+    id: String,
+    source_type: String,
+    platform: String,
+    started_at: u64,
+    has_audio: bool,
+    display_name: Option<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SessionLogEntryPayload {
+    ended_at: Option<u64>,
+    selected_source_id: Option<String>,
+    selected_track: Option<String>,
+    session: SessionLogCaptureSession,
+    voice_enabled: Option<bool>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LiveAnalysisPacketSummary {
+    asr_text: String,
+    keyframe_count: u32,
+    object_hint_labels: Vec<String>,
+    ocr_tokens: Vec<String>,
+    session_id: String,
+    t_end_ms: u64,
+    t_start_ms: u64,
+    ui_element_labels: Vec<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LiveAnalysisPlanSummary {
+    fps: u32,
+    hold_ms: u64,
+    mode: String,
+    reason: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LiveAnalysisSnapshotInput {
+    created_at: u64,
+    explanation: Value,
+    packet_summary: LiveAnalysisPacketSummary,
+    plan: LiveAnalysisPlanSummary,
+    segment: Value,
+    session: SessionLogEntryPayload,
+    source_id: Option<String>,
 }
 
 #[derive(Default)]
@@ -344,6 +406,40 @@ fn export_demo_artifact(
         json_path: json_path.display().to_string(),
         screenshot_path: saved_screenshot_path,
         status: "exported".into(),
+    })
+}
+
+#[tauri::command]
+fn append_session_log_entry(
+    input: SessionLogEntryPayload,
+) -> Result<PersistLocalRecordResult, String> {
+    let path = session_logs_path();
+    append_json_line(&path, &input)?;
+
+    Ok(PersistLocalRecordResult {
+        path: path.display().to_string(),
+        status: "saved".into(),
+    })
+}
+
+#[tauri::command]
+fn save_live_analysis_snapshot(
+    input: LiveAnalysisSnapshotInput,
+) -> Result<PersistLocalRecordResult, String> {
+    let path = live_analysis_snapshot_path();
+    ensure_parent_dir(&path)?;
+    fs::write(
+        &path,
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&input).map_err(|error| error.to_string())?
+        ),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(PersistLocalRecordResult {
+        path: path.display().to_string(),
+        status: "saved".into(),
     })
 }
 
@@ -582,6 +678,16 @@ fn app_runtime_state_path() -> PathBuf {
     local_runtime_dir().join("ui-state.json")
 }
 
+fn session_logs_path() -> PathBuf {
+    local_runtime_dir().join("logs").join("sessions.jsonl")
+}
+
+fn live_analysis_snapshot_path() -> PathBuf {
+    local_runtime_dir()
+        .join("cache")
+        .join("live-analysis-latest.json")
+}
+
 fn default_app_runtime_state() -> AppRuntimeState {
     AppRuntimeState {
         demo_mode: "live-priority".into(),
@@ -639,6 +745,24 @@ fn write_screenshot_data_url(path: &Path, data_url: &str) -> Result<(), String> 
     fs::write(path, decoded).map_err(|error| error.to_string())
 }
 
+fn ensure_parent_dir(path: &Path) -> Result<(), String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Target path did not have a parent directory".to_string())?;
+    fs::create_dir_all(parent).map_err(|error| error.to_string())
+}
+
+fn append_json_line<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+    ensure_parent_dir(path)?;
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|error| error.to_string())?;
+    let line = serde_json::to_string(value).map_err(|error| error.to_string())?;
+    writeln!(file, "{line}").map_err(|error| error.to_string())
+}
+
 fn mac_capture_bridge_binary(package_dir: &Path) -> Option<PathBuf> {
     [
         package_dir.join(".build/arm64-apple-macosx/debug/MacCaptureBridge"),
@@ -672,7 +796,9 @@ pub fn run() {
             clear_local_runtime,
             load_app_runtime_state,
             save_app_runtime_state,
-            export_demo_artifact
+            export_demo_artifact,
+            append_session_log_entry,
+            save_live_analysis_snapshot
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

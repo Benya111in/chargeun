@@ -4,8 +4,7 @@ import type {
   RuleRecord,
 } from '@ansimtrack/shared-types'
 
-import earthquakeRules from '../../../../data/rules/earthquake_rules.json'
-import fireRules from '../../../../data/rules/fire_rules.json'
+import { earthquakeRuleCatalog, fireRuleCatalog } from './rule-catalog'
 
 export type DemoScenario = {
   id: string
@@ -53,7 +52,7 @@ export const demoScenarios: DemoScenario[] = [
       ],
       keyframes: ['demo://fire/frame-1', 'demo://fire/frame-2'],
     },
-    rules: fireRules as RuleRecord[],
+    rules: fireRuleCatalog as RuleRecord[],
     overlayTargets: [{ label: '비상구 표지' }, { label: '계단 방향' }],
     overlaySummary: '연기, 비상구, 계단 방향',
     videoCaption:
@@ -83,7 +82,7 @@ export const demoScenarios: DemoScenario[] = [
       ],
       keyframes: ['demo://earthquake/frame-1', 'demo://earthquake/frame-2'],
     },
-    rules: earthquakeRules as RuleRecord[],
+    rules: earthquakeRuleCatalog as RuleRecord[],
     overlayTargets: [{ label: '책상 후보' }, { label: '흔들림 의심' }],
     overlaySummary: '탁자 후보, 흔들림 감지',
     videoCaption:
@@ -125,7 +124,7 @@ export const demoScenarios: DemoScenario[] = [
       ],
       keyframes: ['demo://fire-visual/frame-1', 'demo://fire-visual/frame-2'],
     },
-    rules: fireRules as RuleRecord[],
+    rules: fireRuleCatalog as RuleRecord[],
     overlayTargets: [{ label: '비상구 표지' }, { label: '계단 방향' }],
     overlaySummary: '비상구, 계단, 복도',
     videoCaption:
@@ -165,7 +164,7 @@ export const demoScenarios: DemoScenario[] = [
         'demo://earthquake-after/frame-2',
       ],
     },
-    rules: earthquakeRules as RuleRecord[],
+    rules: earthquakeRuleCatalog as RuleRecord[],
     overlayTargets: [{ label: '가스 밸브' }, { label: '출입문' }],
     overlaySummary: '가스 차단, 출입문, after shaking',
     videoCaption:

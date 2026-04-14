@@ -20,6 +20,9 @@ importers:
       '@ansimtrack/llm-orchestrator':
         specifier: workspace:*
         version: link:../../workers/llm-orchestrator
+      '@ansimtrack/perception-pipeline':
+        specifier: workspace:*
+        version: link:../../workers/perception-pipeline
       '@ansimtrack/shadow-buffer':
         specifier: workspace:*
         version: link:../../packages/shadow-buffer

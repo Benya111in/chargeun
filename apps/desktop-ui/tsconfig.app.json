@@ -13,6 +13,9 @@
       "@ansimtrack/shared-types": ["../../packages/shared-types/src/index.ts"],
       "@ansimtrack/llm-orchestrator": [
         "../../workers/llm-orchestrator/src/index.ts"
+      ],
+      "@ansimtrack/perception-pipeline": [
+        "../../workers/perception-pipeline/src/index.ts"
       ]
     },
     "types": ["vite/client"],
