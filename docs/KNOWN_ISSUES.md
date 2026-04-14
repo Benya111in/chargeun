@@ -38,3 +38,4 @@
 - `/demo` 발표 화면의 롱클립은 현재 원본에서 수동으로 다시 잘라 넣은 복사본이라, QA fixture window와 발표용 window를 자동으로 동기화하는 파이프라인은 아직 없다.
 - `/demo`는 이제 멀티트랙/grounded 정보를 함께 보여 주지만, 현재 cue timeline은 실제 segment detector 결과가 아니라 영상 길이를 track 수로 균등 분할한 발표용 cue 스케줄이다.
 - `/demo` scene-stepper의 장면 window는 현재 수동으로 정의한 presentation metadata라서, 실제 라이브 segment detector 결과와 자동 동기화되지는 않는다.
+- 사용자용 `/demo`는 의도적으로 grounding 근거, 관찰 신호, 운영자 제어를 숨기므로, QA나 규칙 검증이 필요할 때는 `/` 검증 화면으로 돌아가야 한다.

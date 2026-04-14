@@ -114,6 +114,8 @@
 - 발표 화면이 6~9초 QA 컷으로 너무 짧게 끝나던 문제를 수정해, `/demo` 자산을 화재 28초/24초, 지진 28초/30초 길이의 발표용 롱클립으로 교체했다
 - 발표 화면이 한 문장만 보여 연속성이 약하던 문제를 수정해, `/demo`에 멀티트랙 cue timeline, grounded rule/source, 관찰 신호, safety fallback을 함께 보여 주는 theater layout을 추가했다
 - `/demo`를 scene-stepper 구조로 재작업해, 각 영상을 3~4개 장면 window로 나누고 장면 재생 -> 자동 정지 -> 현재 장면 멀티트랙 설명 -> 다음 장면 재생 흐름으로 바꿨다
+- `/demo`가 개발자용 프로세스 설명처럼 보이던 문제를 수정해, grounded/rule/signal/safety 패널과 운영자 문구를 제거하고 실제 느린학습자 기준의 큰 영상, 장면 순서, 쉬운 설명, 하지 말 것, 다시 보기/다음 장면만 남겼다
+- Playwright로 `http://localhost:1420/demo`에서 첫 장면이 7.8초까지 실제 재생된 뒤 자동 정지하고, 사용자용 설명 탭과 `이 장면 다시 보기`/`다음 장면 보기`만 나타나는지 재검증했다
 - localhost demo path에서 버튼 상태만 바뀌고 Shadow Player 화면이 비어 보이던 문제를 추적해, scenario별 정적 demo frame 자산(`apps/desktop-ui/public/demo/*.jpg`)과 replay/live thumbnail fallback을 연결했다
 - `mock-session`이 demo timeline용 frame 목록을 같이 들고 다니도록 확장하고, `ShadowVideoStage`가 live frame이 없을 때 scenario demo frame을 cursor 기준으로 고르도록 수정했다
 - 이후 localhost 브라우저 데모에서도 각 preset 버튼이 실제 scene image 변경으로 바로 드러나게 되어, "버튼은 눌리는데 아무것도 안 바뀐다"는 오해를 줄였다
