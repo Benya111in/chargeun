@@ -1,17 +1,17 @@
 # KNOWN_ISSUES
 
-- macOS ScreenCaptureKit 경로는 preview/audio callback까지 붙었지만, full continuous video stream과 Shadow buffer 직결은 아직 미완성이다.
+- macOS ScreenCaptureKit 경로는 preview/audio callback과 sampled-frame Shadow replay까지 붙었지만, full continuous video stream을 encoded playback으로 바로 재생하는 단계는 아직 미완성이다.
 - Windows capture는 문서화 및 TODO만 있다.
 - 음성 입력은 이제 네이티브/브라우저 경로가 있지만, 여전히 버튼 intent와 텍스트 fallback이 가장 안정적인 시연 경로다.
 - 데모 데이터는 mock 세션을 사용하므로 실제 캡처 drift는 아직 검증되지 않았다.
 - Shadow Player의 auto-pause는 현재 marker 기반 UI 검증 단계이며 실제 segment detector 연동은 후속 작업이다.
 - perception worker는 구현됐지만 현재 OCR/ASR adapter는 shell 수준이며 실제 모델 추론은 아직 연결되지 않았다.
-- native mac preview는 low-fps snapshot frame 이벤트까지 연결됐지만 실제 continuous video/audio stream과 Shadow buffer 직결은 아직 미구현이다.
+- native mac preview는 low-fps snapshot frame 이벤트가 실제 Shadow replay에도 들어가지만, continuous video/audio stream을 그대로 sync playback하는 단계는 아직 미구현이다.
 - `swift test`는 현재 로컬 툴체인에서 `XCTest`/`Testing` 모듈을 바로 찾지 못해 smoke executable 검증으로 대체하고 있다.
 - Tauri `list/start/stop` command는 이제 Swift `MacCaptureBridge`를 직접 호출하지만, executable subprocess 경로라 첫 호출 시 지연이 있을 수 있다.
 - native audio preview는 이제 실제 ScreenCaptureKit audio callback을 내보내지만, PCM payload 저장/재생이나 live ASR 입력까지는 아직 연결되지 않았다.
 - 현재 로컬 macOS는 `swift run MacCaptureBridge bootstrap` 기준 Screen Recording 권한이 `denied` 상태라, 실제 native frame smoke는 권한 허용 후에만 검증할 수 있다.
-- Shadow Player replay lane은 아직 mock ring buffer 기반이며, 새 `captureInput` frame window와 직접 합쳐지지 않았다.
+- Shadow Player replay lane은 이제 `captureInput.frameWindow` 기반 sampled-frame replay를 사용하지만, 실제 영상 코덱 단위의 연속 재생과 오디오 drift 보정은 아직 없다.
 - desktop UI는 이제 live capture의 `captureInput`를 local perception/segment/explanation 경로에 흘리지만, 실제 OCR/ASR adapter는 아직 shell 수준이라 live path는 주로 visual/frame-window summary 기반 fallback으로 동작한다.
 - 현재 voice path는 macOS native TTS와 command-style STT를 우선 사용하지만, STT는 5개 지원 intent 문장 중심이라 자유 dictation 수준은 아니다.
 - `VoiceRuntimeBridge`는 현재 `NSSpeechSynthesizer` 기반이라 macOS 14+ deprecation warning이 남아 있으며, 추후 `AVSpeechSynthesizer`로 교체하는 것이 맞다.

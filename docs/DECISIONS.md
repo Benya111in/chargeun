@@ -176,3 +176,8 @@
 
 - 이유: 지금까지의 Tauri runtime/QA 경로는 개발 저장소 상대경로에 기대고 있어서, 실제로 번들된 `.app`를 다른 맥북에 옮기면 persistence와 QA workspace가 바로 깨질 위험이 컸다.
 - 영향: debug build는 기존 협업 흐름을 위해 저장소 `.slowlearner`와 `data/eval`을 계속 사용하지만, release/package build는 `app_local_data_dir` 아래 runtime/SQLite/QA JSON을 쓴다. eval fixture와 seed QA JSON은 `bundle.resources`로 앱 리소스에 포함하고, standalone 앱은 첫 실행 시 이를 local seed로 복사해 사용한다.
+
+### D-036 live Shadow는 full stream 대신 sampled frame부터 직결한다
+
+- 이유: 현재 native/browser 공통으로 가장 안정적으로 들어오는 것은 snapshot/dataURL 기반 frame sample이고, 이를 먼저 Shadow Player에 꽂아야 live path의 본질인 "4초 붙잡아 주기"를 실제 제품 화면에서 검증할 수 있다.
+- 영향: Shadow buffer는 이제 frame payload를 보존하고, `useShadowLivePlayer`가 `captureInput.frameWindow`를 실제 replay/live thumbnail로 사용한다. 다만 현재는 encoded video/audio 동기화 재생이 아니라 sampled frame replay이므로, 연속 영상 품질과 live audio ASR 연동은 후속 범위로 남긴다.

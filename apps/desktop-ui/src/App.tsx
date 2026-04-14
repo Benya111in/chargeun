@@ -1130,6 +1130,7 @@ function App() {
               <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
                 <ShadowVideoStage
                   key={shadowScenario.id}
+                  captureInput={capture.state.captureInput}
                   onToggleEvidence={() => setShowEvidence((value) => !value)}
                   onTogglePanic={() => setPanicMode((value) => !value)}
                   panicMode={panicMode}

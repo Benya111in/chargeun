@@ -279,7 +279,7 @@ export function useCaptureController() {
       setActiveSession(session)
       setStatus('running')
       setNotice(
-        '브라우저 fallback live preview가 켜졌습니다. Shadow Player replay lane은 mock buffer를 유지합니다.',
+        '브라우저 fallback live preview가 켜졌습니다. Shadow Player replay lane에도 실제 browser sample이 연결됩니다.',
       )
     } catch (error) {
       const nextPermission =
@@ -331,7 +331,7 @@ export function useCaptureController() {
       setActiveSession(captureSessionFromNativeRecord(session))
       setStatus('running')
       setNotice(
-        'native capture 세션이 시작되었습니다. preview lane은 native frame snapshot을 받고, replay lane은 계속 분리된 mock buffer를 유지합니다.',
+        'native capture 세션이 시작되었습니다. preview lane은 native frame snapshot을 받고, Shadow Player replay lane도 같은 live input을 사용합니다.',
       )
     } catch {
       setStatus('error')

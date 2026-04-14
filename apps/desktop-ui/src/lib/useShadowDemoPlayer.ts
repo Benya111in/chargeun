@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 
-import { ShadowBuffer, type ShadowMarker } from '@ansimtrack/shadow-buffer'
+import { ShadowBuffer } from '@ansimtrack/shadow-buffer'
+
+import {
+  buildVisibleMarkers,
+  getAnalysisMode,
+  type VisibleMarker,
+} from './shadow-player-utils'
 
 type ShadowDemoPlayerOptions = {
+  enabled?: boolean
   segmentStartMs: number
   segmentEndMs: number
-}
-
-type VisibleMarker = ShadowMarker & {
-  positionPct: number
 }
 
 type ShadowDemoPlayerState = {
@@ -20,12 +23,17 @@ type ShadowDemoPlayerState = {
   isUnderrun: boolean
   lastEvent: string
   liveEdgeMs: number
+  liveFrameOrigin: null
+  liveFrameRef: null
   markerWindow: {
     segmentStartMs: number
     segmentEndMs: number
   }
   markers: VisibleMarker[]
+  mode: 'demo'
   replayCursorMs: number
+  replayFrameOrigin: null
+  replayFrameRef: null
 }
 
 const capacityMs = 8000
@@ -34,6 +42,7 @@ const frameIntervalMs = 250
 const seededLiveEdgeMs = 12000
 
 export function useShadowDemoPlayer(options: ShadowDemoPlayerOptions) {
+  const enabled = options.enabled ?? true
   const [seeded] = useState(() => createSeededBuffer(options))
   const { buffer, markerWindow } = seeded
   const [state, setState] = useState<ShadowDemoPlayerState>(() =>
@@ -41,6 +50,10 @@ export function useShadowDemoPlayer(options: ShadowDemoPlayerOptions) {
   )
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
     const interval = window.setInterval(() => {
       setState((previous) => {
         const nextTsMs = buffer.getLiveEdgeMs() + frameIntervalMs
@@ -80,6 +93,7 @@ export function useShadowDemoPlayer(options: ShadowDemoPlayerOptions) {
         }
 
         return {
+          ...previous,
           autoPauseEnabled: previous.autoPauseEnabled,
           analysisMode: getAnalysisMode(
             replayCursorMs,
@@ -102,7 +116,7 @@ export function useShadowDemoPlayer(options: ShadowDemoPlayerOptions) {
     return () => {
       window.clearInterval(interval)
     }
-  }, [buffer, markerWindow])
+  }, [buffer, enabled, markerWindow])
 
   return {
     state,
@@ -213,9 +227,14 @@ function createInitialState(
     isUnderrun: snapshot.isUnderrun,
     lastEvent: '4초 Shadow buffer 준비 완료',
     liveEdgeMs: snapshot.liveEdgeMs,
+    liveFrameOrigin: null,
+    liveFrameRef: null,
     markerWindow,
     markers: buildVisibleMarkers(buffer, snapshot),
+    mode: 'demo',
     replayCursorMs: snapshot.delayedCursorMs,
+    replayFrameOrigin: null,
+    replayFrameRef: null,
   }
 }
 
@@ -229,32 +248,6 @@ function createMarkerWindow(options: ShadowDemoPlayerOptions) {
     segmentStartMs,
     segmentEndMs,
   }
-}
-
-function buildVisibleMarkers(
-  buffer: ShadowBuffer,
-  snapshot: {
-    bufferStartMs: number
-    liveEdgeMs: number
-  },
-) {
-  const rangeMs = Math.max(1, snapshot.liveEdgeMs - snapshot.bufferStartMs)
-
-  return buffer.getMarkers().map((marker) => ({
-    ...marker,
-    positionPct: ((marker.tsMs - snapshot.bufferStartMs) / rangeMs) * 100,
-  }))
-}
-
-function getAnalysisMode(
-  replayCursorMs: number,
-  segmentStartMs: number,
-  segmentEndMs: number,
-) {
-  return replayCursorMs >= segmentStartMs - 1000 &&
-    replayCursorMs <= segmentEndMs + 500
-    ? 'burst'
-    : 'baseline'
 }
 
 export const shadowDemoDefaults = {

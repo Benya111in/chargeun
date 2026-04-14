@@ -138,7 +138,11 @@ export function LiveCapturePreview({
           </p>
           <p>
             analysis frame 창: {captureInput.frameWindow.length}개 · shadow 입력{' '}
-            {captureInput.shadowStatus === 'ready' ? '준비됨' : '준비 중'}
+            {captureInput.shadowStatus === 'ready'
+              ? '실행 중'
+              : captureInput.shadowStatus === 'preview-only'
+                ? '준비 중'
+                : '대기 중'}
           </p>
           <p>
             perception seed:{' '}

@@ -114,13 +114,16 @@
 - `scripts/sync-qa-logs.ts`가 generated markdown을 쓰고 바로 Prettier로 정리하도록 보강해 `pnpm qa:sync` 이후에도 lint baseline이 다시 깨지지 않게 수정
 - debug bundle 빌드까지 확인해 packaged app 안에 `data/eval/*.json` 리소스가 실제로 들어가는 것을 검증
 - `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm build`, `pnpm --filter desktop-ui tauri build --debug` 검증 완료
+- `packages/shadow-buffer`가 frame payload를 함께 들고 다닐 수 있게 확장되고, `useShadowLivePlayer`/`shadow-player-utils`를 추가해 실제 `captureInput.frameWindow`가 4초 지연 replay cursor와 segment marker에 직접 연결되도록 정리
+- `ShadowVideoStage`가 실제 replay frame과 live edge thumbnail을 표시하고, browser/native capture notice도 replay lane이 더 이상 mock buffer가 아니라 실제 sampled frame 입력을 쓴다는 내용으로 갱신
+- `shadow-player-utils.test.ts`를 추가하고 `pnpm --filter desktop-ui test`, `pnpm build`, `pnpm lint`로 live Shadow slice 검증 완료
 
 ### 진행 중
 
-- Shadow Player가 여전히 mock/demo ring buffer 위주라 실제 live capture 입력과 4초 지연 재생을 직접 묶는 단계
+- 실제 OCR/ASR adapter가 아직 shell 수준이라 live 분석이 visual/frame-window summary fallback에 크게 의존하는 단계
 
 ### 다음
 
-1. live capture frame window를 Shadow Player ring buffer에 직접 주입
-2. 실제 OCR/ASR adapter를 로컬 추론 또는 저비용 모델 호출로 교체
+1. 실제 OCR/ASR adapter를 로컬 추론 또는 저비용 모델 호출로 교체
+2. live audio path를 ASR chunk와 Shadow replay 설명 흐름에 직접 연결
 3. fire/review fixture actual clip 확보와 rehearsal log 누적

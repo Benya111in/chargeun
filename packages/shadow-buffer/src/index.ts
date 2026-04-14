@@ -1,7 +1,8 @@
-export type ShadowFrame = {
+export type ShadowFrame<TPayload = undefined> = {
   id: string
   tsMs: number
   durationMs: number
+  payload?: TPayload
 }
 
 export type ShadowMarker = {
@@ -23,16 +24,16 @@ export type ShadowSnapshot = {
   isUnderrun: boolean
 }
 
-export class ShadowBuffer {
+export class ShadowBuffer<TPayload = undefined> {
   readonly #config: ShadowBufferConfig
-  readonly #frames: ShadowFrame[] = []
+  readonly #frames: ShadowFrame<TPayload>[] = []
   readonly #markers: ShadowMarker[] = []
 
   constructor(config: ShadowBufferConfig) {
     this.#config = config
   }
 
-  appendFrame(frame: ShadowFrame) {
+  appendFrame(frame: ShadowFrame<TPayload>) {
     this.#frames.push(frame)
     this.#pruneFrames()
   }

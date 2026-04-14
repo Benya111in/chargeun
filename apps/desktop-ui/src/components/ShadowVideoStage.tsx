@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 import {
   Flame,
+  MonitorPlay,
   PanelRightOpen,
   Pause,
   Play,
@@ -13,10 +14,12 @@ import {
 
 import type { HazardType } from '@ansimtrack/shared-types'
 
+import type { CaptureInputState } from '../lib/capture-input'
 import {
   shadowDemoDefaults,
   useShadowDemoPlayer,
 } from '../lib/useShadowDemoPlayer'
+import { useShadowLivePlayer } from '../lib/useShadowLivePlayer'
 import { cn, formatClock } from '../lib/utils'
 
 type ShadowStageScenario = {
@@ -33,20 +36,37 @@ type ShadowStageScenario = {
 }
 
 export function ShadowVideoStage({
+  captureInput,
   onToggleEvidence,
   onTogglePanic,
   panicMode,
   scenario,
 }: {
+  captureInput: CaptureInputState
   onToggleEvidence: () => void
   onTogglePanic: () => void
   panicMode: boolean
   scenario: ShadowStageScenario
 }) {
-  const player = useShadowDemoPlayer({
+  const liveShadowEnabled =
+    captureInput.shadowStatus === 'ready' && captureInput.frameWindow.length > 0
+
+  const livePlayer = useShadowLivePlayer({
+    captureInput,
+    enabled: liveShadowEnabled,
     segmentStartMs: scenario.segment.startMs,
     segmentEndMs: scenario.segment.endMs,
   })
+  const demoPlayer = useShadowDemoPlayer({
+    enabled: !liveShadowEnabled,
+    segmentStartMs: scenario.segment.startMs,
+    segmentEndMs: scenario.segment.endMs,
+  })
+  const player =
+    liveShadowEnabled && livePlayer.state.liveEdgeMs > 0
+      ? livePlayer
+      : demoPlayer
+  const isLiveReplay = player.state.mode === 'live'
 
   const replayProgressPct = getPercent(
     player.state.replayCursorMs,
@@ -70,7 +90,13 @@ export function ShadowVideoStage({
               player.state.isUnderrun ? 'bg-amber-300' : 'bg-emerald-400',
             )}
           />
-          {player.state.isUnderrun ? 'buffer underrun' : 'live edge - 4초'}
+          {player.state.isUnderrun
+            ? isLiveReplay
+              ? 'shadow buffer warming up'
+              : 'buffer underrun'
+            : isLiveReplay
+              ? '실제 live 입력 · 4초 shadow'
+              : 'demo shadow · 4초'}
         </div>
         <div className="flex items-center gap-2">
           {scenario.segment.hazard === 'fire' ? (
@@ -83,17 +109,56 @@ export function ShadowVideoStage({
       </div>
 
       <div className="flex h-full min-h-[380px] flex-col justify-between px-5 pb-5 pt-18">
-        <div className="grid grid-cols-[1fr_auto] gap-3">
-          <div className="max-w-[420px] rounded-md border border-white/10 bg-black/22 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
-              현재 장면
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-white">
-              {scenario.segment.title}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-white/75">
-              {scenario.videoCaption}
-            </p>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="relative overflow-hidden rounded-md border border-white/10 bg-black/40">
+            {player.state.replayFrameRef ? (
+              <img
+                alt="Shadow replay frame"
+                className="aspect-video w-full object-cover"
+                src={player.state.replayFrameRef}
+              />
+            ) : (
+              <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_transparent_36%),linear-gradient(180deg,rgba(13,16,20,0.82),rgba(4,6,9,0.98))] px-6 text-center text-sm leading-6 text-white/70">
+                실제 frame이 들어오면 4초 지연 replay가 이 화면에 표시됩니다.
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/30 to-transparent" />
+            <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-md border border-white/12 bg-black/42 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/70">
+                <MonitorPlay className="size-4" />
+                {isLiveReplay ? 'Shadow Replay' : 'Demo Replay'}
+              </span>
+              {player.state.replayFrameOrigin ? (
+                <span className="rounded-md border border-white/12 bg-black/32 px-3 py-2 text-xs text-white/65">
+                  {player.state.replayFrameOrigin === 'native'
+                    ? 'native snapshot'
+                    : 'browser sample'}
+                </span>
+              ) : null}
+            </div>
+            {player.state.liveFrameRef ? (
+              <div className="absolute bottom-4 right-4 w-36 overflow-hidden rounded-md border border-white/12 bg-black/42 shadow-[0_20px_40px_rgba(0,0,0,0.28)]">
+                <img
+                  alt="Live edge frame"
+                  className="aspect-video w-full object-cover"
+                  src={player.state.liveFrameRef}
+                />
+                <div className="border-t border-white/12 px-2 py-1 text-[11px] text-white/70">
+                  live edge
+                </div>
+              </div>
+            ) : null}
+            <div className="absolute inset-x-0 bottom-0 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
+                현재 장면
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {scenario.segment.title}
+              </p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/78">
+                {scenario.videoCaption}
+              </p>
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             {scenario.overlayTargets.map((target) => (
@@ -133,7 +198,9 @@ export function ShadowVideoStage({
 
           <div className="rounded-md border border-white/10 bg-black/28 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.12em] text-white/55">
-              <span>세그먼트 마커</span>
+              <span>
+                {isLiveReplay ? '실시간 세그먼트 마커' : '세그먼트 마커'}
+              </span>
               <span>{player.state.lastEvent}</span>
             </div>
             <div className="relative mt-3 h-3 rounded-full bg-white/8">
@@ -161,7 +228,10 @@ export function ShadowVideoStage({
               />
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
-              <span>buffer {shadowDemoDefaults.capacityMs / 1000}초 유지</span>
+              <span>
+                buffer {shadowDemoDefaults.capacityMs / 1000}초 유지 ·{' '}
+                {isLiveReplay ? 'live lane 직결' : 'demo seed'}
+              </span>
               <span>
                 auto-pause {player.state.autoPauseEnabled ? 'on' : 'off'} ·{' '}
                 {player.state.isPaused ? 'paused' : 'playing'}
