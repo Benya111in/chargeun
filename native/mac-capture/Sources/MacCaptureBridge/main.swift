@@ -120,14 +120,44 @@ private enum BridgeCommand {
                 )
             )
 
+            var audioMonitor: SystemAudioPreviewMonitor?
+
             if includeAudio {
-                try writeJSONLine(
-                    BridgeMacCaptureEvent.error(
-                        sessionId: started.storedSession.sessionId,
-                        code: "audio-preview-fallback",
-                        message: "Native video preview is live, but system audio preview is not connected yet."
+                do {
+                    let monitor = SystemAudioPreviewMonitor(
+                        source: started.activeSession.source,
+                        onAudioSample: { sample in
+                            try? writeJSONLine(
+                                BridgeMacCaptureEvent.audio(
+                                    sessionId: started.storedSession.sessionId,
+                                    tsMs: sample.tsMs,
+                                    pcmRef: "native-audio://\(started.storedSession.sessionId)/\(sample.tsMs)",
+                                    sampleRate: sample.sampleRate,
+                                    channels: sample.channels
+                                )
+                            )
+                        },
+                        onError: { message in
+                            try? writeJSONLine(
+                                BridgeMacCaptureEvent.error(
+                                    sessionId: started.storedSession.sessionId,
+                                    code: "audio-preview-fallback",
+                                    message: message
+                                )
+                            )
+                        }
                     )
-                )
+                    try await monitor.start()
+                    audioMonitor = monitor
+                } catch {
+                    try writeJSONLine(
+                        BridgeMacCaptureEvent.error(
+                            sessionId: started.storedSession.sessionId,
+                            code: "audio-preview-fallback",
+                            message: error.localizedDescription
+                        )
+                    )
+                }
             }
 
             var emittedFrameCount = 0
@@ -166,6 +196,10 @@ private enum BridgeCommand {
                 }
 
                 try await Task.sleep(nanoseconds: frameIntervalMs * 1_000_000)
+            }
+
+            if let audioMonitor {
+                await audioMonitor.stop()
             }
 
             try writeJSONLine(
@@ -370,8 +404,7 @@ private func writeJSONLine(_ value: some Encodable) throws {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
     let data = try encoder.encode(value)
-    FileHandle.standardOutput.write(data)
-    FileHandle.standardOutput.write(Data([0x0A]))
+    try OutputWriter.shared.write(data: data)
 }
 
 private func value(for flag: String, in arguments: [String]) throws -> String {
@@ -444,4 +477,16 @@ private func defaultSessionId() -> String {
 
 private func currentTimestampMs() -> Int64 {
     Int64(Date().timeIntervalSince1970 * 1000)
+}
+
+private final class OutputWriter: @unchecked Sendable {
+    static let shared = OutputWriter()
+    private let lock = NSLock()
+
+    func write(data: Data) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        try FileHandle.standardOutput.write(contentsOf: data)
+        try FileHandle.standardOutput.write(contentsOf: Data([0x0A]))
+    }
 }

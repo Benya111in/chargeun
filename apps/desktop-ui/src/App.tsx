@@ -61,7 +61,10 @@ import { demoScenarios } from './lib/mock-session'
 import { liveRuleCatalog } from './lib/rule-catalog'
 import { useCaptureController } from './lib/useCaptureController'
 import { cn, formatClock, formatPercent } from './lib/utils'
-import { useVoicePlayback } from './lib/voice-playback'
+import {
+  classifyVoiceIntentFromText,
+  useVoiceRuntime,
+} from './lib/voice-runtime'
 
 type TrackKey = 'basic' | 'easy' | 'action' | 'reason' | 'caregiver' | 'report'
 type PendingCaptureStart = 'browser' | 'native'
@@ -122,8 +125,9 @@ function App() {
   const [showRestoredLiveSnapshot, setShowRestoredLiveSnapshot] =
     useState(false)
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
+  const [voiceCommandInput, setVoiceCommandInput] = useState('')
   const capture = useCaptureController()
-  const voicePlayback = useVoicePlayback()
+  const voiceRuntime = useVoiceRuntime()
   const appExportRef = useRef<HTMLDivElement | null>(null)
   const previousSessionIdRef = useRef<string | null>(null)
   const previousLoggedSessionRef = useRef<CaptureSession | null>(null)
@@ -387,12 +391,12 @@ function App() {
     sessionLogMetaRef.current = {
       selectedSourceId: capture.state.selectedSourceId || null,
       selectedTrack: requestedTrack,
-      voiceEnabled: voicePlayback.state.available,
+      voiceEnabled: voiceRuntime.state.available,
     }
   }, [
     capture.state.selectedSourceId,
     requestedTrack,
-    voicePlayback.state.available,
+    voiceRuntime.state.available,
   ])
 
   useEffect(() => {
@@ -416,7 +420,7 @@ function App() {
         selectedSourceId: capture.state.selectedSourceId || null,
         selectedTrack: requestedTrack,
         session: currentSession,
-        voiceEnabled: voicePlayback.state.available,
+        voiceEnabled: voiceRuntime.state.available,
       })
     }
 
@@ -425,7 +429,7 @@ function App() {
     capture.state.activeSession,
     capture.state.selectedSourceId,
     requestedTrack,
-    voicePlayback.state.available,
+    voiceRuntime.state.available,
   ])
 
   useEffect(() => {
@@ -445,7 +449,7 @@ function App() {
           selectedSourceId: capture.state.selectedSourceId || null,
           selectedTrack: requestedTrack,
           session: activeSession,
-          voiceEnabled: voicePlayback.state.available,
+          voiceEnabled: voiceRuntime.state.available,
         },
         sourceId: capture.state.selectedSourceId || null,
       } satisfies LiveAnalysisSnapshotInput
@@ -462,7 +466,7 @@ function App() {
     liveAnalysis,
     requestedTrack,
     segment,
-    voicePlayback.state.available,
+    voiceRuntime.state.available,
   ])
 
   const clearRuntimeCache = useCallback(
@@ -522,7 +526,27 @@ function App() {
   const handleVoice = (intent: VoiceIntent) => {
     const reply = buildVoiceReply({ explanation, intent })
     setVoiceReply(reply.text)
-    voicePlayback.speak(reply.text)
+    void voiceRuntime.speak(reply.text)
+  }
+
+  const handleListenVoiceIntent = async () => {
+    const result = await voiceRuntime.listen()
+    if (result.transcript) {
+      setVoiceCommandInput(result.transcript)
+    }
+
+    if (result.status === 'recognized' && result.intent) {
+      handleVoice(result.intent as VoiceIntent)
+    }
+  }
+
+  const handleVoiceCommandSubmit = () => {
+    const intent = classifyVoiceIntentFromText(voiceCommandInput)
+    if (!intent) {
+      return
+    }
+
+    handleVoice(intent)
   }
 
   const startCaptureWithConsent = async (mode: PendingCaptureStart) => {
@@ -1131,14 +1155,20 @@ function App() {
                     <div className="flex items-center gap-2">
                       <StatusPill
                         tone={
-                          voicePlayback.state.speaking ? 'grounded' : 'neutral'
+                          voiceRuntime.state.speaking
+                            ? 'grounded'
+                            : voiceRuntime.state.listening
+                              ? 'review'
+                              : 'neutral'
                         }
                       >
-                        {voicePlayback.state.speaking
+                        {voiceRuntime.state.speaking
                           ? '음성 재생 중'
-                          : voicePlayback.state.available
-                            ? 'TTS 대기'
-                            : '텍스트만'}
+                          : voiceRuntime.state.listening
+                            ? '마이크 대기'
+                            : voiceRuntime.state.available
+                              ? `${voiceRuntime.state.ttsMode.toUpperCase()} 대기`
+                              : '텍스트만'}
                       </StatusPill>
                       <Mic className="size-5 text-[var(--muted)]" />
                     </div>
@@ -1156,22 +1186,51 @@ function App() {
                       ),
                     )}
                     <ActionButton
-                      disabled={!voicePlayback.state.speaking}
+                      disabled={voiceRuntime.state.listening}
+                      icon={<Mic className="size-4" />}
+                      onClick={() => void handleListenVoiceIntent()}
+                    >
+                      마이크 intent
+                    </ActionButton>
+                    <ActionButton
+                      disabled={!voiceRuntime.state.speaking}
                       icon={<Square className="size-4" />}
-                      onClick={voicePlayback.stop}
+                      onClick={() => void voiceRuntime.stop()}
                     >
                       음성 중지
+                    </ActionButton>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      className="min-w-[240px] flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)] outline-none"
+                      onChange={(event) =>
+                        setVoiceCommandInput(event.target.value)
+                      }
+                      placeholder="예: 지금 뭐 해야 해"
+                      value={voiceCommandInput}
+                    />
+                    <ActionButton
+                      disabled={!classifyVoiceIntentFromText(voiceCommandInput)}
+                      icon={<Ear className="size-4" />}
+                      onClick={handleVoiceCommandSubmit}
+                    >
+                      텍스트 명령
                     </ActionButton>
                   </div>
                   <div className="mt-4 rounded-md border border-[var(--line)] bg-[var(--soft)] px-4 py-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
                       Transcript
                     </p>
+                    {voiceRuntime.state.transcript ? (
+                      <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                        인식된 요청: {voiceRuntime.state.transcript}
+                      </p>
+                    ) : null}
                     <p className="mt-2 text-sm leading-6 text-[var(--ink)]">
                       {voiceReply}
                     </p>
                     <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
-                      {voicePlayback.state.notice}
+                      {voiceRuntime.state.notice}
                     </p>
                   </div>
                 </section>

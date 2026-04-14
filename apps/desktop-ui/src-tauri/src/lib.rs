@@ -8,7 +8,7 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdout, Command, Stdio},
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter, State};
@@ -18,6 +18,7 @@ const CAPTURE_EVENT_FRAME: &str = "capture/frame";
 const CAPTURE_EVENT_AUDIO: &str = "capture/audio";
 const CAPTURE_EVENT_SESSION_STOPPED: &str = "capture/session-stopped";
 const CAPTURE_EVENT_SYSTEM_ERROR: &str = "error/system";
+const VOICE_EVENT_REPLY: &str = "voice/reply";
 const SQLITE_SCHEMA_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
@@ -239,13 +240,69 @@ struct LiveAnalysisSnapshotInput {
     source_id: Option<String>,
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VoiceRuntimeStatus {
+    native_tts_available: bool,
+    native_stt_available: bool,
+    preferred_voice_identifier: Option<String>,
+    preferred_voice_name: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SpeakVoiceReplyInput {
+    text: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SpeakVoiceReplyResult {
+    mode: String,
+    request_id: u64,
+    started: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StopVoiceReplyResult {
+    stopped: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ListenForVoiceIntentInput {
+    timeout_ms: Option<u64>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VoiceIntentRecognitionResult {
+    status: String,
+    intent: Option<String>,
+    transcript: Option<String>,
+    source: String,
+    message: Option<String>,
+}
+
 #[derive(Default)]
 struct CaptureBridgeState {
     sessions: Mutex<HashMap<String, ManagedCaptureProcess>>,
 }
 
+#[derive(Clone, Default)]
+struct VoiceRuntimeState {
+    playback: Arc<Mutex<Option<ManagedVoicePlayback>>>,
+}
+
 struct ManagedCaptureProcess {
     child: Child,
+}
+
+#[derive(Clone)]
+struct ManagedVoicePlayback {
+    pid: u32,
+    request_id: u64,
 }
 
 #[tauri::command]
@@ -514,6 +571,114 @@ fn load_last_live_analysis_snapshot() -> Result<Option<LiveAnalysisSnapshotInput
     Ok(Some(snapshot))
 }
 
+#[tauri::command]
+fn get_voice_runtime_status() -> VoiceRuntimeStatus {
+    run_voice_runtime_bridge_json::<VoiceRuntimeStatus>(&["status"]).unwrap_or(VoiceRuntimeStatus {
+        native_tts_available: false,
+        native_stt_available: false,
+        preferred_voice_identifier: None,
+        preferred_voice_name: None,
+    })
+}
+
+#[tauri::command]
+fn speak_voice_reply(
+    app: AppHandle,
+    state: State<VoiceRuntimeState>,
+    input: SpeakVoiceReplyInput,
+) -> Result<SpeakVoiceReplyResult, String> {
+    let _ = stop_voice_playback_process(&state.playback)?;
+
+    let request_id = current_timestamp_ms();
+    let mut child = spawn_voice_runtime_bridge_speak(&input)?;
+    let pid = child.id();
+
+    {
+        let mut playback = state
+            .playback
+            .lock()
+            .map_err(|_| "Voice runtime playback state is poisoned".to_string())?;
+        *playback = Some(ManagedVoicePlayback { pid, request_id });
+    }
+
+    emit_voice_runtime_event(
+        &app,
+        json!({
+            "mode": "native",
+            "requestId": request_id,
+            "text": input.text,
+            "type": "tts-started",
+        }),
+    )?;
+
+    let playback_state = state.playback.clone();
+    let app_handle = app.clone();
+
+    std::thread::spawn(move || {
+        let result = child.wait();
+        let payload = match result {
+            Ok(status) if status.success() => json!({
+                "mode": "native",
+                "requestId": request_id,
+                "type": "tts-finished",
+            }),
+            Ok(status) if status.code().is_none() => json!({
+                "mode": "native",
+                "requestId": request_id,
+                "type": "tts-stopped",
+            }),
+            Ok(status) => json!({
+                "message": format!("Voice runtime exited with status {status}"),
+                "mode": "native",
+                "requestId": request_id,
+                "type": "tts-error",
+            }),
+            Err(error) => json!({
+                "message": error.to_string(),
+                "mode": "native",
+                "requestId": request_id,
+                "type": "tts-error",
+            }),
+        };
+
+        if let Ok(mut playback) = playback_state.lock() {
+            if playback
+                .as_ref()
+                .map(|current| current.request_id == request_id)
+                .unwrap_or(false)
+            {
+                playback.take();
+            }
+        }
+
+        let _ = emit_voice_runtime_event(&app_handle, payload);
+    });
+
+    Ok(SpeakVoiceReplyResult {
+        mode: "native".into(),
+        request_id,
+        started: true,
+    })
+}
+
+#[tauri::command]
+fn stop_voice_reply(state: State<VoiceRuntimeState>) -> Result<StopVoiceReplyResult, String> {
+    let stopped = stop_voice_playback_process(&state.playback)?;
+    Ok(StopVoiceReplyResult { stopped })
+}
+
+#[tauri::command]
+fn listen_for_voice_intent(
+    input: ListenForVoiceIntentInput,
+) -> Result<VoiceIntentRecognitionResult, String> {
+    let timeout_ms = input.timeout_ms.unwrap_or(6000).to_string();
+    run_voice_runtime_bridge_json::<VoiceIntentRecognitionResult>(&[
+        "listen-intent",
+        "--timeout-ms",
+        &timeout_ms,
+    ])
+}
+
 fn read_stream_event(reader: &mut BufReader<ChildStdout>) -> Result<Option<Value>, String> {
     let mut line = String::new();
 
@@ -665,6 +830,11 @@ fn emit_system_error(app: &AppHandle, payload: Value) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+fn emit_voice_runtime_event(app: &AppHandle, payload: Value) -> Result<(), String> {
+    app.emit(VOICE_EVENT_REPLY, payload)
+        .map_err(|error| error.to_string())
+}
+
 fn spawn_mac_capture_bridge_stream(
     session_id: &str,
     input: &StartNativeCaptureInput,
@@ -730,6 +900,80 @@ fn run_mac_capture_bridge(args: &[&str]) -> Result<Vec<u8>, String> {
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Err(if stderr.is_empty() { stdout } else { stderr })
     }
+}
+
+fn spawn_voice_runtime_bridge_speak(input: &SpeakVoiceReplyInput) -> Result<Child, String> {
+    let package_dir = mac_capture_package_dir();
+
+    let mut command = if let Some(binary) = voice_runtime_bridge_binary(&package_dir) {
+        let mut command = Command::new(binary);
+        command.current_dir(&package_dir);
+        command
+    } else {
+        let mut command = Command::new("swift");
+        command
+            .args(["run", "VoiceRuntimeBridge", "--"])
+            .current_dir(&package_dir);
+        command
+    };
+
+    command
+        .args(["speak", "--text", &input.text])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|error| error.to_string())
+}
+
+fn run_voice_runtime_bridge_json<T: DeserializeOwned>(args: &[&str]) -> Result<T, String> {
+    let output = run_voice_runtime_bridge(args)?;
+    serde_json::from_slice::<T>(&output).map_err(|error| error.to_string())
+}
+
+fn run_voice_runtime_bridge(args: &[&str]) -> Result<Vec<u8>, String> {
+    let package_dir = mac_capture_package_dir();
+    let output = if let Some(binary) = voice_runtime_bridge_binary(&package_dir) {
+        Command::new(binary)
+            .args(args)
+            .current_dir(&package_dir)
+            .output()
+            .map_err(|error| error.to_string())?
+    } else {
+        Command::new("swift")
+            .args(["run", "VoiceRuntimeBridge", "--"])
+            .args(args)
+            .current_dir(&package_dir)
+            .output()
+            .map_err(|error| error.to_string())?
+    };
+
+    if output.status.success() {
+        Ok(output.stdout)
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Err(if stderr.is_empty() { stdout } else { stderr })
+    }
+}
+
+fn stop_voice_playback_process(
+    playback_state: &Arc<Mutex<Option<ManagedVoicePlayback>>>,
+) -> Result<bool, String> {
+    let playback = playback_state
+        .lock()
+        .map_err(|_| "Voice runtime playback state is poisoned".to_string())?
+        .clone();
+
+    let Some(playback) = playback else {
+        return Ok(false);
+    };
+
+    let status = Command::new("kill")
+        .args(["-TERM", &playback.pid.to_string()])
+        .status()
+        .map_err(|error| error.to_string())?;
+
+    Ok(status.success())
 }
 
 fn mac_capture_package_dir() -> PathBuf {
@@ -1047,6 +1291,16 @@ fn mac_capture_bridge_binary(package_dir: &Path) -> Option<PathBuf> {
     .find(|candidate| candidate.exists())
 }
 
+fn voice_runtime_bridge_binary(package_dir: &Path) -> Option<PathBuf> {
+    [
+        package_dir.join(".build/arm64-apple-macosx/debug/VoiceRuntimeBridge"),
+        package_dir.join(".build/x86_64-apple-macosx/debug/VoiceRuntimeBridge"),
+        package_dir.join(".build/debug/VoiceRuntimeBridge"),
+    ]
+    .into_iter()
+    .find(|candidate| candidate.exists())
+}
+
 fn build_session_id() -> String {
     format!("native-session-{}", current_timestamp_ms())
 }
@@ -1062,6 +1316,7 @@ fn current_timestamp_ms() -> u64 {
 pub fn run() {
     tauri::Builder::default()
         .manage(CaptureBridgeState::default())
+        .manage(VoiceRuntimeState::default())
         .invoke_handler(tauri::generate_handler![
             get_bootstrap_state,
             list_native_capture_sources,
@@ -1073,7 +1328,11 @@ pub fn run() {
             export_demo_artifact,
             append_session_log_entry,
             save_live_analysis_snapshot,
-            load_last_live_analysis_snapshot
+            load_last_live_analysis_snapshot,
+            get_voice_runtime_status,
+            speak_voice_reply,
+            stop_voice_reply,
+            listen_for_voice_intent
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

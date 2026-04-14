@@ -18,6 +18,10 @@ let package = Package(
         .executable(
             name: "MacCaptureSmoke",
             targets: ["MacCaptureSmoke"]
+        ),
+        .executable(
+            name: "VoiceRuntimeBridge",
+            targets: ["VoiceRuntimeBridge"]
         )
     ],
     targets: [
@@ -30,6 +34,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "MacCaptureSmoke",
+            dependencies: ["MacCapture"]
+        ),
+        .executableTarget(
+            name: "VoiceRuntimeBridge",
             dependencies: ["MacCapture"]
         )
     ]

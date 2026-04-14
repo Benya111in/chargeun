@@ -112,13 +112,24 @@ export function LiveCapturePreview({
           <p>
             오디오:{' '}
             {nativePreview.audioState === 'live'
-              ? 'native 이벤트 수신 중'
+              ? `native 이벤트 수신 중${
+                  nativePreview.lastAudioSampleRate &&
+                  nativePreview.lastAudioChannels
+                    ? ` · ${nativePreview.lastAudioSampleRate}Hz / ${nativePreview.lastAudioChannels}ch`
+                    : ''
+                }`
               : nativePreview.audioState === 'requested'
                 ? '요청됨'
                 : nativePreview.audioState === 'fallback'
                   ? '미연결, 영상 preview만 유지'
                   : '없음'}
           </p>
+          {nativePreview.lastAudioAtMs ? (
+            <p>
+              최근 audio 이벤트:{' '}
+              {new Date(nativePreview.lastAudioAtMs).toLocaleTimeString()}
+            </p>
+          ) : null}
           <p>
             native frame 수: {nativePreview.frameCount}
             {nativePreview.lastFrameAtMs

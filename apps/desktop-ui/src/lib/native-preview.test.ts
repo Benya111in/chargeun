@@ -52,6 +52,30 @@ describe('reduceNativePreviewState', () => {
     expect(next.lastError).toContain('audio')
   })
 
+  it('stores metadata when a native audio event arrives', () => {
+    const started = reduceNativePreviewState(initialNativePreviewState, {
+      type: 'session-started',
+      sessionId: 'native-voice',
+      width: 1280,
+      height: 720,
+      hasAudio: true,
+    })
+
+    const next = reduceNativePreviewState(started, {
+      type: 'audio',
+      sessionId: 'native-voice',
+      tsMs: 3_400,
+      pcmRef: 'native-audio://native-voice/3400',
+      sampleRate: 48_000,
+      channels: 2,
+    })
+
+    expect(next.audioState).toBe('live')
+    expect(next.lastAudioAtMs).toBe(3_400)
+    expect(next.lastAudioSampleRate).toBe(48_000)
+    expect(next.lastAudioChannels).toBe(2)
+  })
+
   it('ignores frames from another session after one is active', () => {
     const started = reduceNativePreviewState(initialNativePreviewState, {
       type: 'session-started',

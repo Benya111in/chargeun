@@ -45,6 +45,39 @@ const runtimeStateStorageKey = 'ansimtrack.runtime-state'
 const liveAnalysisSnapshotStorageKey = 'ansimtrack.live-analysis.latest'
 const sessionLogStorageKey = 'ansimtrack.session-log'
 
+export type VoiceRuntimeStatus = {
+  nativeTtsAvailable: boolean
+  nativeSttAvailable: boolean
+  preferredVoiceIdentifier: string | null
+  preferredVoiceName: string | null
+}
+
+export type SpeakVoiceReplyResult = {
+  mode: 'native'
+  requestId: number
+  started: boolean
+}
+
+export type StopVoiceReplyResult = {
+  stopped: boolean
+}
+
+export type VoiceIntentRecognitionResult = {
+  status: 'recognized' | 'timeout' | 'unavailable' | 'error' | 'no-match'
+  intent?: string | null
+  transcript?: string | null
+  source: 'native-stt' | 'browser-stt' | 'text'
+  message?: string | null
+}
+
+export type VoiceRuntimeEvent = {
+  type: 'tts-started' | 'tts-finished' | 'tts-stopped' | 'tts-error'
+  mode: 'native'
+  requestId: number
+  text?: string
+  message?: string
+}
+
 export async function getCaptureBootstrapState(): Promise<CaptureBootstrapState> {
   if (!isTauri()) {
     return DEFAULT_CAPTURE_BOOTSTRAP_STATE
@@ -188,6 +221,46 @@ export async function loadLastLiveAnalysisSnapshot(): Promise<LiveAnalysisSnapsh
   }
 }
 
+export async function getVoiceRuntimeStatus(): Promise<VoiceRuntimeStatus> {
+  if (!isTauri()) {
+    return {
+      nativeSttAvailable: false,
+      nativeTtsAvailable: false,
+      preferredVoiceIdentifier: null,
+      preferredVoiceName: null,
+    }
+  }
+
+  try {
+    return await invoke<VoiceRuntimeStatus>('get_voice_runtime_status')
+  } catch {
+    return {
+      nativeSttAvailable: false,
+      nativeTtsAvailable: false,
+      preferredVoiceIdentifier: null,
+      preferredVoiceName: null,
+    }
+  }
+}
+
+export async function speakVoiceReply(input: {
+  text: string
+}): Promise<SpeakVoiceReplyResult> {
+  return invoke<SpeakVoiceReplyResult>('speak_voice_reply', { input })
+}
+
+export async function stopVoiceReply(): Promise<StopVoiceReplyResult> {
+  return invoke<StopVoiceReplyResult>('stop_voice_reply')
+}
+
+export async function listenForVoiceIntent(input?: {
+  timeoutMs?: number
+}): Promise<VoiceIntentRecognitionResult> {
+  return invoke<VoiceIntentRecognitionResult>('listen_for_voice_intent', {
+    input,
+  })
+}
+
 export async function listenToNativeCaptureEvents(
   onEvent: (event: MacCaptureEvent) => void,
 ) {
@@ -219,6 +292,25 @@ export async function listenToNativeCaptureEvents(
     for (const unlisten of unlistenEntries) {
       void unlisten()
     }
+  }
+}
+
+export async function listenToVoiceRuntimeEvents(
+  onEvent: (event: VoiceRuntimeEvent) => void,
+) {
+  if (!isTauri()) {
+    return () => {}
+  }
+
+  const unlisten = await listen<unknown>(captureEvents.voiceReply, (event) => {
+    const payload = event.payload as VoiceRuntimeEvent
+    if (payload?.type && payload?.mode === 'native') {
+      onEvent(payload)
+    }
+  })
+
+  return () => {
+    void unlisten()
   }
 }
 

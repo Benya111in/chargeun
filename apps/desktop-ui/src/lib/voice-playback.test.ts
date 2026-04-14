@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { pickPreferredVoice } from './voice-playback'
+import {
+  classifyVoiceIntentFromText,
+  pickPreferredVoice,
+} from './voice-runtime'
 
 describe('pickPreferredVoice', () => {
   it('prefers a Korean voice when one is available', () => {
@@ -19,5 +22,10 @@ describe('pickPreferredVoice', () => {
     ] as SpeechSynthesisVoice[]
 
     expect(pickPreferredVoice(voices)?.name).toBe('English US')
+  })
+
+  it('classifies a supported Korean intent transcript', () => {
+    expect(classifyVoiceIntentFromText('지금 뭐 해야 해?')).toBe('action')
+    expect(classifyVoiceIntentFromText('신고 뭐라고 해')).toBe('report')
   })
 })
