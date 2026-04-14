@@ -12,6 +12,10 @@ let package = Package(
             targets: ["MacCapture"]
         ),
         .executable(
+            name: "MacCaptureBridge",
+            targets: ["MacCaptureBridge"]
+        ),
+        .executable(
             name: "MacCaptureSmoke",
             targets: ["MacCaptureSmoke"]
         )
@@ -19,6 +23,10 @@ let package = Package(
     targets: [
         .target(
             name: "MacCapture"
+        ),
+        .executableTarget(
+            name: "MacCaptureBridge",
+            dependencies: ["MacCapture"]
         ),
         .executableTarget(
             name: "MacCaptureSmoke",

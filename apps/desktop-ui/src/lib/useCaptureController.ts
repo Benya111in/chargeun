@@ -93,10 +93,18 @@ export function useCaptureController() {
       }
 
       setNativeSources(nextNativeSources)
+      setPermission(
+        browserCaptureSupported
+          ? nextBootstrap.permissionState
+          : nextBootstrap.permissionState === 'unknown'
+            ? 'unsupported'
+            : nextBootstrap.permissionState,
+      )
       setStatus('idle')
       setNotice(
         nextBootstrap.capturePath === 'screen-capture-kit-ready' ||
-          nextBootstrap.capturePath === 'screen-capture-kit-command-ready'
+          nextBootstrap.capturePath === 'screen-capture-kit-command-ready' ||
+          nextBootstrap.capturePath === 'screen-capture-kit-swift-bridge-ready'
           ? 'macOS 우선 경로가 준비되었습니다. 브라우저 fallback은 보조 경로로 유지됩니다.'
           : 'macOS 우선 경로는 준비 중입니다. live preview는 브라우저 fallback으로 먼저 검증할 수 있습니다.',
       )

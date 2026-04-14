@@ -21,16 +21,18 @@
 - Tauri에 `get_bootstrap_state`, `list_native_capture_sources`, `start_native_capture`, `stop_native_capture` command 추가
 - desktop UI capture controller가 Tauri native command를 우선 사용하도록 연결
 - `cargo check`까지 포함해 command/UI 경로 검증
+- `docs/WORK_QUEUE.md`를 추가해 남은 문서를 순차 작업 큐로 고정
+- Tauri capture command가 Swift `MacCaptureBridge` executable을 직접 호출하도록 연결
+- `swift run MacCaptureBridge bootstrap`, `swift run MacCaptureBridge stop --session-id does-not-exist`로 bridge command smoke 검증
 
 ### 진행 중
 
-- macOS ScreenCaptureKit bridge 실연결
+- macOS frame/audio preview bridge 실연결
 - 브라우저 fallback preview를 shadow/perception 입력으로 연결
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
 
 ### 다음
 
-1. `native/mac-capture`를 ScreenCaptureKit 세션/권한/소스 열거 경로로 강화
-2. Tauri command를 `native/mac-capture` Swift foundation과 직접 연결
-3. native frame/audio event를 preview/shadow 입력으로 전달하는 브리지 추가
-4. browser/native preview 입력을 shadow/perception lane으로 분기 연결
+1. native frame/audio event를 preview/shadow 입력으로 전달하는 브리지 추가
+2. browser/native preview 입력을 shadow/perception lane으로 분기 연결
+3. mock segment -> grounded rule match -> segment engine 실입력 교체

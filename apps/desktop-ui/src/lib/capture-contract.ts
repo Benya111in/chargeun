@@ -21,6 +21,7 @@ export type CaptureRuntime = 'native-mac' | 'browser-fallback'
 export type CaptureBootstrapState = {
   platform: string
   capturePath: string
+  permissionState: CapturePermissionState | 'unknown'
   shadowDelayMs: number
 }
 
@@ -57,6 +58,7 @@ export type CaptureSourceOption = {
 export const DEFAULT_CAPTURE_BOOTSTRAP_STATE: CaptureBootstrapState = {
   platform: 'mac-priority',
   capturePath: 'screen-capture-kit-pending',
+  permissionState: 'unknown',
   shadowDelayMs: 4000,
 }
 
@@ -129,7 +131,8 @@ export function buildCaptureSources(input: {
 export function isNativeCapturePathReady(capturePath: string) {
   return (
     capturePath === 'screen-capture-kit-ready' ||
-    capturePath === 'screen-capture-kit-command-ready'
+    capturePath === 'screen-capture-kit-command-ready' ||
+    capturePath === 'screen-capture-kit-swift-bridge-ready'
   )
 }
 
