@@ -25,6 +25,8 @@ export const captureSessionSchema = z.object({
   displayName: z.string().optional(),
 })
 
+export const captureSampleOriginSchema = z.enum(['browser', 'native'])
+
 export const segmentSchema = z.object({
   id: z.string(),
   sessionId: z.string(),
@@ -90,6 +92,24 @@ export const perceptionPacketSchema = z.object({
     }),
   ),
   keyframes: z.array(z.string()),
+})
+
+export const captureFrameSampleSchema = z.object({
+  sessionId: z.string(),
+  tsMs: z.number(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  imageRef: z.string().min(1),
+  origin: captureSampleOriginSchema,
+})
+
+export const captureAudioSampleSchema = z.object({
+  sessionId: z.string(),
+  tsMs: z.number(),
+  pcmRef: z.string().min(1),
+  sampleRate: z.number().positive(),
+  channels: z.number().int().positive(),
+  origin: captureSampleOriginSchema,
 })
 
 export const ruleRecordSchema = z.object({

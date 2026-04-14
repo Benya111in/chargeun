@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react'
 
 import type { CaptureSession } from '@ansimtrack/shared-types'
 
+import {
+  buildPerceptionSeed,
+  type CaptureInputState,
+} from '../lib/capture-input'
 import type {
   CaptureControllerStatus,
   CaptureSourceOption,
@@ -15,9 +19,11 @@ export function LiveCapturePreview({
   session,
   status,
   stream,
+  captureInput,
   nativePreview,
 }: {
   notice: string
+  captureInput: CaptureInputState
   selectedSource: CaptureSourceOption | null
   session: CaptureSession | null
   status: CaptureControllerStatus
@@ -25,6 +31,7 @@ export function LiveCapturePreview({
   nativePreview: NativePreviewState
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const perceptionSeed = buildPerceptionSeed(captureInput)
 
   useEffect(() => {
     const element = videoRef.current
@@ -117,6 +124,16 @@ export function LiveCapturePreview({
             {nativePreview.lastFrameAtMs
               ? ` · 최근 ${new Date(nativePreview.lastFrameAtMs).toLocaleTimeString()}`
               : ''}
+          </p>
+          <p>
+            analysis frame 창: {captureInput.frameWindow.length}개 · shadow 입력{' '}
+            {captureInput.shadowStatus === 'ready' ? '준비됨' : '준비 중'}
+          </p>
+          <p>
+            perception seed:{' '}
+            {perceptionSeed
+              ? `${perceptionSeed.keyframes.length} keyframes / ${perceptionSeed.tStartMs}-${perceptionSeed.tEndMs}`
+              : '대기 중'}
           </p>
           {nativePreview.lastError ? <p>{nativePreview.lastError}</p> : null}
         </div>

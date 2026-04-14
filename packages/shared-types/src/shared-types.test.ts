@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { macCaptureEventSchema, segmentExplanationSchema } from './schemas'
+import {
+  captureFrameSampleSchema,
+  macCaptureEventSchema,
+  segmentExplanationSchema,
+} from './schemas'
 
 describe('segmentExplanationSchema', () => {
   it('accepts grounded explanations with action text', () => {
@@ -59,5 +63,20 @@ describe('macCaptureEventSchema', () => {
     })
 
     expect(result.success).toBe(false)
+  })
+})
+
+describe('captureFrameSampleSchema', () => {
+  it('accepts normalized browser frames', () => {
+    const result = captureFrameSampleSchema.safeParse({
+      sessionId: 'web-1',
+      tsMs: 2_400,
+      width: 960,
+      height: 540,
+      imageRef: 'data:image/jpeg;base64,browser',
+      origin: 'browser',
+    })
+
+    expect(result.success).toBe(true)
   })
 })

@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { CaptureSession } from '@ansimtrack/shared-types'
 
+import {
+  initialCaptureInputState,
+  pushCaptureFrame,
+  syncCaptureInputWithNativeFrame,
+  syncCaptureInputWithSession,
+  type CaptureInputState,
+} from './capture-input'
 import {
   BROWSER_FALLBACK_SOURCE_ID,
   DEFAULT_CAPTURE_BOOTSTRAP_STATE,
@@ -27,10 +34,12 @@ import {
   reduceNativePreviewState,
   type NativePreviewState,
 } from './native-preview'
+import { useBrowserFrameSampler } from './useBrowserFrameSampler'
 
 type CaptureControllerState = {
   activeSession: CaptureSession | null
   bootstrap: CaptureBootstrapState
+  captureInput: CaptureInputState
   nativePreview: NativePreviewState
   notice: string
   permission: CapturePermissionState
@@ -61,6 +70,7 @@ export function useCaptureController() {
   const [nativeSources, setNativeSources] = useState<
     NativeCaptureSourceRecord[]
   >([])
+  const [captureInput, setCaptureInput] = useState(initialCaptureInputState)
   const [nativePreview, setNativePreview] = useState(initialNativePreviewState)
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null)
   const activeSessionIdRef = useRef<string | null>(null)
@@ -87,6 +97,10 @@ export function useCaptureController() {
   useEffect(() => {
     activeSessionIdRef.current = activeSession?.id ?? null
   }, [activeSession?.id])
+
+  useEffect(() => {
+    setCaptureInput(syncCaptureInputWithSession(activeSession))
+  }, [activeSession])
 
   useEffect(() => {
     let unlistenNativeCapture = () => {}
@@ -165,10 +179,35 @@ export function useCaptureController() {
     }
   }, [])
 
+  useEffect(() => {
+    if (activeSession?.platform !== 'mac') {
+      return
+    }
+
+    setCaptureInput((current) =>
+      syncCaptureInputWithNativeFrame(current, nativePreview.lastFrame),
+    )
+  }, [activeSession?.platform, nativePreview.lastFrame])
+
+  const handleBrowserSample = useCallback(
+    (frame: Parameters<typeof pushCaptureFrame>[1]) => {
+      setCaptureInput((current) => pushCaptureFrame(current, frame))
+    },
+    [],
+  )
+
+  useBrowserFrameSampler({
+    enabled: activeSession?.platform === 'web',
+    onFrame: handleBrowserSample,
+    session: activeSession,
+    stream: previewStream,
+  })
+
   const stopCapture = async (nextNotice = '캡처를 중지했습니다.') => {
     stopMediaStream(previewStreamRef.current)
     previewStreamRef.current = null
     setPreviewStream(null)
+    setCaptureInput(initialCaptureInputState)
     setNativePreview(initialNativePreviewState)
 
     if (activeSession?.platform === 'mac') {
@@ -305,6 +344,7 @@ export function useCaptureController() {
   const state: CaptureControllerState = {
     activeSession,
     bootstrap,
+    captureInput,
     nativePreview,
     notice,
     permission,

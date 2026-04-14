@@ -28,14 +28,17 @@
 - desktop UI에 native preview reducer, Tauri event listener, native frame snapshot preview 표시를 추가해 browser/native preview lane을 같은 화면에서 다루도록 확장
 - `pnpm --filter @ansimtrack/shared-types test`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `swift build`, `cargo check` 검증 완료
 - `swift run MacCaptureBridge bootstrap`로 현재 로컬 macOS 권한 상태가 `permissionState: denied`임을 재확인
+- browser `MediaStream`를 1fps JPEG sample로 정규화하는 sampler와 native/browser 공용 `CaptureFrameSample` 계약을 추가
+- `captureInput` 상태와 perception seed 초안을 연결해 preview lane이 다음 perception/rule 단계에서 바로 쓸 frame window를 유지하도록 정리
 
 ### 진행 중
 
-- 브라우저 fallback preview를 shadow/perception 입력으로 연결
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
+- fire/earthquake rule matcher 구현
+- perception packet foundation과 hazard/segment engine 실입력 연결
 
 ### 다음
 
-1. browser/native preview 입력을 shadow/perception lane으로 분기 연결
-2. mock segment -> grounded rule match -> segment engine 실입력 교체
+1. fire/earthquake grounded matcher 구현
+2. perception packet foundation과 hazard/segment engine 실입력 교체
 3. grounded track와 evidence 흐름을 실제 packet/rule 입력으로 치환

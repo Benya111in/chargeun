@@ -46,3 +46,8 @@
 
 - 이유: 실시간 raw frame을 바로 Tauri로 밀어 넣는 경로는 현재 데모 단계에서 비용과 복잡도가 크다.
 - 영향: macOS 우선 경로는 우선 low-fps JPEG data URL snapshot을 `capture/frame` 이벤트로 흘리고, Shadow replay lane은 기존 ring buffer와 분리 유지한다.
+
+### D-010 browser/native 입력은 공통 frame sample로 정규화
+
+- 이유: perception, grounding, segment 단계가 입력 원본이 브라우저인지 네이티브인지에 따라 분기되면 후속 구현이 빠르게 꼬인다.
+- 영향: 브라우저 fallback도 1fps JPEG sample을 만들고, native snapshot과 같은 `CaptureFrameSample` window를 유지한다. replay lane은 여전히 별도지만 perception seed는 같은 계약을 쓴다.

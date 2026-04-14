@@ -20,7 +20,7 @@
    - source docs: `docs/05_NATIVE_CAPTURE_MAC.md`, `docs/08_SHADOW_PLAYER_AND_BUFFER_ENGINE.md`
    - goal: native preview/frame 이벤트를 앱으로 보내고 replay lane과 분리 유지
 
-3. `pending` browser/native preview를 shadow/perception 입력으로 분기
+3. `done` browser/native preview를 shadow/perception 입력으로 분기
    - source docs: `docs/07_BROWSER_CAPTURE_FALLBACK.md`, `docs/08_SHADOW_PLAYER_AND_BUFFER_ENGINE.md`, `docs/09_PERCEPTION_PIPELINE.md`
    - goal: preview input과 shadow input을 같은 contract 아래로 정리
 

@@ -11,6 +11,7 @@ export type SafetyMode = 'grounded' | 'review_official'
 export type VoiceIntent = 'repeat' | 'easy' | 'why' | 'action' | 'report'
 
 export type CapturePlatform = 'mac' | 'windows' | 'web'
+export type CaptureSampleOrigin = 'browser' | 'native'
 
 export type CaptureSession = {
   id: string
@@ -64,6 +65,24 @@ export type PerceptionPacket = {
   uiElements: Array<{ label: string; bbox: number[]; conf: number }>
   objectHints: Array<{ label: string; bbox: number[]; conf: number }>
   keyframes: string[]
+}
+
+export type CaptureFrameSample = {
+  sessionId: string
+  tsMs: number
+  width: number
+  height: number
+  imageRef: string
+  origin: CaptureSampleOrigin
+}
+
+export type CaptureAudioSample = {
+  sessionId: string
+  tsMs: number
+  pcmRef: string
+  sampleRate: number
+  channels: number
+  origin: CaptureSampleOrigin
 }
 
 export type RuleRecord = {

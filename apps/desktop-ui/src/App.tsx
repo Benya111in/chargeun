@@ -248,6 +248,7 @@ function App() {
               </div>
 
               <LiveCapturePreview
+                captureInput={capture.state.captureInput}
                 nativePreview={capture.state.nativePreview}
                 notice={capture.state.notice}
                 selectedSource={capture.state.selectedSource}
