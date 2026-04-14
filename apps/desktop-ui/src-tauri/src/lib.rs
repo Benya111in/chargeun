@@ -178,6 +178,25 @@ struct ExportDemoArtifactResult {
     status: String,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExtractOcrTokensInput {
+    image_ref: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BridgeOcrTokensResult {
+    tokens: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExtractOcrTokensResult {
+    status: String,
+    tokens: Vec<String>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PersistLocalRecordResult {
@@ -591,6 +610,26 @@ fn export_demo_artifact(
         json_path: json_path.display().to_string(),
         screenshot_path: saved_screenshot_path,
         status: "exported".into(),
+    })
+}
+
+#[tauri::command]
+fn extract_ocr_tokens(
+    app: AppHandle,
+    input: ExtractOcrTokensInput,
+) -> Result<ExtractOcrTokensResult, String> {
+    let path = write_data_url_temp_file(&app, "ocr-frame", &input.image_ref)?;
+    let path_string = path.display().to_string();
+    let result = run_mac_capture_bridge_json::<BridgeOcrTokensResult>(&[
+        "ocr-image",
+        "--image-path",
+        &path_string,
+    ]);
+    let _ = fs::remove_file(&path);
+
+    result.map(|value| ExtractOcrTokensResult {
+        status: "recognized".into(),
+        tokens: value.tokens,
     })
 }
 
@@ -1285,15 +1324,37 @@ fn sanitize_artifact_name(input: &str) -> String {
 }
 
 fn write_screenshot_data_url(path: &Path, data_url: &str) -> Result<(), String> {
+    fs::write(path, decode_data_url(data_url)?).map_err(|error| error.to_string())
+}
+
+fn write_data_url_temp_file(
+    app: &AppHandle,
+    prefix: &str,
+    data_url: &str,
+) -> Result<PathBuf, String> {
+    let extension = if data_url.starts_with("data:image/png") {
+        "png"
+    } else if data_url.starts_with("data:image/webp") {
+        "webp"
+    } else {
+        "jpg"
+    };
+    let path = local_runtime_dir(app)
+        .join("cache")
+        .join("ocr")
+        .join(format!("{prefix}-{}.{}", current_timestamp_ms(), extension));
+    ensure_parent_dir(&path)?;
+    fs::write(&path, decode_data_url(data_url)?).map_err(|error| error.to_string())?;
+    Ok(path)
+}
+
+fn decode_data_url(data_url: &str) -> Result<Vec<u8>, String> {
     let encoded = data_url
         .split_once(',')
         .map(|(_, encoded)| encoded)
-        .ok_or_else(|| "Screenshot data URL was malformed".to_string())?;
-    let decoded = STANDARD
-        .decode(encoded)
-        .map_err(|error| error.to_string())?;
+        .ok_or_else(|| "Data URL was malformed".to_string())?;
 
-    fs::write(path, decoded).map_err(|error| error.to_string())
+    STANDARD.decode(encoded).map_err(|error| error.to_string())
 }
 
 fn ensure_parent_dir(path: &Path) -> Result<(), String> {
@@ -1649,6 +1710,7 @@ pub fn run() {
             load_app_runtime_state,
             save_app_runtime_state,
             export_demo_artifact,
+            extract_ocr_tokens,
             append_session_log_entry,
             save_live_analysis_snapshot,
             load_last_live_analysis_snapshot,

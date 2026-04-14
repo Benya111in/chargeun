@@ -117,13 +117,16 @@
 - `packages/shadow-buffer`가 frame payload를 함께 들고 다닐 수 있게 확장되고, `useShadowLivePlayer`/`shadow-player-utils`를 추가해 실제 `captureInput.frameWindow`가 4초 지연 replay cursor와 segment marker에 직접 연결되도록 정리
 - `ShadowVideoStage`가 실제 replay frame과 live edge thumbnail을 표시하고, browser/native capture notice도 replay lane이 더 이상 mock buffer가 아니라 실제 sampled frame 입력을 쓴다는 내용으로 갱신
 - `shadow-player-utils.test.ts`를 추가하고 `pnpm --filter desktop-ui test`, `pnpm build`, `pnpm lint`로 live Shadow slice 검증 완료
+- Tauri `extract_ocr_tokens` command와 `MacCaptureBridge ocr-image` Vision OCR 경로를 추가해 latest frame data URL을 임시 이미지로 풀고 실제 한글/영문 OCR token을 뽑아 live perception에 주입하도록 정리
+- `useLiveOcrTokens` hook과 preview OCR status를 추가해 current session frame window 기준 OCR token을 누적/표시하고, live analysis가 demo fixture 대신 실제 OCR token을 evidence로 사용하도록 연결
+- `swift build`, `./.build/debug/MacCaptureBridge ocr-image --image-path /tmp/slowlearner-ocr-smoke.png`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm --filter desktop-ui test`, `pnpm --filter desktop-ui typecheck`, `pnpm lint`, `pnpm build`로 OCR adapter slice 검증 완료
 
 ### 진행 중
 
-- 실제 OCR/ASR adapter가 아직 shell 수준이라 live 분석이 visual/frame-window summary fallback에 크게 의존하는 단계
+- ASR adapter가 아직 비어 있어서 live 분석이 OCR + visual/frame-window summary 중심으로 동작하는 단계
 
 ### 다음
 
-1. 실제 OCR/ASR adapter를 로컬 추론 또는 저비용 모델 호출로 교체
-2. live audio path를 ASR chunk와 Shadow replay 설명 흐름에 직접 연결
+1. live audio path를 ASR chunk와 Shadow replay 설명 흐름에 직접 연결
+2. 실제 ASR adapter를 로컬 추론 또는 저비용 모델 호출로 교체
 3. fire/review fixture actual clip 확보와 rehearsal log 누적

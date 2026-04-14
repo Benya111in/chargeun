@@ -1,5 +1,7 @@
+import AppKit
 import Foundation
 import MacCapture
+import Vision
 
 @main
 struct MacCaptureBridge {
@@ -17,6 +19,7 @@ struct MacCaptureBridge {
 private enum BridgeCommand {
     case bootstrap
     case listSources
+    case ocrImage(imagePath: String)
     case start(sessionId: String?, sourceId: String, includeAudio: Bool, resolution: CaptureResolutionProfile)
     case stream(
         sessionId: String,
@@ -38,6 +41,9 @@ private enum BridgeCommand {
             self = .bootstrap
         case "list-sources":
             self = .listSources
+        case "ocr-image":
+            let imagePath = try value(for: "--image-path", in: arguments)
+            self = .ocrImage(imagePath: imagePath)
         case "start":
             let sessionId = optionalValue(for: "--session-id", in: arguments)
             let sourceId = try value(for: "--source-id", in: arguments)
@@ -90,6 +96,9 @@ private enum BridgeCommand {
             let coordinator = MacCaptureCoordinator()
             let sources = try await coordinator.enumerateSources().map(BridgeCaptureSource.init)
             try writeJSONLine(sources)
+        case let .ocrImage(imagePath):
+            let result = try OCRImageRecognizer().recognizeTokens(imagePath: imagePath)
+            try writeJSONLine(result)
         case let .start(sessionId, sourceId, includeAudio, resolution):
             let started = try await startBridgeSession(
                 sessionId: sessionId ?? defaultSessionId(),
@@ -293,6 +302,10 @@ private struct BridgeStopResult: Codable {
     let stopped: Bool
 }
 
+private struct BridgeOcrTokensResult: Codable {
+    let tokens: [String]
+}
+
 private enum BridgeMacCaptureEvent: Encodable {
     case sessionStarted(sessionId: String, width: Int, height: Int, hasAudio: Bool)
     case frame(sessionId: String, tsMs: Int64, width: Int, height: Int, pixelBufferRef: String)
@@ -391,12 +404,70 @@ private enum BridgeSessionRegistry {
 
 private enum BridgeError: Error, LocalizedError {
     case invalidArguments(String)
+    case ocrUnavailable(String)
 
     var errorDescription: String? {
         switch self {
         case let .invalidArguments(message):
             return message
+        case let .ocrUnavailable(message):
+            return message
         }
+    }
+}
+
+private final class OCRImageRecognizer {
+    func recognizeTokens(imagePath: String) throws -> BridgeOcrTokensResult {
+        let imageURL = URL(fileURLWithPath: imagePath)
+
+        guard
+            let image = NSImage(contentsOf: imageURL),
+            let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else {
+            throw BridgeError.ocrUnavailable("Unable to decode OCR image at \(imagePath)")
+        }
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["ko-KR", "en-US"]
+        request.usesLanguageCorrection = false
+
+        let handler = VNImageRequestHandler(cgImage: cgImage)
+        try handler.perform([request])
+
+        let tokens = (request.results ?? [])
+            .compactMap { $0.topCandidates(1).first?.string }
+            .flatMap(tokenizeRecognizedText)
+
+        return BridgeOcrTokensResult(tokens: uniqueTokens(tokens))
+    }
+}
+
+private func tokenizeRecognizedText(_ text: String) -> [String] {
+    guard let regex = try? NSRegularExpression(pattern: #"[0-9A-Za-z가-힣]{2,}"#) else {
+        return []
+    }
+
+    let range = NSRange(text.startIndex..., in: text)
+    return regex.matches(in: text, range: range).compactMap { match in
+        guard let tokenRange = Range(match.range, in: text) else {
+            return nil
+        }
+
+        return String(text[tokenRange])
+    }
+}
+
+private func uniqueTokens(_ tokens: [String]) -> [String] {
+    var seen = Set<String>()
+
+    return tokens.filter { token in
+        if seen.contains(token) {
+            return false
+        }
+
+        seen.insert(token)
+        return true
     }
 }
 

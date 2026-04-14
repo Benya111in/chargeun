@@ -181,3 +181,8 @@
 
 - 이유: 현재 native/browser 공통으로 가장 안정적으로 들어오는 것은 snapshot/dataURL 기반 frame sample이고, 이를 먼저 Shadow Player에 꽂아야 live path의 본질인 "4초 붙잡아 주기"를 실제 제품 화면에서 검증할 수 있다.
 - 영향: Shadow buffer는 이제 frame payload를 보존하고, `useShadowLivePlayer`가 `captureInput.frameWindow`를 실제 replay/live thumbnail로 사용한다. 다만 현재는 encoded video/audio 동기화 재생이 아니라 sampled frame replay이므로, 연속 영상 품질과 live audio ASR 연동은 후속 범위로 남긴다.
+
+### D-037 live OCR은 macOS Vision bridge를 우선 사용한다
+
+- 이유: 외부 모델 호출 없이도 한글/영문 자막·표지판 인식 신호를 바로 얻을 수 있고, 현재 저장소 구조에서는 latest frame data URL을 Tauri가 받아 네이티브 OCR로 넘기는 경로가 가장 구현 비용이 낮다.
+- 영향: frontend는 `useLiveOcrTokens`로 latest frame OCR을 누적하고, Tauri는 `extract_ocr_tokens` command에서 data URL을 임시 이미지로 푼 뒤 `MacCaptureBridge ocr-image`를 호출한다. 현재 live perception의 text signal은 OCR 우선이며, audio transcription은 별도 후속 slice로 남긴다.

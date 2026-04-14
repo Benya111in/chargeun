@@ -71,6 +71,7 @@ import {
 } from './lib/qa-review'
 import { liveRuleCatalog } from './lib/rule-catalog'
 import { useCaptureController } from './lib/useCaptureController'
+import { useLiveOcrTokens } from './lib/useLiveOcrTokens'
 import { cn, formatClock, formatPercent } from './lib/utils'
 import {
   classifyVoiceIntentFromText,
@@ -173,6 +174,7 @@ function App() {
     defaultRehearsalDraft,
   )
   const capture = useCaptureController()
+  const liveOcr = useLiveOcrTokens(capture.state.captureInput)
   const voiceRuntime = useVoiceRuntime()
   const appExportRef = useRef<HTMLDivElement | null>(null)
   const previousSessionIdRef = useRef<string | null>(null)
@@ -229,8 +231,15 @@ function App() {
         captureInput: capture.state.captureInput,
         rules: liveRuleCatalog,
         session: capture.state.activeSession,
+        signals: {
+          ocrTokens: liveOcr.ocrTokens,
+        },
       }),
-    [capture.state.activeSession, capture.state.captureInput],
+    [
+      capture.state.activeSession,
+      capture.state.captureInput,
+      liveOcr.ocrTokens,
+    ],
   )
   const restoredAnalysis = useMemo(
     () =>
@@ -1084,6 +1093,8 @@ function App() {
                 captureInput={capture.state.captureInput}
                 nativePreview={capture.state.nativePreview}
                 notice={capture.state.notice}
+                ocrStatus={liveOcr.status}
+                ocrTokenCount={liveOcr.ocrTokens.length}
                 selectedSource={capture.state.selectedSource}
                 session={capture.state.activeSession}
                 status={capture.state.status}

@@ -46,6 +46,11 @@ export type PersistLocalRecordResult = {
   status: 'browser-preview' | 'saved'
 }
 
+export type ExtractOcrTokensResult = {
+  status: 'browser-preview' | 'recognized'
+  tokens: string[]
+}
+
 const runtimeStateStorageKey = 'ansimtrack.runtime-state'
 const liveAnalysisSnapshotStorageKey = 'ansimtrack.live-analysis.latest'
 const sessionLogStorageKey = 'ansimtrack.session-log'
@@ -189,6 +194,26 @@ export async function exportDemoArtifact(input: {
   }
 
   return invoke<ExportDemoArtifactResult>('export_demo_artifact', { input })
+}
+
+export async function extractOcrTokens(input: {
+  imageRef: string
+}): Promise<ExtractOcrTokensResult> {
+  if (!isTauri()) {
+    return {
+      status: 'browser-preview',
+      tokens: [],
+    }
+  }
+
+  try {
+    return await invoke<ExtractOcrTokensResult>('extract_ocr_tokens', { input })
+  } catch {
+    return {
+      status: 'browser-preview',
+      tokens: [],
+    }
+  }
 }
 
 export async function appendSessionLogEntry(

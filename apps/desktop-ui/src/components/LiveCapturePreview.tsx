@@ -15,6 +15,8 @@ import { cn } from '../lib/utils'
 
 export function LiveCapturePreview({
   notice,
+  ocrStatus,
+  ocrTokenCount,
   selectedSource,
   session,
   status,
@@ -24,6 +26,8 @@ export function LiveCapturePreview({
 }: {
   notice: string
   captureInput: CaptureInputState
+  ocrStatus: 'idle' | 'ready' | 'scanning'
+  ocrTokenCount: number
   selectedSource: CaptureSourceOption | null
   session: CaptureSession | null
   status: CaptureControllerStatus
@@ -149,6 +153,14 @@ export function LiveCapturePreview({
             {perceptionSeed
               ? `${perceptionSeed.keyframes.length} keyframes / ${perceptionSeed.tStartMs}-${perceptionSeed.tEndMs}`
               : '대기 중'}
+          </p>
+          <p>
+            OCR adapter:{' '}
+            {ocrStatus === 'ready'
+              ? `${ocrTokenCount}개 token`
+              : ocrStatus === 'scanning'
+                ? '인식 중'
+                : '대기 중'}
           </p>
           {nativePreview.lastError ? <p>{nativePreview.lastError}</p> : null}
         </div>
