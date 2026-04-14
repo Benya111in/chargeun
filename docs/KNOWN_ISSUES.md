@@ -34,3 +34,4 @@
 - `pnpm check-env`는 로컬 툴체인과 env scaffold만 점검하며, Screen Recording/마이크 권한 허용 여부는 런타임에서 직접 확인해야 한다.
 - `pnpm prompts:validate`는 prompt 자산 존재와 핵심 제약 문구만 검사하며, 실제 모델 응답 품질이나 JSON 안정성은 별도 eval로 계속 확인해야 한다.
 - localhost 브라우저 데모는 이제 scenario frame을 보여 주지만, 여전히 진짜 동영상 playback이 아니라 sampled/static frame replay라서 연속 영상처럼 보이지는 않는다.
+- `/demo` 발표 화면은 실제 mp4를 재생하지만, 현재는 local `public/demo-video/*.mp4` 복사본에 의존하므로 clip 교체나 더 긴 영상 관리에는 별도 asset pipeline이 아직 없다.

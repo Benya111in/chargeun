@@ -201,3 +201,8 @@
 
 - 이유: localhost 시연에서 실제 capture가 비활성인 상태에서는 버튼 클릭이 텍스트/근거만 바꾸면, 첫 인상상 "아무것도 안 된다"로 읽히기 쉽다.
 - 영향: demo preset은 scenario별 정적 frame 세트를 함께 가지고, `ShadowVideoStage`는 live frame이 없을 때 replay/live thumbnail에 이 frame을 cursor 기준으로 렌더링한다. 실제 live capture가 붙으면 이 fallback은 자동으로 비활성화된다.
+
+### D-041 검증 화면과 발표 화면을 분리한다
+
+- 이유: 운영자용 검증 UI는 상태와 패널이 많아야 하지만, 발표 순간에는 실제 영상과 핵심 설명만 크게 보여야 한다.
+- 영향: `/`는 기존 verification workspace로 유지하고, `/demo`는 실제 mp4 클립과 큰 설명만 노출하는 theater route로 분리한다. `/demo`의 재생 버튼은 Shadow mock control이 아니라 HTML5 `video.play()`에 직접 연결한다.
