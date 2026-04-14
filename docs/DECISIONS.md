@@ -1,0 +1,18 @@
+# DECISIONS
+
+## 2026-04-14
+
+### D-001 macOS 단일 경로 우선
+
+- 이유: 대회용 데모 완성도가 범용성보다 중요하다.
+- 영향: Windows는 contract/stub 수준으로 두고, 실제 캡처/Shadow Player 연결은 macOS 중심으로 진행한다.
+
+### D-002 로컬 우선 + grounded action 강제
+
+- 이유: 재난 행동 지시는 공식 근거 없이는 출력하면 안 된다.
+- 영향: `action`, `report`, `do_not`는 rule id 없으면 UI에서 숨기거나 review 모드로 전환한다.
+
+### D-003 초기 vertical slice는 mock perception 기반
+
+- 이유: 빈 저장소에서 캡처, 모델, UI를 동시에 여는 것보다 데모 흐름을 먼저 고정하는 편이 빠르다.
+- 영향: 첫 구현은 검증된 mock segment/explanation/rules로 UI와 safety 흐름을 완성하고, 이후 native capture와 worker 입력을 교체한다.

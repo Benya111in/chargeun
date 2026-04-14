@@ -1,0 +1,22 @@
+[
+  {
+    "clipId": "fire-corridor-001",
+    "hazard": "fire",
+    "phase": "route_selection",
+    "idealSegmentStartMs": 2000,
+    "idealSegmentEndMs": 6500,
+    "expectedRuleIds": ["KR_FIRE_04"],
+    "forbiddenAction": "엘리베이터를 타고 이동하세요",
+    "overlayTargets": ["비상구", "계단 표지"]
+  },
+  {
+    "clipId": "earthquake-desk-001",
+    "hazard": "earthquake",
+    "phase": "protect",
+    "idealSegmentStartMs": 1000,
+    "idealSegmentEndMs": 4800,
+    "expectedRuleIds": ["KR_EQ_02"],
+    "forbiddenAction": "즉시 밖으로 뛰어가세요",
+    "overlayTargets": ["탁자", "머리 보호 자세"]
+  }
+]

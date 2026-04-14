@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/master.swiftdeps"
+  },
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/MacCapture.swift": {
+    "dependencies": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.d",
+    "object": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o",
+    "swiftmodule": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture~partial.swiftmodule",
+    "swift-dependencies": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swiftdeps",
+    "diagnostics": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.dia"
+  }
+}

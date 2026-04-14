@@ -1,0 +1,214 @@
+[
+  {
+    "rule_id": "KR_EQ_01",
+    "hazard": "earthquake",
+    "phase": "preparation",
+    "when": [
+      "평소 지진 대비를 준비함",
+      "가정 안전 점검이 필요함",
+      "비상용품을 정리함"
+    ],
+    "action": "집 안의 안전한 대피 공간과 비상용품, 가족 연락 방법을 미리 정해 둡니다.",
+    "do_not": "대피 위치와 만날 장소를 정하지 않은 채로 두지 않습니다.",
+    "why": "지진은 갑자기 발생하므로 평소 준비가 피해를 줄입니다.",
+    "caregiver": "어린이, 노약자, 장애인이 이해하기 쉬운 만남 장소와 역할을 함께 정합니다.",
+    "report_script": "평소에는 비상연락망과 가까운 대피장소를 가족에게 다시 확인합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_02",
+    "hazard": "earthquake",
+    "phase": "preparation",
+    "when": [
+      "가구와 가전이 흔들릴 위험이 있음",
+      "창문이나 그릇장 정리가 필요함",
+      "떨어질 물건을 고정해야 함"
+    ],
+    "action": "가구와 가전제품을 고정하고, 떨어질 수 있는 물건은 높은 곳에 두지 않습니다.",
+    "do_not": "무거운 물건이나 깨질 물건을 높은 곳에 두지 않습니다.",
+    "why": "낙하물과 전도는 지진 부상의 큰 원인입니다.",
+    "caregiver": "아이 손이 닿는 곳도 함께 정리해 다칠 수 있는 물건을 치웁니다.",
+    "report_script": "평소 점검에서는 가스와 전기 차단 위치도 함께 확인합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_03",
+    "hazard": "earthquake",
+    "phase": "during_shaking",
+    "when": [
+      "지진이 흔들림을 시작함",
+      "실내에서 크게 흔들림",
+      "가까운 대피 공간이 필요함"
+    ],
+    "action": "튼튼한 탁자 아래로 들어가 탁자 다리를 꼭 잡고 머리와 몸을 보호합니다.",
+    "do_not": "흔들리는 동안 서둘러 밖으로 뛰어나가지 않습니다.",
+    "why": "지진의 흔들림은 짧지만, 바깥으로 뛰는 동안 낙하물에 다칠 수 있습니다.",
+    "caregiver": "어린이와 함께라면 먼저 몸을 낮추고 같은 보호 자세를 취하게 합니다.",
+    "report_script": "흔들림이 끝난 뒤 안전 여부를 확인하고 필요 시 구조를 요청합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_04",
+    "hazard": "earthquake",
+    "phase": "during_shaking",
+    "when": [
+      "탁자가 없어서 몸을 보호해야 함",
+      "실내에서 피할 곳이 없음",
+      "욕실이나 좁은 공간에 있음"
+    ],
+    "action": "방석, 수건, 목욕대야 등으로 머리와 몸을 보호하며 최대한 낮게 자세를 유지합니다.",
+    "do_not": "유리창이나 무거운 가구 근처로 이동하지 않습니다.",
+    "why": "낙하물과 유리 파편을 줄이려면 몸을 보호하는 것이 우선입니다.",
+    "caregiver": "보호가 필요한 사람에게 즉시 머리 보호물을 씌우고 같이 낮게 앉습니다.",
+    "report_script": "흔들림이 멈춘 뒤 부상 여부와 주변 위험을 확인합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_05",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": ["흔들림이 멈춤", "화재 대비가 필요함", "출구 확보를 해야 함"],
+    "action": "가스와 전깃불을 끄고 문이나 창문을 열어 언제든 대피할 수 있도록 출구를 확보합니다.",
+    "do_not": "흔들림이 끝나자마자 무작정 이동하지 않습니다.",
+    "why": "여진과 화재에 대비하면서 안전한 출구를 확보해야 합니다.",
+    "caregiver": "아이와 함께라면 손을 놓지 말고 다음 행동을 짧게 알려 줍니다.",
+    "report_script": "가스 냄새, 화재, 부상자가 있으면 즉시 119에 알립니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_06",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": [
+      "건물 밖으로 나가야 함",
+      "바닥에 유리 조각이나 파편이 있을 수 있음",
+      "발을 보호해야 함"
+    ],
+    "action": "집에서 나갈 때는 신발을 꼭 신고 이동합니다.",
+    "do_not": "맨발로 파편이 있는 바닥을 밟지 않습니다.",
+    "why": "유리 조각과 떨어진 물체로 발을 다칠 수 있습니다.",
+    "caregiver": "아이에게도 신발을 신기고, 안아서 이동할 수 있으면 안고 나갑니다.",
+    "report_script": "신발을 착용한 뒤 안전한 경로로 이동하고 필요 시 도움을 요청합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_07",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": [
+      "건물 밖으로 나가야 함",
+      "엘리베이터 이용을 고민함",
+      "계단으로 이동 가능함"
+    ],
+    "action": "엘리베이터를 타지 말고 계단을 이용해 건물 밖으로 대피합니다.",
+    "do_not": "엘리베이터를 계속 사용하지 않습니다.",
+    "why": "지진 때 엘리베이터는 멈출 수 있고 갇힐 위험이 있습니다.",
+    "caregiver": "아이와 함께라면 계단 가장자리를 피하고 천천히 이동합니다.",
+    "report_script": "엘리베이터에 갇히면 인터폰이나 휴대전화로 구조를 요청합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_08",
+    "hazard": "earthquake",
+    "phase": "evacuation_route",
+    "when": [
+      "건물 밖으로 나옴",
+      "유리창·간판·담장이 위험함",
+      "이동 경로를 잡아야 함"
+    ],
+    "action": "건물과 담장에서 최대한 떨어져 가방이나 손으로 머리를 보호하며 이동합니다.",
+    "do_not": "건물 벽 바로 옆으로 붙어 이동하지 않습니다.",
+    "why": "붕괴물과 낙하물은 건물 주변에 집중될 수 있습니다.",
+    "caregiver": "사람이 많은 곳에서는 아이를 가운데 두고 머리 보호를 우선합니다.",
+    "report_script": "주변 붕괴 위험이 있으면 안전한 위치에서 119와 안내 방송을 확인합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_09",
+    "hazard": "earthquake",
+    "phase": "open_space",
+    "when": [
+      "넓은 공간으로 대피해야 함",
+      "운동장이나 공원이 보임",
+      "낙하물이 없는 곳이 필요함"
+    ],
+    "action": "떨어지는 물건에 주의하며 운동장이나 공원 같은 넓은 공간으로 이동합니다.",
+    "do_not": "차량으로 서둘러 이동하지 않습니다.",
+    "why": "차량 이동은 혼잡과 추가 위험을 키울 수 있습니다.",
+    "caregiver": "아이와 함께라면 손을 잡고 사람이 몰리는 방향을 피합니다.",
+    "report_script": "넓은 공간에 도착하면 라디오나 공공 안내를 확인합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_10",
+    "hazard": "earthquake",
+    "phase": "public_space",
+    "when": [
+      "백화점이나 마트에 있음",
+      "진열대 주변에 있음",
+      "계단이나 기둥 근처로 피해야 함"
+    ],
+    "action": "진열물에서 떨어지고 계단이나 기둥 근처로 이동한 뒤 흔들림이 멈추면 안내에 따라 밖으로 대피합니다.",
+    "do_not": "에스컬레이터나 출구로 한꺼번에 몰리지 않습니다.",
+    "why": "군중 밀집은 추가 사고를 만들 수 있습니다.",
+    "caregiver": "아이를 안거나 손을 잡고 안내 직원의 지시에 맞춰 움직입니다.",
+    "report_script": "대피가 끝나면 부상자 발생 여부를 주변 직원에게 알립니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_11",
+    "hazard": "earthquake",
+    "phase": "vehicle_stop",
+    "when": [
+      "자동차를 타고 있음",
+      "도로 가장자리로 정차해야 함",
+      "비상등을 켜야 함"
+    ],
+    "action": "비상등을 켜고 서서히 속도를 줄여 도로 오른쪽에 차를 세운 뒤 라디오 안내를 확인합니다.",
+    "do_not": "교차로 한복판이나 터널 입구에서 급정지하지 않습니다.",
+    "why": "긴급차량 통행과 주변 안전을 위해 차로를 비워야 합니다.",
+    "caregiver": "동승자가 있으면 창밖 낙하물 위험을 함께 확인하고 침착하게 기다립니다.",
+    "report_script": "대피가 필요하면 열쇠를 두고 내려 차량 통로를 막지 않게 합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_12",
+    "hazard": "earthquake",
+    "phase": "post_quake_report",
+    "when": [
+      "흔들림이 멈춤",
+      "부상자나 화재가 있음",
+      "가정이나 사무실 복귀 판단이 필요함"
+    ],
+    "action": "가족과 부상자를 확인하고 필요하면 119에 신고한 뒤, 공공 안내에 따라 귀가 여부를 결정합니다.",
+    "do_not": "근거 없는 소문만 믿고 움직이지 않습니다.",
+    "why": "여진과 2차 피해가 있을 수 있어 공식 안내 확인이 필요합니다.",
+    "caregiver": "어린이와 함께라면 먼저 안전 확인을 하고, 다시 돌아갈지 짧게 설명합니다.",
+    "report_script": "부상자, 가스 누출, 화재, 구조 필요 여부를 119에 말합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-04-14"
+  }
+]

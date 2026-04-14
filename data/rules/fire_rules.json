@@ -1,0 +1,194 @@
+[
+  {
+    "rule_id": "KR_FIRE_01",
+    "hazard": "fire",
+    "phase": "alert_and_wake",
+    "when": [
+      "화재경보가 울림",
+      "연기나 불꽃을 봄",
+      "자고 있는 중에 경보가 들림"
+    ],
+    "action": "주변 사람에게 즉시 알리고 모두를 깨운 뒤 가장 가까운 안전한 대피 경로를 찾습니다.",
+    "do_not": "불이 맞는지 확인하느라 시간을 끌지 않습니다.",
+    "why": "초기 경보 단계에서는 빠른 알림과 대피 판단이 우선입니다.",
+    "caregiver": "어린이, 노약자, 보행이 불편한 사람을 먼저 깨우고 손을 잡아 함께 움직입니다.",
+    "report_script": "안전한 곳으로 이동한 뒤 119에 화재 여부와 현재 위치를 알립니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_02",
+    "hazard": "fire",
+    "phase": "door_assessment",
+    "when": [
+      "출입문 손잡이가 뜨거움",
+      "문 반대쪽 연기가 의심됨",
+      "문을 열기 전 확인이 필요함"
+    ],
+    "action": "손등으로 손잡이와 문 주변을 확인해 위험하면 문을 열지 않고 다른 대피 수단을 찾습니다.",
+    "do_not": "뜨거운 문을 바로 열지 않습니다.",
+    "why": "문 반대쪽에 화염이나 연기가 있을 수 있기 때문입니다.",
+    "caregiver": "아이와 함께라면 문 확인 전에 먼저 아이를 안쪽 안전지대로 이동시킵니다.",
+    "report_script": "문이 열리지 않아 대피가 어렵다면 119에 현재 상황과 위치를 말합니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_03",
+    "hazard": "fire",
+    "phase": "stair_evacuation",
+    "when": ["계단으로 대피 가능함", "복도에 연기가 적음", "출구가 보임"],
+    "action": "계단을 이용해 낮은 자세로 지상층이나 옥상 등 안전한 곳으로 이동합니다.",
+    "do_not": "엘리베이터를 타지 않습니다.",
+    "why": "연기와 정전이 있는 상황에서 엘리베이터는 위험할 수 있습니다.",
+    "caregiver": "어린이와 노약자는 가운데에 두고 함께 이동합니다.",
+    "report_script": "대피가 끝나면 인원 상태를 확인하고 필요 시 119에 연락합니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_04",
+    "hazard": "fire",
+    "phase": "door_control",
+    "when": ["세대 밖으로 나감", "복도나 계단으로 이동함", "문을 닫을 수 있음"],
+    "action": "나갈 때 출입문을 닫아 연기와 불길의 확산을 늦춥니다.",
+    "do_not": "문을 열어 둔 채 뛰어나오지 않습니다.",
+    "why": "닫힌 문은 화염과 연기의 이동을 줄이는 데 도움이 됩니다.",
+    "caregiver": "마지막으로 나올 사람을 정하고, 아이가 문에 끼이지 않도록 손을 잡습니다.",
+    "report_script": "문을 닫고 탈출한 뒤 구조대에 건물 상태를 알립니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_05",
+    "hazard": "fire",
+    "phase": "refuge_space",
+    "when": [
+      "대피가 어려움",
+      "현관 쪽이 막힘",
+      "대피공간이나 경량칸막이가 있음"
+    ],
+    "action": "대피공간, 경량칸막이, 하향식피난구 등 가능한 피난 수단으로 이동합니다.",
+    "do_not": "연기 쪽으로 무리해서 돌파하지 않습니다.",
+    "why": "갇힌 상태에서 무리한 이동은 연기 흡입 위험을 키웁니다.",
+    "caregiver": "어린이나 거동이 불편한 사람을 먼저 피난 수단 가까이 옮깁니다.",
+    "report_script": "현재 위치와 갇힌 인원 수를 119에 바로 알립니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_06",
+    "hazard": "fire",
+    "phase": "seal_room",
+    "when": ["대피공간이 없음", "연기 유입이 시작됨", "밖으로 나가기 어려움"],
+    "action": "화염과 연기에서 먼 방으로 이동해 문을 닫고 젖은 수건 등으로 틈을 막습니다.",
+    "do_not": "연기 유입 방향으로 창문을 무작정 열지 않습니다.",
+    "why": "실내로 들어오는 연기량을 줄여 생존 시간을 확보해야 합니다.",
+    "caregiver": "아이와 함께 있다면 바닥 가까이 머무르게 하고 호흡을 안정시킵니다.",
+    "report_script": "문을 닫은 뒤 119에 정확한 위치와 구조 필요를 알립니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_07",
+    "hazard": "fire",
+    "phase": "smoke_low_posture",
+    "when": [
+      "복도에 연기가 많음",
+      "대피 중 시야가 나쁨",
+      "연기 아래로 이동해야 함"
+    ],
+    "action": "몸을 낮추고 젖은 수건 등으로 코와 입을 보호하며 이동합니다.",
+    "do_not": "서서 뛰거나 연기가 짙은 위쪽 공기를 들이마시지 않습니다.",
+    "why": "연기는 위로 모이므로 낮은 자세가 상대적으로 유리합니다.",
+    "caregiver": "아이에게도 같은 자세를 유지시키고 손을 놓치지 않도록 합니다.",
+    "report_script": "연기 때문에 이동이 어렵다면 119에 구조를 요청합니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_08",
+    "hazard": "fire",
+    "phase": "small_fire_response",
+    "when": ["초기 소화가 가능함", "불길이 작음", "탈출 경로가 확보됨"],
+    "action": "작은 불일 때만 소화기나 물양동이 등을 사용해 신속히 진압합니다.",
+    "do_not": "불길이 커진 뒤 무리해서 끄려 하지 않습니다.",
+    "why": "초기 진압이 실패하면 대피가 늦어져 위험이 커집니다.",
+    "caregiver": "주변 사람을 먼저 대피시키고 한 사람이 진압을 시도합니다.",
+    "report_script": "진압이 안 되면 즉시 119로 전환하고 대피 상태를 알립니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_09",
+    "hazard": "fire",
+    "phase": "clothing_fire",
+    "when": ["옷에 불이 붙음", "몸에 화염이 닿음"],
+    "action": "멈추고, 얼굴을 가리고, 바닥에 엎드려 몸을 굴러 불을 끕니다.",
+    "do_not": "뛰어다니지 않습니다.",
+    "why": "움직일수록 산소가 공급돼 불이 커질 수 있습니다.",
+    "caregiver": "주변 사람이 옷에 불이 붙으면 먼저 넘어지지 않게 도와주고 굴리도록 돕습니다.",
+    "report_script": "불이 꺼진 뒤 화상 여부를 확인하고 119에 응급 도움을 요청합니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_10",
+    "hazard": "fire",
+    "phase": "post_evacuation",
+    "when": ["건물 밖 대피 완료", "안전한 집결지 도착", "인원 확인 단계"],
+    "action": "사전에 정한 안전한 장소로 모여 인원을 확인합니다.",
+    "do_not": "남은 사람을 찾으러 다시 건물 안으로 들어가지 않습니다.",
+    "why": "재진입은 구조대 통제 없이 매우 위험합니다.",
+    "caregiver": "어린이, 노약자, 장애인의 위치를 우선 확인합니다.",
+    "report_script": "빠진 사람이 있으면 마지막으로 본 위치를 119와 구조대에 알립니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_11",
+    "hazard": "fire",
+    "phase": "apartment_monitoring",
+    "when": [
+      "아파트 다른 세대 화재",
+      "자기 집으로 연기 유입 없음",
+      "안내방송이 나옴"
+    ],
+    "action": "세대 안에서 대기하며 창문을 닫고 안내방송을 따릅니다.",
+    "do_not": "상황을 보겠다며 복도나 계단으로 바로 나가지 않습니다.",
+    "why": "공동주택에서는 대피보다 대기와 안내 확인이 안전한 경우가 있습니다.",
+    "caregiver": "가족을 한 곳에 모으고 외부 동선을 최소화합니다.",
+    "report_script": "119에 화재 위치를 신고하고 안내방송을 계속 확인합니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_FIRE_12",
+    "hazard": "fire",
+    "phase": "apartment_smoke_inflow",
+    "when": [
+      "아파트 다른 세대 화재",
+      "연기나 화염이 집 안으로 들어옴",
+      "대피와 피난시설 선택이 필요함"
+    ],
+    "action": "계단으로 대피가 가능하면 낮은 자세로 계단을 이용하고, 어렵다면 피난시설로 이동합니다.",
+    "do_not": "엘리베이터를 타거나 연기 쪽으로 되돌아가지 않습니다.",
+    "why": "연기 유입이 있을 때는 빠른 탈출과 문 닫기가 중요합니다.",
+    "caregiver": "어린이와 노약자를 가운데 두고, 마지막 사람이 문을 닫습니다.",
+    "report_script": "대피가 어려우면 현재 위치와 갇힌 상황을 119에 말합니다.",
+    "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "updated_at": "2026-04-14"
+  }
+]

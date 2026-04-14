@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/master.swiftdeps"
+  },
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift": {
+    "dependencies": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.d",
+    "object": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.dia"
+  }
+}

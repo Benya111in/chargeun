@@ -1,0 +1,3 @@
+module MacCapture {
+    header "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/include/MacCapture-Swift.h"
+}

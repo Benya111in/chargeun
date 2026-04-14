@@ -1,0 +1,566 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.xctest/Contents/MacOS/MacCapturePackageTests",
+      "packagePath" : "/Users/user/Desktop/SlowLearner/native/mac-capture",
+      "productName" : "MacCapturePackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.MacCapture-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "fileList" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources",
+      "importPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/MacCapture.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MacCapture",
+      "moduleOutputPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule",
+      "objects" : [
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/include/MacCapture-Swift.h",
+        "-swift-version",
+        "6",
+        "-I",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-L",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-plugin-path",
+        "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mac_capture"
+      ],
+      "outputFileMapPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/MacCapture.swift"
+      ],
+      "tempsPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.MacCapturePackageTests-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "fileList" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources",
+      "importPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MacCapturePackageTests",
+      "moduleOutputPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapturePackageTests.swiftmodule",
+      "objects" : [
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/include/MacCapturePackageTests-Swift.h",
+        "-I",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-L",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-plugin-path",
+        "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mac_capture"
+      ],
+      "outputFileMapPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapturePackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.MacCaptureTests-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "fileList" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources",
+      "importPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/MacCaptureTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MacCaptureTests",
+      "moduleOutputPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule",
+      "objects" : [
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/MacCaptureTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-I",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-L",
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "-plugin-path",
+        "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mac_capture"
+      ],
+      "outputFileMapPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/MacCaptureTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/MacCaptureTests.swift"
+      ],
+      "tempsPath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "MacCapture" : [
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "-module-name",
+      "MacCapture",
+      "-package-name",
+      "mac_capture",
+      "-c",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/MacCapture.swift",
+      "-I",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/include/MacCapture-Swift.h",
+      "-swift-version",
+      "6",
+      "-I",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-L",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-plugin-path",
+      "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mac_capture",
+      "-driver-use-frontend-path",
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+    ],
+    "MacCapturePackageTests" : [
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "-module-name",
+      "MacCapturePackageTests",
+      "-package-name",
+      "mac_capture",
+      "-c",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift",
+      "-I",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/include/MacCapturePackageTests-Swift.h",
+      "-I",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-L",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-plugin-path",
+      "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mac_capture",
+      "-driver-use-frontend-path",
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+    ],
+    "MacCaptureTests" : [
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "-module-name",
+      "MacCaptureTests",
+      "-package-name",
+      "mac_capture",
+      "-c",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/MacCaptureTests.swift",
+      "-I",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-I",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-L",
+      "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+      "-plugin-path",
+      "/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mac_capture",
+      "-driver-use-frontend-path",
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "MacCapture" : [
+
+    ],
+    "MacCapturePackageTests" : [
+      "MacCaptureTests",
+      "MacCapture"
+    ],
+    "MacCaptureTests" : [
+      "MacCapture"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/MacCapture.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources"
+    },
+    "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources"
+    },
+    "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/MacCaptureTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/MacCaptureTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources"
+    },
+    "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+    }
+  }
+}

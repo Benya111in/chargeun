@@ -1,0 +1,112 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "MacCapture-arm64-apple-macosx26.0-debug.module": ["<MacCapture-arm64-apple-macosx26.0-debug.module>"]
+  "MacCapturePackageTests-arm64-apple-macosx26.0-debug.module": ["<MacCapturePackageTests-arm64-apple-macosx26.0-debug.module>"]
+  "MacCapturePackageTests-arm64-apple-macosx26.0-debug.test": ["<MacCapturePackageTests-arm64-apple-macosx26.0-debug.test>"]
+  "MacCaptureTests-arm64-apple-macosx26.0-debug.module": ["<MacCaptureTests-arm64-apple-macosx26.0-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<MacCapture-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<MacCapture-arm64-apple-macosx26.0-debug.module>","<MacCapturePackageTests-arm64-apple-macosx26.0-debug.test>","<MacCaptureTests-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/MacCapture.swift"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources"]
+    description: "Write auxiliary file /Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources"
+
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources"]
+    description: "Write auxiliary file /Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources"
+
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift":
+    tool: test-entry-point-tool
+    inputs: []
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift"]
+
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/MacCaptureTests.swift.o"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.product/Objects.LinkFileList"
+
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/MacCaptureTests.swift"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources"]
+    description: "Write auxiliary file /Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources"
+
+  "/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Library/Developer/CommandLineTools/usr/bin/swiftc"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+
+  "<MacCapture-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule"]
+    outputs: ["<MacCapture-arm64-apple-macosx26.0-debug.module>"]
+
+  "<MacCapturePackageTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapturePackageTests.swiftmodule"]
+    outputs: ["<MacCapturePackageTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "<MacCapturePackageTests-arm64-apple-macosx26.0-debug.test>":
+    tool: phony
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.xctest/Contents/MacOS/MacCapturePackageTests"]
+    outputs: ["<MacCapturePackageTests-arm64-apple-macosx26.0-debug.test>"]
+
+  "<MacCaptureTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/MacCaptureTests.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule"]
+    outputs: ["<MacCaptureTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.MacCapture-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/MacCapture.swift","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule"]
+    description: "Compiling Swift Module 'MacCapture' (1 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","MacCapture","-emit-dependencies","-emit-module","-emit-module-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule","-output-file-map","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/sources","-I","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/include/MacCapture-Swift.h","-swift-version","6","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","mac_capture"]
+
+  "C.MacCapturePackageTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.derived/runner.swift","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapturePackageTests.swiftmodule"]
+    description: "Compiling Swift Module 'MacCapturePackageTests' (1 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","MacCapturePackageTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapturePackageTests.swiftmodule","-output-file-map","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/sources","-I","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/include/MacCapturePackageTests-Swift.h","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","mac_capture"]
+
+  "C.MacCapturePackageTests-arm64-apple-macosx26.0-debug.test":
+    tool: shell
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapture.build/MacCapture.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.build/runner.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/MacCaptureTests.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.product/Objects.LinkFileList"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.xctest/Contents/MacOS/MacCapturePackageTests"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/MacCapturePackageTests.xctest/Contents/MacOS/MacCapturePackageTests"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-L","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug","-o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.xctest/Contents/MacOS/MacCapturePackageTests","-module-name","MacCapturePackageTests","-Xlinker","-no_warn_duplicate_libraries","-Xlinker","-bundle","-Xlinker","-rpath","-Xlinker","@loader_path/../../../","@/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCapturePackageTests.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Library/Developer/CommandLineTools/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-Xlinker","-add_ast_path","-Xlinker","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapturePackageTests.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g"]
+
+  "C.MacCaptureTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/MacCaptureTests.swift","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCapture.swiftmodule","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources"]
+    outputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/MacCaptureTests.swift.o","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule"]
+    description: "Compiling Swift Module 'MacCaptureTests' (1 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","MacCaptureTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules/MacCaptureTests.swiftmodule","-output-file-map","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/MacCaptureTests.build/sources","-I","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/user/Desktop/SlowLearner/native/mac-capture/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-swift-version","6","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","mac_capture"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/user/Desktop/SlowLearner/native/mac-capture/Sources/MacCapture/","/Users/user/Desktop/SlowLearner/native/mac-capture/Tests/MacCaptureTests/","/Users/user/Desktop/SlowLearner/native/mac-capture/Package.swift","/Users/user/Desktop/SlowLearner/native/mac-capture/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
