@@ -1,4 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -17,6 +18,48 @@ const CAPTURE_EVENT_FRAME: &str = "capture/frame";
 const CAPTURE_EVENT_AUDIO: &str = "capture/audio";
 const CAPTURE_EVENT_SESSION_STOPPED: &str = "capture/session-stopped";
 const CAPTURE_EVENT_SYSTEM_ERROR: &str = "error/system";
+const SQLITE_SCHEMA_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,
+  source_type TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  started_at INTEGER NOT NULL,
+  ended_at INTEGER,
+  has_audio INTEGER NOT NULL,
+  display_name TEXT
+);
+
+CREATE TABLE IF NOT EXISTS perception_packets (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  t_start_ms INTEGER NOT NULL,
+  t_end_ms INTEGER NOT NULL,
+  asr_text TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS segments (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  hazard TEXT NOT NULL,
+  phase TEXT NOT NULL,
+  start_ms INTEGER NOT NULL,
+  end_ms INTEGER NOT NULL,
+  confidence REAL NOT NULL,
+  official_rule_ids TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS segment_explanations (
+  segment_id TEXT PRIMARY KEY,
+  safety_mode TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL
+);
+"#;
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -340,12 +383,16 @@ fn clear_local_runtime() -> Result<ClearLocalRuntimeResult, String> {
 fn load_app_runtime_state() -> Result<AppRuntimeState, String> {
     let path = app_runtime_state_path();
 
-    if !path.exists() {
-        return Ok(default_app_runtime_state());
+    if path.exists() {
+        let raw = fs::read(&path).map_err(|error| error.to_string())?;
+        return serde_json::from_slice::<AppRuntimeState>(&raw).map_err(|error| error.to_string());
     }
 
-    let raw = fs::read(&path).map_err(|error| error.to_string())?;
-    serde_json::from_slice::<AppRuntimeState>(&raw).map_err(|error| error.to_string())
+    if let Some(state) = load_app_setting_json::<AppRuntimeState>("app_runtime_state")? {
+        return Ok(state);
+    }
+
+    Ok(default_app_runtime_state())
 }
 
 #[tauri::command]
@@ -364,6 +411,7 @@ fn save_app_runtime_state(input: SaveAppRuntimeStateInput) -> Result<AppRuntimeS
         ),
     )
     .map_err(|error| error.to_string())?;
+    save_app_setting_json("app_runtime_state", &input.state)?;
 
     Ok(input.state)
 }
@@ -415,6 +463,7 @@ fn append_session_log_entry(
 ) -> Result<PersistLocalRecordResult, String> {
     let path = session_logs_path();
     append_json_line(&path, &input)?;
+    persist_session_log_entry(&input)?;
 
     Ok(PersistLocalRecordResult {
         path: path.display().to_string(),
@@ -436,11 +485,33 @@ fn save_live_analysis_snapshot(
         ),
     )
     .map_err(|error| error.to_string())?;
+    persist_session_log_entry(&input.session)?;
+    persist_live_analysis_snapshot(&input)?;
 
     Ok(PersistLocalRecordResult {
         path: path.display().to_string(),
         status: "saved".into(),
     })
+}
+
+#[tauri::command]
+fn load_last_live_analysis_snapshot() -> Result<Option<LiveAnalysisSnapshotInput>, String> {
+    if let Some(snapshot) =
+        load_app_setting_json::<LiveAnalysisSnapshotInput>("last_live_analysis_snapshot")?
+    {
+        return Ok(Some(snapshot));
+    }
+
+    let path = live_analysis_snapshot_path();
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let raw = fs::read(&path).map_err(|error| error.to_string())?;
+    let snapshot = serde_json::from_slice::<LiveAnalysisSnapshotInput>(&raw)
+        .map_err(|error| error.to_string())?;
+
+    Ok(Some(snapshot))
 }
 
 fn read_stream_event(reader: &mut BufReader<ChildStdout>) -> Result<Option<Value>, String> {
@@ -688,6 +759,10 @@ fn live_analysis_snapshot_path() -> PathBuf {
         .join("live-analysis-latest.json")
 }
 
+fn runtime_db_path() -> PathBuf {
+    local_runtime_dir().join("runtime.sqlite3")
+}
+
 fn default_app_runtime_state() -> AppRuntimeState {
     AppRuntimeState {
         demo_mode: "live-priority".into(),
@@ -763,6 +838,205 @@ fn append_json_line<T: Serialize>(path: &Path, value: &T) -> Result<(), String> 
     writeln!(file, "{line}").map_err(|error| error.to_string())
 }
 
+fn open_runtime_db() -> Result<Connection, String> {
+    let path = runtime_db_path();
+    ensure_parent_dir(&path)?;
+
+    let connection = Connection::open(path).map_err(|error| error.to_string())?;
+    connection
+        .execute_batch(SQLITE_SCHEMA_SQL)
+        .map_err(|error| error.to_string())?;
+
+    Ok(connection)
+}
+
+fn save_app_setting_json<T: Serialize>(key: &str, value: &T) -> Result<(), String> {
+    let connection = open_runtime_db()?;
+    let value_json = serde_json::to_string(value).map_err(|error| error.to_string())?;
+
+    connection
+        .execute(
+            "
+            INSERT INTO app_settings (key, value_json)
+            VALUES (?1, ?2)
+            ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json
+            ",
+            params![key, value_json],
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(())
+}
+
+fn load_app_setting_json<T: DeserializeOwned>(key: &str) -> Result<Option<T>, String> {
+    let connection = open_runtime_db()?;
+    let raw = connection
+        .query_row(
+            "SELECT value_json FROM app_settings WHERE key = ?1",
+            params![key],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+
+    match raw {
+        Some(value) => serde_json::from_str::<T>(&value)
+            .map(Some)
+            .map_err(|error| error.to_string()),
+        None => Ok(None),
+    }
+}
+
+fn persist_session_log_entry(entry: &SessionLogEntryPayload) -> Result<(), String> {
+    let connection = open_runtime_db()?;
+
+    connection
+        .execute(
+            "
+            INSERT INTO sessions (
+              id,
+              source_type,
+              platform,
+              started_at,
+              ended_at,
+              has_audio,
+              display_name
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            ON CONFLICT(id) DO UPDATE SET
+              source_type = excluded.source_type,
+              platform = excluded.platform,
+              started_at = excluded.started_at,
+              ended_at = COALESCE(excluded.ended_at, sessions.ended_at),
+              has_audio = excluded.has_audio,
+              display_name = COALESCE(excluded.display_name, sessions.display_name)
+            ",
+            params![
+                entry.session.id,
+                entry.session.source_type,
+                entry.session.platform,
+                entry.session.started_at,
+                entry.ended_at,
+                if entry.session.has_audio { 1 } else { 0 },
+                entry.session.display_name
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(())
+}
+
+fn persist_live_analysis_snapshot(input: &LiveAnalysisSnapshotInput) -> Result<(), String> {
+    let connection = open_runtime_db()?;
+    let packet_id = format!(
+        "{}:{}:{}",
+        input.packet_summary.session_id,
+        input.packet_summary.t_start_ms,
+        input.packet_summary.t_end_ms
+    );
+    let packet_json =
+        serde_json::to_string(&input.packet_summary).map_err(|error| error.to_string())?;
+    let segment_id = json_string_field(&input.segment, "id")
+        .unwrap_or_else(|| format!("segment-{}", input.created_at));
+    let official_rule_ids_json = match input.segment.get("officialRuleIds") {
+        Some(value) => serde_json::to_string(value).map_err(|error| error.to_string())?,
+        None => "[]".into(),
+    };
+    let explanation_json =
+        serde_json::to_string(&input.explanation).map_err(|error| error.to_string())?;
+
+    connection
+        .execute(
+            "
+            INSERT OR REPLACE INTO perception_packets (
+              id,
+              session_id,
+              t_start_ms,
+              t_end_ms,
+              asr_text,
+              payload_json
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            ",
+            params![
+                packet_id,
+                input.packet_summary.session_id,
+                input.packet_summary.t_start_ms,
+                input.packet_summary.t_end_ms,
+                input.packet_summary.asr_text,
+                packet_json
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    connection
+        .execute(
+            "
+            INSERT OR REPLACE INTO segments (
+              id,
+              session_id,
+              hazard,
+              phase,
+              start_ms,
+              end_ms,
+              confidence,
+              official_rule_ids
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            ",
+            params![
+                segment_id,
+                input.session.session.id,
+                json_string_field(&input.segment, "hazard").unwrap_or_else(|| "unknown".into()),
+                json_string_field(&input.segment, "phase")
+                    .unwrap_or_else(|| "review_official".into()),
+                json_u64_field(&input.segment, "startMs").unwrap_or(0),
+                json_u64_field(&input.segment, "endMs").unwrap_or(0),
+                json_f64_field(&input.segment, "confidence").unwrap_or(0.0),
+                official_rule_ids_json
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    connection
+        .execute(
+            "
+            INSERT OR REPLACE INTO segment_explanations (
+              segment_id,
+              safety_mode,
+              payload_json
+            )
+            VALUES (?1, ?2, ?3)
+            ",
+            params![
+                segment_id,
+                json_string_field(&input.explanation, "safetyMode")
+                    .unwrap_or_else(|| "review_official".into()),
+                explanation_json
+            ],
+        )
+        .map_err(|error| error.to_string())?;
+
+    save_app_setting_json("last_live_analysis_snapshot", input)?;
+
+    Ok(())
+}
+
+fn json_string_field(value: &Value, key: &str) -> Option<String> {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .map(ToString::to_string)
+}
+
+fn json_u64_field(value: &Value, key: &str) -> Option<u64> {
+    value.get(key).and_then(Value::as_u64)
+}
+
+fn json_f64_field(value: &Value, key: &str) -> Option<f64> {
+    value.get(key).and_then(Value::as_f64)
+}
+
 fn mac_capture_bridge_binary(package_dir: &Path) -> Option<PathBuf> {
     [
         package_dir.join(".build/arm64-apple-macosx/debug/MacCaptureBridge"),
@@ -798,7 +1072,8 @@ pub fn run() {
             save_app_runtime_state,
             export_demo_artifact,
             append_session_log_entry,
-            save_live_analysis_snapshot
+            save_live_analysis_snapshot,
+            load_last_live_analysis_snapshot
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

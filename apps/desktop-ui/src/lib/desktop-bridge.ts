@@ -1,10 +1,7 @@
 import {
   captureEvents,
   macCaptureEventSchema,
-  type CaptureSession,
   type MacCaptureEvent,
-  type Segment,
-  type SegmentExplanation,
 } from '@ansimtrack/shared-types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
@@ -21,6 +18,10 @@ import {
   slugifyArtifactName,
   type AppRuntimeState,
 } from './demo-runtime'
+import type {
+  LiveAnalysisSnapshotInput,
+  SessionLogEntryPayload,
+} from './live-analysis-contract'
 
 export type ClearLocalRuntimeResult = {
   cleared: boolean
@@ -38,42 +39,6 @@ export type ExportDemoArtifactResult = {
 export type PersistLocalRecordResult = {
   path: string
   status: 'browser-preview' | 'saved'
-}
-
-export type SessionLogEntryPayload = {
-  endedAt?: number
-  selectedSourceId?: string | null
-  selectedTrack?: string | null
-  session: CaptureSession
-  voiceEnabled?: boolean
-}
-
-export type LiveAnalysisPacketSummary = {
-  asrText: string
-  keyframeCount: number
-  objectHintLabels: string[]
-  ocrTokens: string[]
-  sessionId: string
-  tEndMs: number
-  tStartMs: number
-  uiElementLabels: string[]
-}
-
-export type LiveAnalysisPlanSummary = {
-  fps: number
-  holdMs: number
-  mode: string
-  reason: string
-}
-
-export type LiveAnalysisSnapshotInput = {
-  createdAt: number
-  explanation: SegmentExplanation
-  packetSummary: LiveAnalysisPacketSummary
-  plan: LiveAnalysisPlanSummary
-  segment: Segment
-  session: SessionLogEntryPayload
-  sourceId?: string | null
 }
 
 const runtimeStateStorageKey = 'ansimtrack.runtime-state'
@@ -209,6 +174,20 @@ export async function saveLiveAnalysisSnapshot(
   })
 }
 
+export async function loadLastLiveAnalysisSnapshot(): Promise<LiveAnalysisSnapshotInput | null> {
+  if (!isTauri()) {
+    return loadLiveAnalysisSnapshotFromBrowser()
+  }
+
+  try {
+    return await invoke<LiveAnalysisSnapshotInput | null>(
+      'load_last_live_analysis_snapshot',
+    )
+  } catch {
+    return null
+  }
+}
+
 export async function listenToNativeCaptureEvents(
   onEvent: (event: MacCaptureEvent) => void,
 ) {
@@ -272,6 +251,19 @@ function saveRuntimeStateToBrowser(state: AppRuntimeState) {
   }
 
   return state
+}
+
+function loadLiveAnalysisSnapshotFromBrowser() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const raw = window.localStorage.getItem(liveAnalysisSnapshotStorageKey)
+    return raw ? (JSON.parse(raw) as LiveAnalysisSnapshotInput) : null
+  } catch {
+    return null
+  }
 }
 
 function appendSessionLogEntryInBrowser(

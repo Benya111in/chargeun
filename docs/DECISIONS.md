@@ -126,3 +126,8 @@
 
 - 이유: active capture frame의 data URL 전체를 매 refresh마다 저장하면 브라우저 preview와 Tauri runtime 모두에서 용량과 쓰기 비용이 급격히 커진다.
 - 영향: live session log는 `sessions.jsonl`에 세션 메타데이터만 append하고, 최신 analysis snapshot은 keyframe count/OCR/ASR/object hint label 중심 summary로 저장한다. 실제 raw frame cache는 capture input window와 runtime export 경로에서만 일시적으로 유지한다.
+
+### D-026 restore는 SQLite 우선, JSON file fallback을 병행한다
+
+- 이유: 제품 단계에서는 SQLite query/restore가 필요하지만, 기존 demo runtime과 브라우저 preview는 파일 fallback이 있어야 전환 비용이 낮다.
+- 영향: Tauri는 `runtime.sqlite3`에 `app_settings`, `sessions`, `perception_packets`, `segments`, `segment_explanations`를 기록하고, 동시에 `ui-state.json`과 `live-analysis-latest.json` fallback을 유지한다. 앱 시작 시에는 파일이 있으면 먼저 읽고, 없으면 SQLite에서 마지막 runtime state와 live snapshot을 복원한다.

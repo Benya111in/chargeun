@@ -68,13 +68,16 @@
 - live capture frame window를 `buildPerceptionFoundation -> buildSegmentFromPerception -> buildGroundedExplanation` 경로에 연결해 active capture 중에는 demo fixture 대신 실시간 local packet/segment/explanation이 화면에 반영되도록 정리
 - Tauri `.slowlearner/logs/sessions.jsonl` / `.slowlearner/cache/live-analysis-latest.json` 및 브라우저 preview localStorage fallback을 추가해 session log와 최신 live analysis snapshot을 남기도록 구현
 - `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 live capture analysis slice 검증 완료
+- Tauri runtime에 `runtime.sqlite3`를 추가해 `app_settings`, `sessions`, `perception_packets`, `segments`, `segment_explanations`를 실제 SQLite에 기록하고, JSON 파일 fallback과 함께 dual-write 하도록 정리
+- 앱 시작 시 마지막 live analysis snapshot을 SQLite 또는 cache file에서 복원하고, `live-priority` 모드에서는 active session이 없을 때 복원된 라이브 요약을 그대로 표시하도록 연결
+- `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 SQLite restore slice 검증 완료
 
 ### 진행 중
 
-- SQLite restore와 native audio 보강
+- native audio와 voice runtime 보강
 
 ### 다음
 
-1. SQLite restore와 native audio 보강
+1. native audio와 voice runtime 보강
 2. 실제 clip 기반 rehearsal log 축적
 3. live OCR/ASR adapter를 실제 모델 호출 또는 로컬 추론으로 교체

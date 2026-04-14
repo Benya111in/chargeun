@@ -7,8 +7,9 @@
 - macOS 우선 capture command, browser fallback preview, Shadow Player demo path 구현
 - fire/earthquake grounded rule matcher, segment engine, voice fallback, evidence drawer 구현
 - live capture frame window에서 local `PerceptionPacket -> Segment -> explanation` 갱신과 snapshot/session log 저장 경로 구현
+- Tauri runtime에 SQLite-backed app/session restore를 추가해 마지막 라이브 분석 요약과 runtime state를 재시작 후 복원 가능하게 정리
 - safety/privacy guardrail, QA audit, demo runbook/backup mode, runtime restore/export 경로 구현
-- 아직 남은 핵심은 실제 OCR/ASR 모델 연결, SQLite restore, native audio와 Shadow buffer 직결 보강
+- 아직 남은 핵심은 실제 OCR/ASR 모델 연결, native audio/TTS/STT, Shadow buffer live 직결 보강
 
 ## 권장 환경
 

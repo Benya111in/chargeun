@@ -85,3 +85,11 @@
 18. `done` live capture -> perception -> segment -> session log 실시간 연결
     - source docs: `docs/09_PERCEPTION_PIPELINE.md`, `docs/10_HAZARD_CLASSIFIER_AND_SEGMENT_ENGINE.md`, `docs/15_BACKEND_STORAGE_AND_JOBS.md`, `docs/22_POST_DEMO_BACKLOG.md`
     - goal: active capture frame window에서 live packet/segment/explanation을 만들고 로컬 snapshot/session log를 남긴다
+
+19. `done` SQLite restore + restored live snapshot 경로
+    - source docs: `docs/15_BACKEND_STORAGE_AND_JOBS.md`, `docs/21_RELEASE_CHECKLIST.md`, `docs/22_POST_DEMO_BACKLOG.md`
+    - goal: runtime state, session log, 마지막 live analysis를 SQLite-backed restore 경로로 승격하고 재시작 시 복원한다
+
+20. `pending` native audio + voice runtime 보강
+    - source docs: `docs/05_NATIVE_CAPTURE_MAC.md`, `docs/13_VOICE_REALTIME_AND_TTS.md`, `docs/21_RELEASE_CHECKLIST.md`, `docs/22_POST_DEMO_BACKLOG.md`
+    - goal: native system audio bridge, TTS/STT runtime, fallback 정책을 제품 수준으로 정리

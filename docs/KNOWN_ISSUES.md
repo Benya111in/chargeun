@@ -14,8 +14,8 @@
 - Shadow Player replay lane은 아직 mock ring buffer 기반이며, 새 `captureInput` frame window와 직접 합쳐지지 않았다.
 - desktop UI는 이제 live capture의 `captureInput`를 local perception/segment/explanation 경로에 흘리지만, 실제 OCR/ASR adapter는 아직 shell 수준이라 live path는 주로 visual/frame-window summary 기반 fallback으로 동작한다.
 - 현재 voice path는 browser `speechSynthesis` fallback이며, 네이티브 TTS/ducking/마이크 intent 분류는 아직 미구현이다.
-- evidence drawer는 live packet까지 보여 주지만, live capture 세션 로그의 SQLite 복원과 재시작 후 전체 세션 재개까지는 아직 앱 전체에 연결되지 않았다.
-- `packages/local-store`는 runtime path, schema, JSONL log/export, latest-only job queue까지 구현됐지만 실제 SQLite 연결과 restart restore UI는 아직 붙지 않았다.
+- evidence drawer는 live packet까지 보여 주고 마지막 live snapshot도 복원하지만, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
+- SQLite는 Tauri runtime에 붙었지만 `packages/local-store` 패키지가 아직 앱의 단일 persistence 구현체는 아니며, historical session browser/UI는 없다.
 - 브라우저 데모 모드에서는 filesystem cache clear를 직접 실행하지 않고, 실제 `clear_local_runtime` command는 Tauri 실행 경로에서만 동작한다.
 - eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.

@@ -5,7 +5,10 @@ import {
   initialCaptureInputState,
   pushCaptureFrame,
 } from './capture-input'
-import { buildLiveAnalysis } from './live-analysis'
+import {
+  buildLiveAnalysis,
+  buildLiveAnalysisFromSnapshot,
+} from './live-analysis'
 import { liveRuleCatalog } from './rule-catalog'
 
 const session = {
@@ -68,5 +71,62 @@ describe('buildLiveAnalysis', () => {
     expect(result?.packetSummary.keyframeCount).toBe(2)
     expect(result?.overlaySummary).toContain('비상구')
     expect(result?.phaseLabel).toContain('대피 경로 선택')
+  })
+
+  it('reconstructs a restored live snapshot into an analysis view', () => {
+    const restored = buildLiveAnalysisFromSnapshot({
+      rules: liveRuleCatalog,
+      snapshot: {
+        createdAt: 22_000,
+        explanation: {
+          segmentId: 'segment-restored',
+          safetyMode: 'grounded',
+          tracks: {
+            action: '계단으로 이동하세요.',
+            basic: '화재 상황으로 보입니다.',
+            easy: '비상구를 보고 계단으로 가세요.',
+            reason: '엘리베이터는 위험할 수 있습니다.',
+            report: '대피 후 119에 연락하세요.',
+          },
+          overlayTargets: [],
+        },
+        packetSummary: {
+          asrText: '비상구 표지를 따라 계단으로 이동하세요.',
+          keyframeCount: 3,
+          objectHintLabels: ['계단으로 대피 가능함', '비상구'],
+          ocrTokens: ['비상구', '계단'],
+          sessionId: session.id,
+          tEndMs: 21_500,
+          tStartMs: 18_000,
+          uiElementLabels: ['비상구'],
+        },
+        plan: {
+          fps: 1,
+          holdMs: 1_000,
+          mode: 'base',
+          reason: 'steady-scan',
+        },
+        segment: {
+          confidence: 0.91,
+          endMs: 21_500,
+          hazard: 'fire',
+          id: 'segment-restored',
+          officialRuleIds: ['KR_FIRE_03'],
+          phase: 'route_selection',
+          sessionId: session.id,
+          startMs: 18_000,
+        },
+        session: {
+          selectedTrack: 'action',
+          session,
+          voiceEnabled: true,
+        },
+        sourceId: 'native-monitor',
+      },
+    })
+
+    expect(restored.packet.keyframes).toHaveLength(3)
+    expect(restored.ruleMatches[0]?.rule.rule_id).toBe('KR_FIRE_03')
+    expect(restored.segment.title).toContain('화재 대응')
   })
 })

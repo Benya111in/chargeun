@@ -42,6 +42,7 @@ import {
   clearLocalRuntimeFiles,
   exportDemoArtifact,
   loadAppRuntimeState,
+  loadLastLiveAnalysisSnapshot,
   saveLiveAnalysisSnapshot,
   saveAppRuntimeState,
 } from './lib/desktop-bridge'
@@ -50,7 +51,12 @@ import {
   defaultAppRuntimeState,
   type PrivacyPrefsState,
 } from './lib/demo-runtime'
-import { buildLiveAnalysis, summarizePacket } from './lib/live-analysis'
+import {
+  buildLiveAnalysis,
+  buildLiveAnalysisFromSnapshot,
+  summarizePacket,
+} from './lib/live-analysis'
+import type { LiveAnalysisSnapshotInput } from './lib/live-analysis-contract'
 import { demoScenarios } from './lib/mock-session'
 import { liveRuleCatalog } from './lib/rule-catalog'
 import { useCaptureController } from './lib/useCaptureController'
@@ -111,6 +117,10 @@ function App() {
   const [restoredRuntimeState, setRestoredRuntimeState] = useState(
     defaultAppRuntimeState,
   )
+  const [restoredLiveSnapshot, setRestoredLiveSnapshot] =
+    useState<LiveAnalysisSnapshotInput | null>(null)
+  const [showRestoredLiveSnapshot, setShowRestoredLiveSnapshot] =
+    useState(false)
   const [voiceReply, setVoiceReply] = useState(defaultVoiceReply)
   const capture = useCaptureController()
   const voicePlayback = useVoicePlayback()
@@ -172,9 +182,22 @@ function App() {
       }),
     [capture.state.activeSession, capture.state.captureInput],
   )
+  const restoredAnalysis = useMemo(
+    () =>
+      demoMode === 'live-priority' &&
+      showRestoredLiveSnapshot &&
+      restoredLiveSnapshot
+        ? buildLiveAnalysisFromSnapshot({
+            rules: liveRuleCatalog,
+            snapshot: restoredLiveSnapshot,
+          })
+        : null,
+    [demoMode, restoredLiveSnapshot, showRestoredLiveSnapshot],
+  )
   const analysis = useMemo(
     () =>
-      liveAnalysis ?? {
+      liveAnalysis ??
+      restoredAnalysis ?? {
         cacheKey: scenario.id,
         explanation: demoGroundedExplanation,
         overlaySummary: scenario.overlaySummary,
@@ -192,6 +215,7 @@ function App() {
       demoRuleMatches,
       demoSegment,
       liveAnalysis,
+      restoredAnalysis,
       scenario.id,
       scenario.overlaySummary,
       scenario.overlayTargets,
@@ -233,7 +257,9 @@ function App() {
     () => ({
       id: liveAnalysis
         ? `live-${capture.state.activeSession?.id ?? 'preview'}`
-        : scenario.id,
+        : restoredAnalysis
+          ? `restored-${restoredLiveSnapshot?.session.session.id ?? 'preview'}`
+          : scenario.id,
       overlaySummary: analysis.overlaySummary,
       overlayTargets: analysis.overlayTargets,
       segment: {
@@ -244,11 +270,19 @@ function App() {
       },
       videoCaption: analysis.videoCaption,
     }),
-    [analysis, capture.state.activeSession?.id, liveAnalysis, scenario.id],
+    [
+      analysis,
+      capture.state.activeSession?.id,
+      liveAnalysis,
+      restoredAnalysis,
+      restoredLiveSnapshot?.session.session.id,
+      scenario.id,
+    ],
   )
   const segment = analysis.segment
   const ruleMatches = analysis.ruleMatches
   const isLiveAnalysis = Boolean(liveAnalysis)
+  const isRestoredLiveAnalysis = Boolean(!liveAnalysis && restoredAnalysis)
 
   const availableTracks = useMemo(
     () =>
@@ -269,13 +303,17 @@ function App() {
     explanation.tracks.basic
   const lastSessionMeta =
     buildPersistedSessionMeta(capture.state.activeSession) ??
-    restoredRuntimeState.lastSession
+    restoredRuntimeState.lastSession ??
+    buildPersistedSessionMeta(restoredLiveSnapshot?.session.session ?? null)
 
   useEffect(() => {
     let cancelled = false
 
     void (async () => {
-      const nextState = await loadAppRuntimeState()
+      const [nextState, nextSnapshot] = await Promise.all([
+        loadAppRuntimeState(),
+        loadLastLiveAnalysisSnapshot(),
+      ])
       if (cancelled) {
         return
       }
@@ -289,9 +327,17 @@ function App() {
       setShowEvidence(nextState.showEvidence)
       setPanicMode(nextState.panicMode)
       setPrivacyPrefs(nextState.privacyPrefs)
+      setRestoredLiveSnapshot(nextSnapshot)
+      setShowRestoredLiveSnapshot(
+        Boolean(nextSnapshot) && nextState.demoMode === 'live-priority',
+      )
       if (nextState.lastSession?.displayName) {
         setArtifactNotice(
           `이전 세션 메타데이터를 복원했습니다: ${nextState.lastSession.displayName}`,
+        )
+      } else if (nextSnapshot?.session.session.displayName) {
+        setArtifactNotice(
+          `이전 라이브 분석을 복원했습니다: ${nextSnapshot.session.session.displayName}`,
         )
       }
       setRuntimeHydrated(true)
@@ -362,6 +408,7 @@ function App() {
         session: previousSession,
         voiceEnabled: meta.voiceEnabled,
       })
+      setShowRestoredLiveSnapshot(true)
     }
 
     if (currentSession && previousSession?.id !== currentSession.id) {
@@ -388,7 +435,7 @@ function App() {
     }
 
     const timer = window.setTimeout(() => {
-      void saveLiveAnalysisSnapshot({
+      const nextSnapshot = {
         createdAt: Date.now(),
         explanation,
         packetSummary: liveAnalysis.packetSummary,
@@ -401,7 +448,10 @@ function App() {
           voiceEnabled: voicePlayback.state.available,
         },
         sourceId: capture.state.selectedSourceId || null,
-      })
+      } satisfies LiveAnalysisSnapshotInput
+
+      setRestoredLiveSnapshot(nextSnapshot)
+      void saveLiveAnalysisSnapshot(nextSnapshot)
     }, 220)
 
     return () => window.clearTimeout(timer)
@@ -489,6 +539,7 @@ function App() {
         ? '캡처를 시작했습니다. 장기 저장 opt-in이 켜져 있어 종료 후 자동 삭제는 꺼져 있습니다.'
         : '캡처를 시작했습니다. 기본은 로컬 처리 우선이며 장기 저장은 꺼져 있습니다.',
     )
+    setShowRestoredLiveSnapshot(true)
   }
 
   const requestCaptureStart = async (mode: PendingCaptureStart) => {
@@ -569,11 +620,17 @@ function App() {
         artifactName: `${
           isLiveAnalysis
             ? `live-${capture.state.activeSession?.id ?? 'capture'}`
-            : scenario.id
+            : isRestoredLiveAnalysis
+              ? `restored-${restoredLiveSnapshot?.session.session.id ?? 'capture'}`
+              : scenario.id
         }-${activeRunbookStep?.id ?? 'demo'}`,
         payload: {
           activeRunbookStep,
-          analysisSource: isLiveAnalysis ? 'live-capture' : 'demo-scenario',
+          analysisSource: isLiveAnalysis
+            ? 'live-capture'
+            : isRestoredLiveAnalysis
+              ? 'restored-live-snapshot'
+              : 'demo-scenario',
           capture: {
             lastSession: lastSessionMeta,
             selectedSourceId: capture.state.selectedSourceId,
@@ -625,6 +682,7 @@ function App() {
     }
 
     setActiveRunbookStepId(step.id)
+    setShowRestoredLiveSnapshot(false)
     if (step.scenarioId) {
       setScenarioId(step.scenarioId)
     }
@@ -649,6 +707,7 @@ function App() {
     }
 
     setDemoMode('backup-replay')
+    setShowRestoredLiveSnapshot(false)
     setScenarioId(session.scenarioId)
     if (session.preferredTrack) {
       setRequestedTrack(session.preferredTrack as TrackKey)
@@ -684,6 +743,7 @@ function App() {
     })
 
     setScenarioId(nextId)
+    setShowRestoredLiveSnapshot(false)
     setRequestedTrack(getPreferredTrack(nextExplanation))
     setVoiceReply(defaultVoiceReply)
     setPanicMode(false)
@@ -727,6 +787,9 @@ function App() {
               >
                 {demoMode === 'backup-replay' ? 'backup replay' : '라이브 우선'}
               </StatusPill>
+              {isRestoredLiveAnalysis ? (
+                <StatusPill tone="review">이전 라이브 복원</StatusPill>
+              ) : null}
             </div>
             <div className="max-w-3xl">
               <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">

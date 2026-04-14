@@ -17,22 +17,16 @@ import type {
 } from '@ansimtrack/shared-types'
 
 import type { CaptureInputState } from './capture-input'
+import type {
+  LiveAnalysisPlanSummary,
+  LiveAnalysisPacketSummary,
+  LiveAnalysisSnapshotInput,
+} from './live-analysis-contract'
 
 export type LiveAnalysisSignals = {
   asrText?: string
   ocrTokens?: string[]
   upstreamHints?: PerceptionPacket['objectHints']
-}
-
-export type LiveAnalysisPacketSummary = {
-  asrText: string
-  keyframeCount: number
-  objectHintLabels: string[]
-  ocrTokens: string[]
-  sessionId: string
-  tEndMs: number
-  tStartMs: number
-  uiElementLabels: string[]
 }
 
 export type LiveAnalysisResult = {
@@ -123,6 +117,97 @@ export function summarizePacket(
     tEndMs: packet.tEndMs,
     tStartMs: packet.tStartMs,
     uiElementLabels: packet.uiElements.map((element) => element.label),
+  }
+}
+
+export function buildLiveAnalysisFromSnapshot(input: {
+  rules: RuleRecord[]
+  snapshot: LiveAnalysisSnapshotInput
+}): LiveAnalysisResult {
+  const packet = hydratePacketFromSummary(input.snapshot.packetSummary)
+  const overlayLabels = collectOverlayLabels(packet)
+  const ruleMatches = matchGroundedRules({
+    evidence: packet,
+    rules: input.rules,
+    segment: input.snapshot.segment,
+  })
+  const title = buildLiveSegmentTitle(input.snapshot.segment)
+  const phaseLabel = buildLivePhaseLabel(input.snapshot.segment)
+
+  return {
+    cacheKey: [
+      input.snapshot.packetSummary.sessionId,
+      input.snapshot.packetSummary.tStartMs,
+      input.snapshot.packetSummary.tEndMs,
+      'restored',
+    ].join(':'),
+    explanation: input.snapshot.explanation,
+    overlaySummary:
+      overlayLabels.join(', ') || '복원된 라이브 분석 요약을 표시하는 중',
+    overlayTargets: overlayLabels.map((label) => ({ label })),
+    packet,
+    packetSummary: input.snapshot.packetSummary,
+    phaseLabel,
+    plan: normalizePlan(input.snapshot.plan),
+    ruleMatches,
+    segment: {
+      ...input.snapshot.segment,
+      phaseLabel,
+      title,
+    },
+    videoCaption: buildLiveVideoCaption({
+      overlayLabels,
+      plan: normalizePlan(input.snapshot.plan),
+      segment: input.snapshot.segment,
+      session: input.snapshot.session.session,
+    }),
+  }
+}
+
+function hydratePacketFromSummary(
+  summary: LiveAnalysisPacketSummary,
+): PerceptionPacket {
+  const uiElements = summary.uiElementLabels.map((label, index) => ({
+    label,
+    bbox: buildGenericBox(index),
+    conf: 0.5,
+  }))
+  const objectHints = summary.objectHintLabels.map((label, index) => ({
+    label,
+    bbox: buildGenericBox(index + uiElements.length),
+    conf: 0.5,
+  }))
+
+  return {
+    sessionId: summary.sessionId,
+    tStartMs: summary.tStartMs,
+    tEndMs: summary.tEndMs,
+    asrText: summary.asrText,
+    ocrTokens: summary.ocrTokens,
+    uiElements,
+    objectHints,
+    keyframes: Array.from(
+      { length: Math.max(1, summary.keyframeCount) },
+      (_, index) => `restore://frame-${index + 1}`,
+    ),
+  }
+}
+
+function buildGenericBox(index: number): [number, number, number, number] {
+  const col = index % 3
+  const row = Math.floor(index / 3)
+  const x = 0.08 + col * 0.22
+  const y = 0.08 + row * 0.14
+
+  return [x, y, 0.18, 0.1]
+}
+
+function normalizePlan(plan: LiveAnalysisPlanSummary): FrameSamplingPlan {
+  return {
+    fps: plan.fps,
+    holdMs: plan.holdMs,
+    mode: plan.mode === 'burst' ? 'burst' : 'base',
+    reason: plan.reason,
   }
 }
 
