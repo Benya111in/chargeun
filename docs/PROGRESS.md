@@ -82,6 +82,9 @@
 - `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm qa:sync`, `pnpm lint`, `pnpm build`로 in-app QA workspace slice 검증 완료
 - QA workspace가 operator가 입력한 local clip path를 Tauri `asset:` URL 또는 브라우저 path fallback으로 바로 preview하도록 확장돼, 실제 clip walkthrough 시 같은 화면에서 영상 확인과 로그 기록을 같이 할 수 있게 정리
 - `resolveLocalMediaSrc` helper test를 추가하고 `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 local clip preview slice 검증 완료
+- `qa-review` helper에 manual review 우선순위 queue와 release checklist snapshot derivation을 추가해, 미완료 fixture를 먼저 보이고 최근 rehearsal 기준 남은 리스크를 앱 안에서 바로 확인할 수 있게 정리
+- `QaReviewPanel`이 다음 walkthrough 추천 fixture, sorted fixture queue, release checklist snapshot을 표시하도록 확장하고 `getLatestRehearsalRun`은 더 이상 배열을 mutate하지 않도록 수정
+- `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 QA readiness dashboard slice 검증 완료
 
 ### 진행 중
 

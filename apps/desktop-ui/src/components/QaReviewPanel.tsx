@@ -12,9 +12,10 @@ import type {
   RehearsalRunRecord,
 } from '../lib/qa-review'
 import {
-  getLatestManualReviewRun,
+  getManualReviewQueue,
   getLatestRehearsalRun,
   getManualReviewCoverage,
+  getReleaseChecklistItems,
   getRehearsalPassCount,
 } from '../lib/qa-review'
 import { cn } from '../lib/utils'
@@ -61,6 +62,15 @@ export function QaReviewPanel({
   const coverage = getManualReviewCoverage(qaState)
   const rehearsalPasses = getRehearsalPassCount(qaState)
   const latestRehearsal = getLatestRehearsalRun(qaState)
+  const manualReviewQueue = getManualReviewQueue(qaState)
+  const releaseChecklist = getReleaseChecklistItems(qaState)
+  const nextFixture =
+    manualReviewQueue.find((fixture) => fixture.latestRun?.status !== 'pass') ??
+    manualReviewQueue[0] ??
+    null
+  const remainingFixtureCount = manualReviewQueue.filter(
+    (fixture) => fixture.latestRun?.status !== 'pass',
+  ).length
   const selectedFixture =
     qaState.fixtures.find((fixture) => fixture.clipId === selectedFixtureId) ??
     qaState.fixtures[0] ??
@@ -102,13 +112,40 @@ export function QaReviewPanel({
             <p className="text-sm font-semibold">fixture walkthrough</p>
           </div>
 
-          <div className="grid gap-2">
-            {qaState.fixtures.map((fixture) => {
-              const latestRun = getLatestManualReviewRun(
-                qaState.manualReviewRuns,
-                fixture.clipId,
-              )
+          <div className="rounded-md border border-[var(--line)] bg-white px-4 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-[var(--ink)]">
+                다음 walkthrough
+              </p>
+              <SummaryBadge
+                tone={remainingFixtureCount === 0 ? 'grounded' : 'review'}
+              >
+                remaining {remainingFixtureCount}
+              </SummaryBadge>
+            </div>
+            {nextFixture ? (
+              <>
+                <p className="mt-2 text-sm font-semibold text-[var(--ink)]">
+                  {nextFixture.clipId}
+                </p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {nextFixture.hazard} · {nextFixture.phase}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  {nextFixture.latestRun?.notes ??
+                    'actual clip path를 연결하고 근거/음성/발표 흐름을 확인하세요.'}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                등록된 fixture가 아직 없습니다.
+              </p>
+            )}
+          </div>
 
+          <div className="grid gap-2">
+            {manualReviewQueue.map((fixture) => {
+              const latestRun = fixture.latestRun
               return (
                 <button
                   key={fixture.clipId}
@@ -226,6 +263,37 @@ export function QaReviewPanel({
           <div className="flex items-center gap-2 text-[var(--ink)]">
             <TimerReset className="size-4" />
             <p className="text-sm font-semibold">3-minute rehearsal</p>
+          </div>
+
+          <div className="grid gap-3 rounded-md border border-[var(--line)] bg-white px-4 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-[var(--ink)]">
+                release checklist snapshot
+              </p>
+              <SummaryBadge
+                tone={
+                  releaseChecklist.every((item) => item.status === 'ready')
+                    ? 'grounded'
+                    : 'review'
+                }
+              >
+                {
+                  releaseChecklist.filter((item) => item.status === 'ready')
+                    .length
+                }
+                /{releaseChecklist.length}
+              </SummaryBadge>
+            </div>
+            <div className="grid gap-2">
+              {releaseChecklist.map((item) => (
+                <ChecklistRow
+                  detail={item.detail}
+                  key={item.id}
+                  label={item.label}
+                  status={item.status}
+                />
+              ))}
+            </div>
           </div>
 
           <div className="rounded-md border border-[var(--line)] bg-white px-4 py-4">
@@ -579,6 +647,28 @@ function RunBadge({
       <Icon className="size-3.5" />
       {status}
     </span>
+  )
+}
+
+function ChecklistRow({
+  detail,
+  label,
+  status,
+}: {
+  detail: string
+  label: string
+  status: 'pending' | 'ready'
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-[var(--line)] bg-[var(--soft)] px-3 py-2">
+      <div className="grid gap-1">
+        <p className="text-sm font-medium text-[var(--ink)]">{label}</p>
+        <p className="text-xs leading-5 text-[var(--muted)]">{detail}</p>
+      </div>
+      <SummaryBadge tone={status === 'ready' ? 'grounded' : 'review'}>
+        {status}
+      </SummaryBadge>
+    </div>
   )
 }
 

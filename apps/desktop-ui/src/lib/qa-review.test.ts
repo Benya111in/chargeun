@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  getLatestRehearsalRun,
   getLatestManualReviewRun,
+  getManualReviewQueue,
   getManualReviewCoverage,
+  getReleaseChecklistItems,
   getRehearsalPassCount,
   type QaReviewState,
 } from './qa-review'
@@ -100,5 +103,46 @@ describe('qa-review helpers', () => {
 
   it('counts passed rehearsals', () => {
     expect(getRehearsalPassCount(state)).toBe(1)
+  })
+
+  it('sorts the manual review queue with unresolved fixtures first', () => {
+    expect(
+      getManualReviewQueue(state).map((fixture) => fixture.clipId),
+    ).toEqual(['eq-1', 'fire-1'])
+  })
+
+  it('builds release checklist items from the latest rehearsal and coverage', () => {
+    const checklist = getReleaseChecklistItems(state)
+
+    expect(checklist.find((item) => item.id === 'manual-review')).toMatchObject(
+      {
+        detail: '1/2 fixtures passed',
+        status: 'pending',
+      },
+    )
+    expect(
+      checklist.find((item) => item.id === 'monitor-capture'),
+    ).toMatchObject({
+      detail: '최근 rehearsal에서 통과',
+      status: 'ready',
+    })
+  })
+
+  it('does not mutate rehearsal order when reading the latest run', () => {
+    const rehearsalRuns = [
+      ...state.rehearsalRuns.map((run) => ({
+        ...run,
+      })),
+    ]
+    const stateCopy = {
+      ...state,
+      rehearsalRuns,
+    }
+
+    expect(getLatestRehearsalRun(stateCopy)?.date).toBe('2026-04-15')
+    expect(stateCopy.rehearsalRuns.map((run) => run.date)).toEqual([
+      '2026-04-14',
+      '2026-04-15',
+    ])
   })
 })

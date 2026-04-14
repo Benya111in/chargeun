@@ -151,3 +151,8 @@
 
 - 이유: 실제 clip 검수에서는 별도 asset registry를 또 관리하기보다, 검수자가 지금 보고 있는 로컬 파일 path를 그대로 preview와 로그에 같이 남기는 편이 가장 빠르고 협업 중 실수가 적다.
 - 영향: `QaReviewPanel`은 manual review의 `path` 값을 우선 사용하고, Tauri 실행 시에는 `convertFileSrc`로 `asset:` URL을 만들어 영상 preview를 연다. 브라우저 preview에서는 path 문자열만 유지하며, 실제 자산 배포/복사는 후속 범위로 남긴다.
+
+### D-031 release readiness는 최신 rehearsal 로그에서 바로 파생한다
+
+- 이유: 대회 직전에는 별도 스프레드시트나 문서를 또 맞추기보다, 지금 앱에서 실제로 남긴 rehearsal/manual review 로그를 기준으로 남은 리스크를 바로 보는 편이 빠르고 협업 인수인계도 단순하다.
+- 영향: desktop UI는 `QaReviewPanel`에서 latest rehearsal + manual review coverage를 조합해 release checklist snapshot을 계산하고, 미완료 fixture를 우선순위 queue로 재정렬한다. pause/seek 같은 아직 계측되지 않은 항목은 계속 사람 기준 manual verification으로 남긴다.

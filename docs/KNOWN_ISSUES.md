@@ -21,6 +21,7 @@
 - `qa:sync`는 manual review/rehearsal markdown을 최신화하지만, 실제 clip을 재생하고 UI를 눈으로 검수하는 작업 자체를 자동화하지는 않는다.
 - QA workspace의 기록 경로는 현재 개발 저장소의 `data/eval` JSON과 `pnpm qa:sync`에 의존하므로, standalone 배포 bundle에서 그대로 쓰는 구조는 아직 아니다.
 - QA workspace의 local clip preview는 사용자가 직접 넣은 local path와 비디오 확장자(`mp4`, `mov`, `m4v`, `webm`, `ogg`)에 의존하며, 폴더 스캔이나 clip 존재 확인 UI는 아직 없다.
+- QA workspace의 release checklist snapshot은 현재 rehearsal JSON에 있는 항목만 파생하므로, Shadow Player pause/seek/replay marker 같은 세부 동작은 여전히 사람이 수동으로 확인해야 한다.
 - 저장소에는 아직 실제 mp4/mov clip 자산이 없어서 `manual_review_runs.json`과 `rehearsal_runs.json`의 많은 항목이 `pending`/`blocked` 상태로 남아 있다.
 - eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.
