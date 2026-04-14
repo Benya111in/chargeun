@@ -36,3 +36,4 @@
 - localhost 브라우저 데모는 이제 scenario frame을 보여 주지만, 여전히 진짜 동영상 playback이 아니라 sampled/static frame replay라서 연속 영상처럼 보이지는 않는다.
 - `/demo` 발표 화면은 실제 mp4를 재생하지만, 현재는 local `public/demo-video/*.mp4` 복사본에 의존하므로 clip 교체나 더 긴 영상 관리에는 별도 asset pipeline이 아직 없다.
 - `/demo` 발표 화면의 롱클립은 현재 원본에서 수동으로 다시 잘라 넣은 복사본이라, QA fixture window와 발표용 window를 자동으로 동기화하는 파이프라인은 아직 없다.
+- `/demo`는 이제 멀티트랙/grounded 정보를 함께 보여 주지만, 현재 cue timeline은 실제 segment detector 결과가 아니라 영상 길이를 track 수로 균등 분할한 발표용 cue 스케줄이다.
