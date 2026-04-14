@@ -24,7 +24,7 @@
    - source docs: `docs/07_BROWSER_CAPTURE_FALLBACK.md`, `docs/08_SHADOW_PLAYER_AND_BUFFER_ENGINE.md`, `docs/09_PERCEPTION_PIPELINE.md`
    - goal: preview input과 shadow input을 같은 contract 아래로 정리
 
-4. `pending` rule KB matcher 완성
+4. `done` rule KB matcher 완성
    - source docs: `docs/11_RULE_KB_AND_GROUNDING.md`, `docs/16_DATA_MODELS_AND_API_CONTRACTS.md`
    - goal: fire/earthquake rules를 실제 matcher로 연결
 

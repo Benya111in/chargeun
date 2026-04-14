@@ -51,3 +51,8 @@
 
 - 이유: perception, grounding, segment 단계가 입력 원본이 브라우저인지 네이티브인지에 따라 분기되면 후속 구현이 빠르게 꼬인다.
 - 영향: 브라우저 fallback도 1fps JPEG sample을 만들고, native snapshot과 같은 `CaptureFrameSample` window를 유지한다. replay lane은 여전히 별도지만 perception seed는 같은 계약을 쓴다.
+
+### D-011 matcher는 현재 문서 drift를 phase alias로 흡수
+
+- 이유: 현재 eval/데모 문서에는 `protect`, `route_selection` 같은 표현이 남아 있고, 실제 rule JSON은 `during_shaking`, `door_control`, `stair_evacuation`처럼 더 구체적인 phase를 쓴다.
+- 영향: grounded matcher는 alias를 통해 후보군을 좁히되, phase만으로는 grounded 처리하지 않고 evidence token이 있어야 rule을 선택한다.

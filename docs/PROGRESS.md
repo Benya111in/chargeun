@@ -30,15 +30,17 @@
 - `swift run MacCaptureBridge bootstrap`로 현재 로컬 macOS 권한 상태가 `permissionState: denied`임을 재확인
 - browser `MediaStream`를 1fps JPEG sample로 정규화하는 sampler와 native/browser 공용 `CaptureFrameSample` 계약을 추가
 - `captureInput` 상태와 perception seed 초안을 연결해 preview lane이 다음 perception/rule 단계에서 바로 쓸 frame window를 유지하도록 정리
+- `workers/llm-orchestrator`에 grounded rule matcher와 `buildGroundedExplanation` 경로를 추가해 fire/earthquake evidence에서 실제 rule 1~3개를 고르도록 구현
+- `protect -> during_shaking`, `route_selection -> stair_evacuation/door_control/refuge_space` phase alias와 evidence gating을 넣어 공식 rule 없는 action 노출을 계속 막음
+- `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 matcher slice까지 루트 검증 완료
 
 ### 진행 중
 
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
-- fire/earthquake rule matcher 구현
 - perception packet foundation과 hazard/segment engine 실입력 연결
 
 ### 다음
 
-1. fire/earthquake grounded matcher 구현
-2. perception packet foundation과 hazard/segment engine 실입력 교체
+1. perception packet foundation 구현
+2. hazard/segment engine 실입력 교체
 3. grounded track와 evidence 흐름을 실제 packet/rule 입력으로 치환

@@ -12,3 +12,4 @@
 - native audio preview는 현재 `audio-preview-fallback` 오류 이벤트로만 노출되며 실제 시스템 오디오 frame은 아직 브리지되지 않았다.
 - 현재 로컬 macOS는 `swift run MacCaptureBridge bootstrap` 기준 Screen Recording 권한이 `denied` 상태라, 실제 native frame smoke는 권한 허용 후에만 검증할 수 있다.
 - Shadow Player replay lane은 아직 mock ring buffer 기반이며, 새 `captureInput` frame window와 직접 합쳐지지 않았다.
+- `data/eval/annotated_segments.json`는 현재 rule JSON보다 예전 phase/rule id를 일부 기대하고 있어, QA slice에서 fixture 정합성 재조정이 필요하다.
