@@ -54,13 +54,15 @@
 - `data/eval/annotated_segments.json`를 5개 fixture(화재 2, 지진 2, review fallback 1) 기준으로 재작성하고, audio-missing 케이스까지 포함한 packet-level eval set으로 정리
 - `scripts/grounding-audit.ts`와 루트 `pnpm eval:audit`, `pnpm qa:smoke` 스크립트를 추가해 hazard/phase/rule id/safety mode/forbidden action/audio fallback을 자동 점검하도록 구현
 - `data/eval/manual_review_log_2026-04-14.md`, `data/eval/demo_rehearsal_checklist.md`를 추가하고 `pnpm eval:audit`, `pnpm qa:smoke`, `pnpm lint`로 QA slice 검증 완료
+- `data/demo/runbook.json`, `data/demo/prerecorded_sessions.json`를 추가해 3분 시연 타임라인과 prerecorded backup 세션을 데이터로 고정
+- desktop UI에 `DemoRunbookPanel`을 추가해 live/backup mode 토글, 단계별 runbook 선택, Q&A용 근거 패널 바로가기, prerecorded backup 프리셋 선택을 제공
+- `mock-session`에 visual-only fire backup과 earthquake after-shaking backup 시나리오를 추가하고 `pnpm --filter desktop-ui test`, `pnpm demo:reset`, `pnpm lint`, `pnpm build`로 demo slice 검증 완료
 
 ### 진행 중
 
 - live capture `captureInput`를 perception/segment/session log로 실시간 연결
-- demo runbook and backup mode
+- post-demo backlog triage
 
 ### 다음
 
-1. demo runbook and backup mode
-2. post-demo backlog triage
+1. post-demo backlog triage

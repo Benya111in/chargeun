@@ -1,0 +1,42 @@
+[
+  {
+    "id": "backup-fire-grounded",
+    "title": "화재 grounded backup",
+    "trigger": "라이브 캡처 실패 시 기본 플랜 B",
+    "note": "연기, 비상구, 계단, door control까지 한 번에 보여 주기 좋습니다.",
+    "scenarioId": "grounded-fire",
+    "preferredTrack": "action",
+    "showEvidence": true,
+    "panicMode": false
+  },
+  {
+    "id": "backup-fire-visual",
+    "title": "화재 visual-only backup",
+    "trigger": "오디오가 실패하거나 음소거 영상일 때",
+    "note": "OCR과 object hint만으로도 grounded가 유지되는 시나리오입니다.",
+    "scenarioId": "backup-fire-visual",
+    "preferredTrack": "action",
+    "showEvidence": true,
+    "panicMode": false
+  },
+  {
+    "id": "backup-earthquake-review",
+    "title": "저신뢰 review backup",
+    "trigger": "grounded가 약할 때 safety fallback을 보여 주기",
+    "note": "공식 확인 우선 모드와 Panic Mode fallback을 설명하기 쉽습니다.",
+    "scenarioId": "review-earthquake",
+    "preferredTrack": "easy",
+    "showEvidence": true,
+    "panicMode": false
+  },
+  {
+    "id": "backup-earthquake-after",
+    "title": "지진 after-shaking backup",
+    "trigger": "phase 전환과 grounded 유지 예시",
+    "note": "흔들림 종료 후 가스/출구 확보 단계 설명에 적합합니다.",
+    "scenarioId": "backup-earthquake-after",
+    "preferredTrack": "action",
+    "showEvidence": true,
+    "panicMode": false
+  }
+]

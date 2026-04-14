@@ -22,6 +22,7 @@ import {
   type VoiceIntent,
 } from '@ansimtrack/shared-types'
 
+import { DemoRunbookPanel } from './components/DemoRunbookPanel'
 import { EvidenceDrawer } from './components/EvidenceDrawer'
 import { LiveCapturePreview } from './components/LiveCapturePreview'
 import {
@@ -29,6 +30,7 @@ import {
   PrivacyControlPanel,
 } from './components/PrivacyControlPanel'
 import { ShadowVideoStage } from './components/ShadowVideoStage'
+import { demoRunbookSteps, prerecordedBackupSessions } from './lib/demo-runbook'
 import {
   capturePermissionLabels,
   captureStatusLabels,
@@ -63,6 +65,12 @@ const initialExplanation = buildGroundedExplanation({
 })
 
 function App() {
+  const [demoMode, setDemoMode] = useState<'backup-replay' | 'live-priority'>(
+    'live-priority',
+  )
+  const [activeRunbookStepId, setActiveRunbookStepId] = useState(
+    demoRunbookSteps[0]?.id ?? 'problem',
+  )
   const [scenarioId, setScenarioId] = useState(initialScenario.id)
   const [requestedTrack, setRequestedTrack] = useState<TrackKey>(
     getPreferredTrack(initialExplanation),
@@ -144,6 +152,13 @@ function App() {
   )
   const explanation = safetyView.explanation
   const safetyWarnings = safetyView.warnings
+  const activeRunbookStep = useMemo(
+    () =>
+      demoRunbookSteps.find((step) => step.id === activeRunbookStepId) ??
+      demoRunbookSteps[0] ??
+      null,
+    [activeRunbookStepId],
+  )
 
   const shadowScenario = useMemo(
     () => ({
@@ -238,6 +253,7 @@ function App() {
 
   const startCaptureWithConsent = async (mode: PendingCaptureStart) => {
     setShowEvidence(true)
+    setDemoMode('live-priority')
     if (mode === 'native') {
       await capture.actions.startNativeMonitor()
     } else {
@@ -313,6 +329,57 @@ function App() {
     )
   }
 
+  const handleSelectRunbookStep = (stepId: string) => {
+    const step = demoRunbookSteps.find((candidate) => candidate.id === stepId)
+    if (!step) {
+      return
+    }
+
+    setActiveRunbookStepId(step.id)
+    if (step.scenarioId) {
+      setScenarioId(step.scenarioId)
+    }
+    if (step.preferredTrack) {
+      setRequestedTrack(step.preferredTrack as TrackKey)
+    }
+    if (typeof step.showEvidence === 'boolean') {
+      setShowEvidence(step.showEvidence)
+    }
+    if (typeof step.panicMode === 'boolean') {
+      setPanicMode(step.panicMode)
+    }
+    setVoiceReply(defaultVoiceReply)
+  }
+
+  const handleSelectBackupSession = (sessionId: string) => {
+    const session = prerecordedBackupSessions.find(
+      (candidate) => candidate.id === sessionId,
+    )
+    if (!session) {
+      return
+    }
+
+    setDemoMode('backup-replay')
+    setScenarioId(session.scenarioId)
+    if (session.preferredTrack) {
+      setRequestedTrack(session.preferredTrack as TrackKey)
+    }
+    if (typeof session.showEvidence === 'boolean') {
+      setShowEvidence(session.showEvidence)
+    }
+    if (typeof session.panicMode === 'boolean') {
+      setPanicMode(session.panicMode)
+    }
+    setActiveRunbookStepId('live-fire')
+    setVoiceReply(defaultVoiceReply)
+  }
+
+  const handleOpenEvidenceShortcut = () => {
+    setShowEvidence(true)
+    setRequestedTrack('reason')
+    setActiveRunbookStepId('evidence')
+  }
+
   const handleScenarioToggle = () => {
     const nextId =
       scenario.id === 'grounded-fire' ? 'review-earthquake' : 'grounded-fire'
@@ -362,6 +429,11 @@ function App() {
                 {explanation.safetyMode === 'grounded'
                   ? '공식 근거 연결됨'
                   : '공식 확인 우선'}
+              </StatusPill>
+              <StatusPill
+                tone={demoMode === 'backup-replay' ? 'review' : 'neutral'}
+              >
+                {demoMode === 'backup-replay' ? 'backup replay' : '라이브 우선'}
               </StatusPill>
             </div>
             <div className="max-w-3xl">
@@ -594,6 +666,18 @@ function App() {
           </section>
 
           <section className="flex min-h-0 flex-col gap-4">
+            <DemoRunbookPanel
+              activeStepId={activeRunbookStep?.id ?? activeRunbookStepId}
+              backupSessions={prerecordedBackupSessions}
+              currentScenarioTitle={scenario.title}
+              demoMode={demoMode}
+              onOpenEvidence={handleOpenEvidenceShortcut}
+              onSelectBackupSession={handleSelectBackupSession}
+              onSelectStep={handleSelectRunbookStep}
+              onSetDemoMode={setDemoMode}
+              showEvidence={showEvidence}
+              steps={demoRunbookSteps}
+            />
             <section className="panel-edge">
               <div className="flex items-center justify-between gap-3">
                 <div>

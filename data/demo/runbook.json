@@ -1,0 +1,55 @@
+[
+  {
+    "id": "problem",
+    "timeWindow": "0:00-0:20",
+    "title": "문제 소개",
+    "cue": "빠른 재난안전 영상은 따라가기 어렵다는 점을 먼저 짚습니다."
+  },
+  {
+    "id": "solution",
+    "timeWindow": "0:20-0:40",
+    "title": "해결책 소개",
+    "cue": "Shadow Player와 멀티트랙 설명 구조를 짧게 보여 줍니다."
+  },
+  {
+    "id": "live-fire",
+    "timeWindow": "0:40-1:40",
+    "title": "라이브 시연",
+    "cue": "화재 장면에서 easy/action 전환과 Panic Mode까지 이어 갑니다.",
+    "scenarioId": "grounded-fire",
+    "preferredTrack": "action",
+    "showEvidence": false,
+    "panicMode": false
+  },
+  {
+    "id": "voice",
+    "timeWindow": "1:40-2:20",
+    "title": "음성 시연",
+    "cue": "지금 뭐 해야 해, 왜, 119에 뭐라고 말해를 순서대로 눌러 봅니다.",
+    "scenarioId": "grounded-fire",
+    "preferredTrack": "easy",
+    "showEvidence": false,
+    "panicMode": false,
+    "recommendedIntent": "action"
+  },
+  {
+    "id": "evidence",
+    "timeWindow": "2:20-2:50",
+    "title": "근거 시연",
+    "cue": "evidence drawer와 source title을 열어 어떤 rule에서 나온 설명인지 보여 줍니다.",
+    "scenarioId": "grounded-fire",
+    "preferredTrack": "reason",
+    "showEvidence": true,
+    "panicMode": false
+  },
+  {
+    "id": "close",
+    "timeWindow": "2:50-3:00",
+    "title": "마무리",
+    "cue": "자막 확대가 아니라 행동 판단 단위 재설명이라는 점으로 끝냅니다.",
+    "scenarioId": "grounded-fire",
+    "preferredTrack": "easy",
+    "showEvidence": true,
+    "panicMode": false
+  }
+]

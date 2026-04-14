@@ -12,3 +12,4 @@ apps/desktop-ui/src-tauri/target
 native/mac-capture/.build
 files/cache
 files/export
+data/demo/last-session.json

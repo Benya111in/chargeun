@@ -96,3 +96,8 @@
 
 - 이유: 현재 단계에서는 실제 영상 클립 수집보다 matcher/segment/guardrail drift를 빠르게 잡는 자동 점검이 더 중요하다.
 - 영향: eval set은 우선 synthetic `PerceptionPacket` fixture로 관리하고, `pnpm eval:audit`가 hazard/phase/rule/safety fallback을 검사한다. 실제 녹화 클립 walkthrough는 별도 manual log로 추적한다.
+
+### D-020 demo runbook과 backup preset은 코드가 아니라 데이터로 관리
+
+- 이유: 발표 직전에는 시연 순서와 플랜 B를 빠르게 바꿀 수 있어야 하고, 프론트 코드 수정 없이도 발표 흐름을 조정할 수 있어야 한다.
+- 영향: `data/demo/runbook.json`과 `data/demo/prerecorded_sessions.json`이 시연 타임라인과 prerecorded preset의 단일 소스가 되고, UI는 이 데이터를 읽어 runbook 패널과 backup mode를 구성한다.

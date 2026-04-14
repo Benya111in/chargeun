@@ -20,3 +20,4 @@
 - 브라우저 데모 모드에서는 filesystem cache clear를 직접 실행하지 않고, 실제 `clear_local_runtime` command는 Tauri 실행 경로에서만 동작한다.
 - eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.
+- demo runbook과 prerecorded backup preset은 추가됐지만 발표용 screenshot/export artifact는 아직 별도 생성하지 않는다.

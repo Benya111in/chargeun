@@ -60,7 +60,7 @@
     - source docs: `docs/18_EVALUATION_AND_QA.md`, `docs/21_RELEASE_CHECKLIST.md`
     - goal: eval clips, grounding audit, rehearsal checklist
 
-13. `pending` demo runbook and backup mode
+13. `done` demo runbook and backup mode
     - source docs: `docs/19_DEMO_RUNBOOK_AND_PITCH.md`
     - goal: prerecorded backup path, demo script alignment
 
