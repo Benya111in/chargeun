@@ -63,14 +63,15 @@
 - `pnpm --filter desktop-ui test`, `pnpm typecheck`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm lint`, `pnpm build`로 restore/export slice 검증 완료
 - `README.md`, `docs/24_LOCAL_SETUP_FOR_MACBOOK.md`, `.env.example`, `scripts/check-env.sh`를 현재 저장소 기준으로 정리해 로컬 부팅 순서, workspace 내 Tauri CLI 사용, demo backup 기본값을 문서와 스크립트에 반영
 - `pnpm check-env`, `bash -n scripts/check-env.sh`, `pnpm lint`로 local setup slice 검증 완료
+- `prompts/README.md`, runtime prompt 3종, `prompts/codex/*.md` 10종, `scripts/validate-prompts.ts`, `pnpm prompts:validate` 스크립트를 추가해 도메인 prompt 자산을 저장소 안에서 버전 관리하도록 정리
+- `pnpm prompts:validate`, `pnpm lint`로 prompt asset slice 검증 완료
 
 ### 진행 중
 
 - live capture `captureInput`를 perception/segment/session log로 실시간 연결
-- domain prompt assets 정리
 
 ### 다음
 
-1. domain prompt assets 정리
-2. live capture -> perception -> segment 실시간 연결
-3. SQLite restore와 native audio 보강
+1. live capture -> perception -> segment 실시간 연결
+2. SQLite restore와 native audio 보강
+3. 실제 clip 기반 rehearsal log 축적

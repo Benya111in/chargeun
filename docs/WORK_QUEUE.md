@@ -78,6 +78,6 @@
     - source docs: `docs/24_LOCAL_SETUP_FOR_MACBOOK.md`
     - goal: `README.md`, `scripts/check-env.sh`, `.env.example`를 현재 저장소 기준으로 정리
 
-17. `pending` domain prompt assets 정리
+17. `done` domain prompt assets 정리
     - source docs: `docs/25_CODEX_PROMPTS_BY_DOMAIN.md`
     - goal: 도메인별 prompt asset과 사용 가이드 정리

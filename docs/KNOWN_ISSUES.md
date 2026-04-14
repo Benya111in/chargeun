@@ -21,3 +21,4 @@
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.
 - runtime state 복원은 demo/UI 상태와 last session metadata 기준이며, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
 - `pnpm check-env`는 로컬 툴체인과 env scaffold만 점검하며, Screen Recording/마이크 권한 허용 여부는 런타임에서 직접 확인해야 한다.
+- `pnpm prompts:validate`는 prompt 자산 존재와 핵심 제약 문구만 검사하며, 실제 모델 응답 품질이나 JSON 안정성은 별도 eval로 계속 확인해야 한다.

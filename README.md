@@ -59,6 +59,7 @@ cp .env.example .env.local
 - `pnpm lint`
 - `pnpm build`
 - `pnpm rules:validate`
+- `pnpm prompts:validate`
 - `pnpm eval:audit`
 - `pnpm qa:smoke`
 - `pnpm demo:reset`
@@ -95,6 +96,7 @@ packages/local-store
 - `pnpm test`
 - `pnpm typecheck`
 - `pnpm lint`
+- `pnpm prompts:validate`
 - `pnpm demo:reset`
 - `pnpm eval:audit`
 - `pnpm qa:smoke`

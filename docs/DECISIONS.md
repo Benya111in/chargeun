@@ -116,3 +116,8 @@
 
 - 이유: 협업 환경에서는 개발자마다 API 키나 글로벌 CLI 준비 상태가 다르므로, 첫 부팅이 외부 의존성 때문에 막히면 진입 비용이 커진다.
 - 영향: `pnpm check-env`는 macOS 툴체인과 `.env.example` 존재만 확인하고, 글로벌 `tauri-cli` 대신 workspace의 `@tauri-apps/cli`를 기본 경로로 본다. `.env.example`은 demo backup 모드를 기본 활성화해 비밀키 없이도 시연 경로가 올라오게 유지한다.
+
+### D-024 prompt 자산은 runtime prompt와 Codex 작업 prompt를 분리 관리한다
+
+- 이유: 앱 내부에서 쓰는 짧은 deterministic prompt와 저장소 구현 작업을 위임하는 긴 Codex prompt는 목적과 변경 주기가 다르다.
+- 영향: `prompts/*.md`는 segment/track/voice runtime prompt 골격으로 유지하고, `prompts/codex/*.md`는 문서 25의 도메인별 작업 지시문을 파일로 관리한다. `scripts/validate-prompts.ts`는 핵심 grounding/safety 제약과 파일 누락을 빠르게 점검한다.
