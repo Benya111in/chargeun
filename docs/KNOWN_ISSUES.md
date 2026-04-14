@@ -12,10 +12,11 @@
 - native audio preview는 현재 `audio-preview-fallback` 오류 이벤트로만 노출되며 실제 시스템 오디오 frame은 아직 브리지되지 않았다.
 - 현재 로컬 macOS는 `swift run MacCaptureBridge bootstrap` 기준 Screen Recording 권한이 `denied` 상태라, 실제 native frame smoke는 권한 허용 후에만 검증할 수 있다.
 - Shadow Player replay lane은 아직 mock ring buffer 기반이며, 새 `captureInput` frame window와 직접 합쳐지지 않았다.
-- `data/eval/annotated_segments.json`는 현재 rule JSON보다 예전 phase/rule id를 일부 기대하고 있어, QA slice에서 fixture 정합성 재조정이 필요하다.
 - desktop UI는 demo scenario에서 새 grounded path를 쓰지만, 실제 live capture의 `captureInput`를 perception worker와 segment engine으로 흘리는 실시간 연결은 아직 미구현이다.
 - 현재 voice path는 browser `speechSynthesis` fallback이며, 네이티브 TTS/ducking/마이크 intent 분류는 아직 미구현이다.
 - evidence drawer는 demo packet 기준으로는 정리됐지만, live capture 세션 로그/재시작 복원까지는 아직 앱 전체에 연결되지 않았다.
 - `packages/local-store`는 runtime path, schema, JSONL log/export, latest-only job queue까지 구현됐지만 실제 SQLite 연결과 restart restore UI는 아직 붙지 않았다.
 - privacy panel과 consent modal은 구현됐지만 사용자 설정을 재시작 후 복원하는 persistence는 아직 없다.
 - 브라우저 데모 모드에서는 filesystem cache clear를 직접 실행하지 않고, 실제 `clear_local_runtime` command는 Tauri 실행 경로에서만 동작한다.
+- eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
+- demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.

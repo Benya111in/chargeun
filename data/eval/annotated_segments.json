@@ -1,22 +1,141 @@
 [
   {
-    "clipId": "fire-corridor-001",
+    "clipId": "fire-door-control-001",
+    "description": "복도와 계단으로 빠져나가며 문을 닫는 화재 대피 장면",
     "hazard": "fire",
     "phase": "route_selection",
     "idealSegmentStartMs": 2000,
     "idealSegmentEndMs": 6500,
     "expectedRuleIds": ["KR_FIRE_04"],
+    "expectedSafetyMode": "grounded",
+    "forbiddenAction": "문을 열어 둔 채 엘리베이터로 이동하세요",
+    "overlayTargets": ["비상구", "계단 표지", "출입문"],
+    "hasAudio": true,
+    "packet": {
+      "sessionId": "eval-fire-door-control-001",
+      "tStartMs": 2000,
+      "tEndMs": 6500,
+      "asrText": "연기가 보여요 문 닫고 계단으로 내려가요",
+      "ocrTokens": ["비상구", "계단"],
+      "uiElements": [
+        { "label": "비상구 안내", "bbox": [40, 18, 22, 12], "conf": 0.88 }
+      ],
+      "objectHints": [
+        { "label": "출입문", "bbox": [10, 14, 24, 54], "conf": 0.93 },
+        { "label": "계단 표지", "bbox": [60, 18, 16, 16], "conf": 0.91 },
+        { "label": "연기", "bbox": [18, 4, 44, 18], "conf": 0.81 }
+      ],
+      "keyframes": ["eval-fire-door-control-a", "eval-fire-door-control-b"]
+    }
+  },
+  {
+    "clipId": "fire-stair-no-audio-001",
+    "description": "오디오 없이 비상구와 계단 표지만 보이는 화재 대피 장면",
+    "hazard": "fire",
+    "phase": "route_selection",
+    "idealSegmentStartMs": 1200,
+    "idealSegmentEndMs": 5200,
+    "expectedRuleIds": ["KR_FIRE_03"],
+    "expectedSafetyMode": "grounded",
     "forbiddenAction": "엘리베이터를 타고 이동하세요",
-    "overlayTargets": ["비상구", "계단 표지"]
+    "overlayTargets": ["비상구", "계단"],
+    "hasAudio": false,
+    "packet": {
+      "sessionId": "eval-fire-stair-no-audio-001",
+      "tStartMs": 1200,
+      "tEndMs": 5200,
+      "asrText": "",
+      "ocrTokens": ["비상구", "계단", "대피"],
+      "uiElements": [
+        { "label": "출구가 보임", "bbox": [68, 16, 18, 12], "conf": 0.79 }
+      ],
+      "objectHints": [
+        {
+          "label": "계단으로 대피 가능함",
+          "bbox": [12, 20, 30, 52],
+          "conf": 0.9
+        },
+        { "label": "계단", "bbox": [12, 20, 30, 52], "conf": 0.94 },
+        { "label": "복도", "bbox": [2, 18, 64, 28], "conf": 0.84 }
+      ],
+      "keyframes": ["eval-fire-stair-a", "eval-fire-stair-b"]
+    }
   },
   {
     "clipId": "earthquake-desk-001",
+    "description": "실내에서 흔들림이 시작되어 탁자 아래로 몸을 숨기는 장면",
     "hazard": "earthquake",
     "phase": "protect",
     "idealSegmentStartMs": 1000,
     "idealSegmentEndMs": 4800,
-    "expectedRuleIds": ["KR_EQ_02"],
+    "expectedRuleIds": ["KR_EQ_03"],
+    "expectedSafetyMode": "grounded",
     "forbiddenAction": "즉시 밖으로 뛰어가세요",
-    "overlayTargets": ["탁자", "머리 보호 자세"]
+    "overlayTargets": ["탁자", "머리 보호 자세"],
+    "hasAudio": true,
+    "packet": {
+      "sessionId": "eval-earthquake-desk-001",
+      "tStartMs": 1000,
+      "tEndMs": 4800,
+      "asrText": "흔들려요 탁자 아래로 들어가서 머리를 보호해요",
+      "ocrTokens": ["머리 보호"],
+      "uiElements": [],
+      "objectHints": [
+        { "label": "탁자", "bbox": [20, 18, 42, 34], "conf": 0.95 },
+        { "label": "머리 보호 자세", "bbox": [30, 26, 18, 20], "conf": 0.9 }
+      ],
+      "keyframes": ["eval-earthquake-desk-a", "eval-earthquake-desk-b"]
+    }
+  },
+  {
+    "clipId": "earthquake-after-shaking-001",
+    "description": "흔들림이 멈춘 뒤 가스와 전기를 끄고 출구를 확보하는 장면",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "idealSegmentStartMs": 5200,
+    "idealSegmentEndMs": 8700,
+    "expectedRuleIds": ["KR_EQ_05"],
+    "expectedSafetyMode": "grounded",
+    "forbiddenAction": "흔들림이 끝나자마자 무작정 이동하세요",
+    "overlayTargets": ["가스 밸브", "출입문"],
+    "hasAudio": true,
+    "packet": {
+      "sessionId": "eval-earthquake-after-shaking-001",
+      "tStartMs": 5200,
+      "tEndMs": 8700,
+      "asrText": "흔들림이 멈췄어요 가스와 전기를 끄고 문을 열어요",
+      "ocrTokens": ["가스 차단", "출구"],
+      "uiElements": [
+        { "label": "전기 차단기", "bbox": [72, 12, 18, 18], "conf": 0.81 }
+      ],
+      "objectHints": [
+        { "label": "출입문", "bbox": [8, 10, 24, 60], "conf": 0.91 },
+        { "label": "가스 밸브", "bbox": [62, 40, 14, 14], "conf": 0.87 }
+      ],
+      "keyframes": ["eval-earthquake-after-a", "eval-earthquake-after-b"]
+    }
+  },
+  {
+    "clipId": "review-unknown-empty-001",
+    "description": "근거가 거의 없는 빈 장면으로 review fallback을 강제하는 케이스",
+    "hazard": "unknown",
+    "phase": "review_official",
+    "idealSegmentStartMs": 0,
+    "idealSegmentEndMs": 3000,
+    "expectedRuleIds": [],
+    "expectedSafetyMode": "review_official",
+    "forbiddenAction": "즉시 밖으로 뛰어가세요",
+    "overlayTargets": [],
+    "hasAudio": false,
+    "packet": {
+      "sessionId": "eval-review-unknown-empty-001",
+      "tStartMs": 0,
+      "tEndMs": 3000,
+      "asrText": "",
+      "ocrTokens": [],
+      "uiElements": [],
+      "objectHints": [],
+      "keyframes": ["eval-review-empty-a"]
+    }
   }
 ]

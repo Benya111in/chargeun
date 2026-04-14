@@ -91,3 +91,8 @@
 
 - 이유: 재난안전 도메인에서는 행동 문장을 근거 없이 떼어 보여 주면 오해 가능성이 크다.
 - 영향: `applySafetyGuardrails`가 low-confidence/missing rule/privacy hold에서는 `review_official`로 강등하고, evidence drawer가 닫혀 있으면 grounded 상태여도 action/report 트랙을 숨긴다. 캡처 시작은 consent modal 확인 뒤에만 허용한다.
+
+### D-019 QA는 raw clip보다 packet fixture audit부터 고정
+
+- 이유: 현재 단계에서는 실제 영상 클립 수집보다 matcher/segment/guardrail drift를 빠르게 잡는 자동 점검이 더 중요하다.
+- 영향: eval set은 우선 synthetic `PerceptionPacket` fixture로 관리하고, `pnpm eval:audit`가 hazard/phase/rule/safety fallback을 검사한다. 실제 녹화 클립 walkthrough는 별도 manual log로 추적한다.

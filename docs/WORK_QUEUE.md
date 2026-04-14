@@ -56,7 +56,7 @@
     - source docs: `docs/17_SAFETY_PRIVACY_AND_COMPLIANCE.md`
     - goal: guardrails, privacy defaults, local-first constraints 확인
 
-12. `pending` evaluation and QA tooling
+12. `done` evaluation and QA tooling
     - source docs: `docs/18_EVALUATION_AND_QA.md`, `docs/21_RELEASE_CHECKLIST.md`
     - goal: eval clips, grounding audit, rehearsal checklist
 

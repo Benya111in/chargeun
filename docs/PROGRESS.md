@@ -51,14 +51,16 @@
 - shared schema가 `review_official` 모드에서 action/report/do_not를 막도록 강화하고, safety fallback 5개 시나리오 테스트를 추가
 - desktop UI에 privacy control panel, capture consent modal, evidence drawer gating, 종료 후 캐시 자동 삭제 옵션, 수동 cache clear 흐름을 추가
 - Tauri `clear_local_runtime` command를 추가하고 `pnpm --filter @ansimtrack/shared-types test`, `pnpm --filter @ansimtrack/llm-orchestrator test`, `pnpm --filter desktop-ui test`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, `pnpm typecheck`, `pnpm lint`, `pnpm build` 검증 완료
+- `data/eval/annotated_segments.json`를 5개 fixture(화재 2, 지진 2, review fallback 1) 기준으로 재작성하고, audio-missing 케이스까지 포함한 packet-level eval set으로 정리
+- `scripts/grounding-audit.ts`와 루트 `pnpm eval:audit`, `pnpm qa:smoke` 스크립트를 추가해 hazard/phase/rule id/safety mode/forbidden action/audio fallback을 자동 점검하도록 구현
+- `data/eval/manual_review_log_2026-04-14.md`, `data/eval/demo_rehearsal_checklist.md`를 추가하고 `pnpm eval:audit`, `pnpm qa:smoke`, `pnpm lint`로 QA slice 검증 완료
 
 ### 진행 중
 
 - live capture `captureInput`를 perception/segment/session log로 실시간 연결
-- evaluation and QA tooling
+- demo runbook and backup mode
 
 ### 다음
 
-1. evaluation and QA tooling
-2. demo runbook and backup mode
-3. post-demo backlog triage
+1. demo runbook and backup mode
+2. post-demo backlog triage
