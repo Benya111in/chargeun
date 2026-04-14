@@ -16,7 +16,7 @@
    - source docs: `docs/05_NATIVE_CAPTURE_MAC.md`, `docs/20_CODEX_EXECUTION_ORDER.md`, `docs/25_CODEX_PROMPTS_BY_DOMAIN.md`
    - goal: Tauri `enumerate/start/stop`가 seeded state가 아니라 Swift `MacCaptureCoordinator` 기반 결과를 사용
 
-2. `pending` native frame/audio preview bridge
+2. `done` native frame/audio preview bridge
    - source docs: `docs/05_NATIVE_CAPTURE_MAC.md`, `docs/08_SHADOW_PLAYER_AND_BUFFER_ENGINE.md`
    - goal: native preview/frame 이벤트를 앱으로 보내고 replay lane과 분리 유지
 

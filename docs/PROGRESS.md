@@ -24,15 +24,18 @@
 - `docs/WORK_QUEUE.md`를 추가해 남은 문서를 순차 작업 큐로 고정
 - Tauri capture command가 Swift `MacCaptureBridge` executable을 직접 호출하도록 연결
 - `swift run MacCaptureBridge bootstrap`, `swift run MacCaptureBridge stop --session-id does-not-exist`로 bridge command smoke 검증
+- `MacCaptureBridge stream` 명령과 low-fps native snapshot preview를 추가해 Tauri가 `capture/session-started`, `capture/frame`, `capture/session-stopped`, `error/system` 이벤트를 앱으로 전달하도록 연결
+- desktop UI에 native preview reducer, Tauri event listener, native frame snapshot preview 표시를 추가해 browser/native preview lane을 같은 화면에서 다루도록 확장
+- `pnpm --filter @ansimtrack/shared-types test`, `pnpm --filter desktop-ui test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `swift build`, `cargo check` 검증 완료
+- `swift run MacCaptureBridge bootstrap`로 현재 로컬 macOS 권한 상태가 `permissionState: denied`임을 재확인
 
 ### 진행 중
 
-- macOS frame/audio preview bridge 실연결
 - 브라우저 fallback preview를 shadow/perception 입력으로 연결
 - mock segment에서 실제 segment/rule 매칭 입력으로 교체
 
 ### 다음
 
-1. native frame/audio event를 preview/shadow 입력으로 전달하는 브리지 추가
-2. browser/native preview 입력을 shadow/perception lane으로 분기 연결
-3. mock segment -> grounded rule match -> segment engine 실입력 교체
+1. browser/native preview 입력을 shadow/perception lane으로 분기 연결
+2. mock segment -> grounded rule match -> segment engine 실입력 교체
+3. grounded track와 evidence 흐름을 실제 packet/rule 입력으로 치환

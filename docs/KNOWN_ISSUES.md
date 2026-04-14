@@ -6,7 +6,8 @@
 - 데모 데이터는 mock 세션을 사용하므로 실제 캡처 drift는 아직 검증되지 않았다.
 - Shadow Player의 auto-pause는 현재 marker 기반 UI 검증 단계이며 실제 segment detector 연동은 후속 작업이다.
 - browser live preview fallback은 켜졌지만 아직 shadow buffer나 perception packet 입력으로는 연결되지 않았다.
-- native mac capture는 source enumerate와 logical session bookkeeping까지 구현됐지만 실제 frame/audio stream bridge는 아직 미구현이다.
+- native mac preview는 low-fps snapshot frame 이벤트까지 연결됐지만 실제 continuous video/audio stream과 Shadow buffer 직결은 아직 미구현이다.
 - `swift test`는 현재 로컬 툴체인에서 `XCTest`/`Testing` 모듈을 바로 찾지 못해 smoke executable 검증으로 대체하고 있다.
 - Tauri `list/start/stop` command는 이제 Swift `MacCaptureBridge`를 직접 호출하지만, executable subprocess 경로라 첫 호출 시 지연이 있을 수 있다.
-- native start/stop은 logical session registry 수준이며 실제 frame/audio streaming lifecycle까지는 아직 연결되지 않았다.
+- native audio preview는 현재 `audio-preview-fallback` 오류 이벤트로만 노출되며 실제 시스템 오디오 frame은 아직 브리지되지 않았다.
+- 현재 로컬 macOS는 `swift run MacCaptureBridge bootstrap` 기준 Screen Recording 권한이 `denied` 상태라, 실제 native frame smoke는 권한 허용 후에만 검증할 수 있다.

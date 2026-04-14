@@ -248,6 +248,7 @@ function App() {
               </div>
 
               <LiveCapturePreview
+                nativePreview={capture.state.nativePreview}
                 notice={capture.state.notice}
                 selectedSource={capture.state.selectedSource}
                 session={capture.state.activeSession}

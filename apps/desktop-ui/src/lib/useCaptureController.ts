@@ -17,14 +17,21 @@ import {
 } from './capture-contract'
 import {
   getCaptureBootstrapState,
+  listenToNativeCaptureEvents,
   listNativeCaptureSources,
   startNativeCapture,
   stopNativeCapture,
 } from './desktop-bridge'
+import {
+  initialNativePreviewState,
+  reduceNativePreviewState,
+  type NativePreviewState,
+} from './native-preview'
 
 type CaptureControllerState = {
   activeSession: CaptureSession | null
   bootstrap: CaptureBootstrapState
+  nativePreview: NativePreviewState
   notice: string
   permission: CapturePermissionState
   previewStream: MediaStream | null
@@ -54,7 +61,9 @@ export function useCaptureController() {
   const [nativeSources, setNativeSources] = useState<
     NativeCaptureSourceRecord[]
   >([])
+  const [nativePreview, setNativePreview] = useState(initialNativePreviewState)
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null)
+  const activeSessionIdRef = useRef<string | null>(null)
   const previewStreamRef = useRef<MediaStream | null>(null)
 
   const sources = useMemo(
@@ -74,6 +83,38 @@ export function useCaptureController() {
       null,
     [selectedSourceId, sources],
   )
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSession?.id ?? null
+  }, [activeSession?.id])
+
+  useEffect(() => {
+    let unlistenNativeCapture = () => {}
+
+    void (async () => {
+      unlistenNativeCapture = await listenToNativeCaptureEvents((event) => {
+        setNativePreview((current) => reduceNativePreviewState(current, event))
+
+        if (event.type === 'error' && event.code !== 'audio-preview-fallback') {
+          setStatus((current) => (current === 'running' ? current : 'error'))
+          setNotice(event.message)
+        }
+
+        if (
+          event.type === 'session-stopped' &&
+          activeSessionIdRef.current === event.sessionId
+        ) {
+          setActiveSession(null)
+          setStatus('idle')
+          setNotice('native capture 세션이 정지되어 preview lane을 비웠습니다.')
+        }
+      })
+    })()
+
+    return () => {
+      unlistenNativeCapture()
+    }
+  }, [])
 
   useEffect(() => {
     let isActive = true
@@ -128,6 +169,7 @@ export function useCaptureController() {
     stopMediaStream(previewStreamRef.current)
     previewStreamRef.current = null
     setPreviewStream(null)
+    setNativePreview(initialNativePreviewState)
 
     if (activeSession?.platform === 'mac') {
       try {
@@ -175,6 +217,7 @@ export function useCaptureController() {
 
       previewStreamRef.current = stream
       setPreviewStream(stream)
+      setNativePreview(initialNativePreviewState)
       setPermission('granted')
 
       const [videoTrack] = stream.getVideoTracks()
@@ -238,6 +281,7 @@ export function useCaptureController() {
       stopMediaStream(previewStreamRef.current)
       previewStreamRef.current = null
       setPreviewStream(null)
+      setNativePreview(initialNativePreviewState)
 
       const session = await startNativeCapture({
         sourceId: source.id,
@@ -248,7 +292,7 @@ export function useCaptureController() {
       setActiveSession(captureSessionFromNativeRecord(session))
       setStatus('running')
       setNotice(
-        'native capture 세션이 시작되었습니다. preview/frame bridge는 다음 slice에서 연결하고, 현재 Shadow Player replay lane은 mock buffer를 유지합니다.',
+        'native capture 세션이 시작되었습니다. preview lane은 native frame snapshot을 받고, replay lane은 계속 분리된 mock buffer를 유지합니다.',
       )
     } catch {
       setStatus('error')
@@ -261,6 +305,7 @@ export function useCaptureController() {
   const state: CaptureControllerState = {
     activeSession,
     bootstrap,
+    nativePreview,
     notice,
     permission,
     previewStream,

@@ -6,6 +6,7 @@ import type {
   CaptureControllerStatus,
   CaptureSourceOption,
 } from '../lib/capture-contract'
+import type { NativePreviewState } from '../lib/native-preview'
 import { cn } from '../lib/utils'
 
 export function LiveCapturePreview({
@@ -14,12 +15,14 @@ export function LiveCapturePreview({
   session,
   status,
   stream,
+  nativePreview,
 }: {
   notice: string
   selectedSource: CaptureSourceOption | null
   session: CaptureSession | null
   status: CaptureControllerStatus
   stream: MediaStream | null
+  nativePreview: NativePreviewState
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
@@ -49,6 +52,12 @@ export function LiveCapturePreview({
             className="aspect-video w-full object-cover"
             muted
             playsInline
+          />
+        ) : nativePreview.lastFrame ? (
+          <img
+            alt="Native capture preview"
+            className="aspect-video w-full object-cover"
+            src={nativePreview.lastFrame.src}
           />
         ) : (
           <div className="flex aspect-video items-center justify-center px-6 text-center text-sm leading-6 text-white/70">
@@ -83,6 +92,33 @@ export function LiveCapturePreview({
           )}
         >
           replay lane과 분리된 preview 상태: {getStatusLabel(status)}
+        </div>
+        <div className="grid gap-2 rounded-md border border-[var(--line)] bg-[var(--soft)] px-3 py-3 text-sm text-[var(--muted)]">
+          <p>
+            입력 경로:{' '}
+            {stream
+              ? '브라우저 MediaStream'
+              : nativePreview.lastFrame
+                ? 'native frame snapshot'
+                : '미연결'}
+          </p>
+          <p>
+            오디오:{' '}
+            {nativePreview.audioState === 'live'
+              ? 'native 이벤트 수신 중'
+              : nativePreview.audioState === 'requested'
+                ? '요청됨'
+                : nativePreview.audioState === 'fallback'
+                  ? '미연결, 영상 preview만 유지'
+                  : '없음'}
+          </p>
+          <p>
+            native frame 수: {nativePreview.frameCount}
+            {nativePreview.lastFrameAtMs
+              ? ` · 최근 ${new Date(nativePreview.lastFrameAtMs).toLocaleTimeString()}`
+              : ''}
+          </p>
+          {nativePreview.lastError ? <p>{nativePreview.lastError}</p> : null}
         </div>
       </div>
     </div>

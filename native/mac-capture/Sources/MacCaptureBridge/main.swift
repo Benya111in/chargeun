@@ -6,12 +6,7 @@ struct MacCaptureBridge {
     static func main() async {
         do {
             let command = try BridgeCommand(arguments: Array(CommandLine.arguments.dropFirst()))
-            let output = try await command.execute()
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.sortedKeys]
-            let data = try encoder.encode(output)
-            FileHandle.standardOutput.write(data)
-            FileHandle.standardOutput.write(Data([0x0A]))
+            try await command.run()
         } catch {
             FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8))
             Foundation.exit(1)
@@ -22,7 +17,15 @@ struct MacCaptureBridge {
 private enum BridgeCommand {
     case bootstrap
     case listSources
-    case start(sourceId: String, includeAudio: Bool, resolution: CaptureResolutionProfile)
+    case start(sessionId: String?, sourceId: String, includeAudio: Bool, resolution: CaptureResolutionProfile)
+    case stream(
+        sessionId: String,
+        sourceId: String,
+        includeAudio: Bool,
+        resolution: CaptureResolutionProfile,
+        frameIntervalMs: UInt64,
+        maxFrames: Int?
+    )
     case stop(sessionId: String)
 
     init(arguments: [String]) throws {
@@ -36,13 +39,32 @@ private enum BridgeCommand {
         case "list-sources":
             self = .listSources
         case "start":
+            let sessionId = optionalValue(for: "--session-id", in: arguments)
             let sourceId = try value(for: "--source-id", in: arguments)
             let includeAudio = boolValue(for: "--include-audio", in: arguments) ?? true
             let resolution = try resolutionValue(in: arguments) ?? .hd1080
+
             self = .start(
+                sessionId: sessionId,
                 sourceId: sourceId,
                 includeAudio: includeAudio,
                 resolution: resolution
+            )
+        case "stream":
+            let sessionId = try value(for: "--session-id", in: arguments)
+            let sourceId = try value(for: "--source-id", in: arguments)
+            let includeAudio = boolValue(for: "--include-audio", in: arguments) ?? true
+            let resolution = try resolutionValue(in: arguments) ?? .hd1080
+            let frameIntervalMs = uint64Value(for: "--frame-interval-ms", in: arguments) ?? 900
+            let maxFrames = intValue(for: "--max-frames", in: arguments)
+
+            self = .stream(
+                sessionId: sessionId,
+                sourceId: sourceId,
+                includeAudio: includeAudio,
+                resolution: resolution,
+                frameIntervalMs: frameIntervalMs,
+                maxFrames: maxFrames
             )
         case "stop":
             let sessionId = try value(for: "--session-id", in: arguments)
@@ -52,11 +74,11 @@ private enum BridgeCommand {
         }
     }
 
-    func execute() async throws -> BridgeOutput {
+    func run() async throws {
         switch self {
         case .bootstrap:
             let coordinator = MacCaptureCoordinator()
-            return .bootstrap(
+            try writeJSONLine(
                 BridgeBootstrapState(
                     platform: "mac-priority",
                     capturePath: "screen-capture-kit-swift-bridge-ready",
@@ -67,63 +89,135 @@ private enum BridgeCommand {
         case .listSources:
             let coordinator = MacCaptureCoordinator()
             let sources = try await coordinator.enumerateSources().map(BridgeCaptureSource.init)
-            return .sources(sources)
-        case let .start(sourceId, includeAudio, resolution):
-            let coordinator = MacCaptureCoordinator()
-            let sessionId = "native-session-\(UUID().uuidString.lowercased())"
+            try writeJSONLine(sources)
+        case let .start(sessionId, sourceId, includeAudio, resolution):
+            let started = try await startBridgeSession(
+                sessionId: sessionId ?? defaultSessionId(),
+                sourceId: sourceId,
+                includeAudio: includeAudio,
+                resolution: resolution
+            )
 
-            _ = try await coordinator.startSession(
-                request: MacCaptureSessionRequest(
-                    sessionId: sessionId,
-                    sourceId: sourceId,
-                    includeAudio: includeAudio,
-                    resolution: resolution
+            try writeJSONLine(started.storedSession)
+        case let .stream(sessionId, sourceId, includeAudio, resolution, frameIntervalMs, maxFrames):
+            let started = try await startBridgeSession(
+                sessionId: sessionId,
+                sourceId: sourceId,
+                includeAudio: includeAudio,
+                resolution: resolution
+            )
+
+            defer {
+                _ = try? BridgeSessionRegistry.remove(sessionId: started.storedSession.sessionId)
+            }
+
+            try writeJSONLine(
+                BridgeMacCaptureEvent.sessionStarted(
+                    sessionId: started.storedSession.sessionId,
+                    width: started.activeSession.outputWidth,
+                    height: started.activeSession.outputHeight,
+                    hasAudio: started.storedSession.hasAudio
                 )
             )
 
-            guard let activeSession = await coordinator.activeSession(sessionId: sessionId) else {
-                throw BridgeError.invalidArguments("Coordinator did not retain the started session")
+            if includeAudio {
+                try writeJSONLine(
+                    BridgeMacCaptureEvent.error(
+                        sessionId: started.storedSession.sessionId,
+                        code: "audio-preview-fallback",
+                        message: "Native video preview is live, but system audio preview is not connected yet."
+                    )
+                )
             }
 
-            let stored = BridgeNativeCaptureSession(
-                sessionId: activeSession.sessionId,
-                sourceId: activeSession.source.id,
-                sourceType: activeSession.source.sourceType,
-                displayName: activeSession.source.displayName,
-                hasAudio: activeSession.hasAudio,
-                platform: "mac",
-                startedAt: UInt64(activeSession.startedAt.timeIntervalSince1970 * 1000),
-                outputWidth: activeSession.outputWidth,
-                outputHeight: activeSession.outputHeight
-            )
+            var emittedFrameCount = 0
 
-            try BridgeSessionRegistry.save(stored)
-            return .session(stored)
+            while !Task.isCancelled {
+                do {
+                    let snapshot = try CapturePreviewSnapshotter.snapshot(
+                        source: started.activeSession.source,
+                        targetWidth: started.activeSession.outputWidth,
+                        targetHeight: started.activeSession.outputHeight
+                    )
+
+                    try writeJSONLine(
+                        BridgeMacCaptureEvent.frame(
+                            sessionId: started.storedSession.sessionId,
+                            tsMs: currentTimestampMs(),
+                            width: snapshot.width,
+                            height: snapshot.height,
+                            pixelBufferRef: snapshot.dataURL
+                        )
+                    )
+                } catch {
+                    try writeJSONLine(
+                        BridgeMacCaptureEvent.error(
+                            sessionId: started.storedSession.sessionId,
+                            code: "snapshot-failed",
+                            message: error.localizedDescription
+                        )
+                    )
+                }
+
+                emittedFrameCount += 1
+
+                if let maxFrames, emittedFrameCount >= maxFrames {
+                    break
+                }
+
+                try await Task.sleep(nanoseconds: frameIntervalMs * 1_000_000)
+            }
+
+            try writeJSONLine(
+                BridgeMacCaptureEvent.sessionStopped(sessionId: started.storedSession.sessionId)
+            )
         case let .stop(sessionId):
             let stopped = try BridgeSessionRegistry.remove(sessionId: sessionId)
-            return .stop(BridgeStopResult(stopped: stopped))
+            try writeJSONLine(BridgeStopResult(stopped: stopped))
         }
     }
 }
 
-private enum BridgeOutput: Encodable {
-    case bootstrap(BridgeBootstrapState)
-    case sources([BridgeCaptureSource])
-    case session(BridgeNativeCaptureSession)
-    case stop(BridgeStopResult)
+private struct StartedBridgeSession {
+    let storedSession: BridgeNativeCaptureSession
+    let activeSession: ActiveCaptureSession
+}
 
-    func encode(to encoder: Encoder) throws {
-        switch self {
-        case let .bootstrap(value):
-            try value.encode(to: encoder)
-        case let .sources(value):
-            try value.encode(to: encoder)
-        case let .session(value):
-            try value.encode(to: encoder)
-        case let .stop(value):
-            try value.encode(to: encoder)
-        }
+private func startBridgeSession(
+    sessionId: String,
+    sourceId: String,
+    includeAudio: Bool,
+    resolution: CaptureResolutionProfile
+) async throws -> StartedBridgeSession {
+    let coordinator = MacCaptureCoordinator()
+
+    _ = try await coordinator.startSession(
+        request: MacCaptureSessionRequest(
+            sessionId: sessionId,
+            sourceId: sourceId,
+            includeAudio: includeAudio,
+            resolution: resolution
+        )
+    )
+
+    guard let activeSession = await coordinator.activeSession(sessionId: sessionId) else {
+        throw BridgeError.invalidArguments("Coordinator did not retain the started session")
     }
+
+    let stored = BridgeNativeCaptureSession(
+        sessionId: activeSession.sessionId,
+        sourceId: activeSession.source.id,
+        sourceType: activeSession.source.sourceType,
+        displayName: activeSession.source.displayName,
+        hasAudio: activeSession.hasAudio,
+        platform: "mac",
+        startedAt: UInt64(activeSession.startedAt.timeIntervalSince1970 * 1000),
+        outputWidth: activeSession.outputWidth,
+        outputHeight: activeSession.outputHeight
+    )
+
+    try BridgeSessionRegistry.save(stored)
+    return StartedBridgeSession(storedSession: stored, activeSession: activeSession)
 }
 
 private struct BridgeBootstrapState: Codable {
@@ -163,6 +257,64 @@ private struct BridgeNativeCaptureSession: Codable {
 
 private struct BridgeStopResult: Codable {
     let stopped: Bool
+}
+
+private enum BridgeMacCaptureEvent: Encodable {
+    case sessionStarted(sessionId: String, width: Int, height: Int, hasAudio: Bool)
+    case frame(sessionId: String, tsMs: Int64, width: Int, height: Int, pixelBufferRef: String)
+    case audio(sessionId: String, tsMs: Int64, pcmRef: String, sampleRate: Double, channels: Int)
+    case error(sessionId: String, code: String, message: String)
+    case sessionStopped(sessionId: String)
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case let .sessionStarted(sessionId, width, height, hasAudio):
+            try container.encode("session-started", forKey: .type)
+            try container.encode(sessionId, forKey: .sessionId)
+            try container.encode(width, forKey: .width)
+            try container.encode(height, forKey: .height)
+            try container.encode(hasAudio, forKey: .hasAudio)
+        case let .frame(sessionId, tsMs, width, height, pixelBufferRef):
+            try container.encode("frame", forKey: .type)
+            try container.encode(sessionId, forKey: .sessionId)
+            try container.encode(tsMs, forKey: .tsMs)
+            try container.encode(width, forKey: .width)
+            try container.encode(height, forKey: .height)
+            try container.encode(pixelBufferRef, forKey: .pixelBufferRef)
+        case let .audio(sessionId, tsMs, pcmRef, sampleRate, channels):
+            try container.encode("audio", forKey: .type)
+            try container.encode(sessionId, forKey: .sessionId)
+            try container.encode(tsMs, forKey: .tsMs)
+            try container.encode(pcmRef, forKey: .pcmRef)
+            try container.encode(sampleRate, forKey: .sampleRate)
+            try container.encode(channels, forKey: .channels)
+        case let .error(sessionId, code, message):
+            try container.encode("error", forKey: .type)
+            try container.encode(sessionId, forKey: .sessionId)
+            try container.encode(code, forKey: .code)
+            try container.encode(message, forKey: .message)
+        case let .sessionStopped(sessionId):
+            try container.encode("session-stopped", forKey: .type)
+            try container.encode(sessionId, forKey: .sessionId)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case sessionId
+        case width
+        case height
+        case hasAudio
+        case tsMs
+        case pixelBufferRef
+        case pcmRef
+        case sampleRate
+        case channels
+        case code
+        case message
+    }
 }
 
 private enum BridgeSessionRegistry {
@@ -214,12 +366,31 @@ private enum BridgeError: Error, LocalizedError {
     }
 }
 
+private func writeJSONLine(_ value: some Encodable) throws {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    let data = try encoder.encode(value)
+    FileHandle.standardOutput.write(data)
+    FileHandle.standardOutput.write(Data([0x0A]))
+}
+
 private func value(for flag: String, in arguments: [String]) throws -> String {
     guard
         let index = arguments.firstIndex(of: flag),
         arguments.indices.contains(index + 1)
     else {
         throw BridgeError.invalidArguments("Missing value for \(flag)")
+    }
+
+    return arguments[index + 1]
+}
+
+private func optionalValue(for flag: String, in arguments: [String]) -> String? {
+    guard
+        let index = arguments.firstIndex(of: flag),
+        arguments.indices.contains(index + 1)
+    else {
+        return nil
     }
 
     return arguments[index + 1]
@@ -236,6 +407,22 @@ private func boolValue(for flag: String, in arguments: [String]) -> Bool? {
     return ["1", "true", "yes"].contains(arguments[index + 1].lowercased())
 }
 
+private func intValue(for flag: String, in arguments: [String]) -> Int? {
+    guard let value = optionalValue(for: flag, in: arguments) else {
+        return nil
+    }
+
+    return Int(value)
+}
+
+private func uint64Value(for flag: String, in arguments: [String]) -> UInt64? {
+    guard let value = optionalValue(for: flag, in: arguments) else {
+        return nil
+    }
+
+    return UInt64(value)
+}
+
 private func resolutionValue(in arguments: [String]) throws -> CaptureResolutionProfile? {
     guard
         let index = arguments.firstIndex(of: "--resolution"),
@@ -249,4 +436,12 @@ private func resolutionValue(in arguments: [String]) throws -> CaptureResolution
     }
 
     return resolution
+}
+
+private func defaultSessionId() -> String {
+    "native-session-\(UUID().uuidString.lowercased())"
+}
+
+private func currentTimestampMs() -> Int64 {
+    Int64(Date().timeIntervalSince1970 * 1000)
 }

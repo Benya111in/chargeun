@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { segmentExplanationSchema } from './schemas'
+import { macCaptureEventSchema, segmentExplanationSchema } from './schemas'
 
 describe('segmentExplanationSchema', () => {
   it('accepts grounded explanations with action text', () => {
@@ -31,6 +31,31 @@ describe('segmentExplanationSchema', () => {
         reason: '근거가 아직 충분하지 않습니다.',
       },
       overlayTargets: [],
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('macCaptureEventSchema', () => {
+  it('accepts native frame payloads', () => {
+    const result = macCaptureEventSchema.safeParse({
+      type: 'frame',
+      sessionId: 'native-1',
+      tsMs: 1_234,
+      width: 1280,
+      height: 720,
+      pixelBufferRef: 'data:image/jpeg;base64,abc123',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects malformed error payloads', () => {
+    const result = macCaptureEventSchema.safeParse({
+      type: 'error',
+      sessionId: 'native-2',
+      code: '',
     })
 
     expect(result.success).toBe(false)

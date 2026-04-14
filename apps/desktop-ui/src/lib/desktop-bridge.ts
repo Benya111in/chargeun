@@ -1,4 +1,10 @@
+import {
+  captureEvents,
+  macCaptureEventSchema,
+  type MacCaptureEvent,
+} from '@ansimtrack/shared-types'
 import { invoke, isTauri } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
 import {
   DEFAULT_CAPTURE_BOOTSTRAP_STATE,
@@ -46,4 +52,38 @@ export async function stopNativeCapture(input: {
   sessionId: string
 }): Promise<{ stopped: boolean }> {
   return invoke<{ stopped: boolean }>('stop_native_capture', { input })
+}
+
+export async function listenToNativeCaptureEvents(
+  onEvent: (event: MacCaptureEvent) => void,
+) {
+  if (!isTauri()) {
+    return () => {}
+  }
+
+  const eventNames = [
+    captureEvents.sessionStarted,
+    captureEvents.frame,
+    captureEvents.audio,
+    captureEvents.sessionStopped,
+    captureEvents.systemError,
+  ] as const
+
+  const unlistenEntries = await Promise.all(
+    eventNames.map((eventName) =>
+      listen<unknown>(eventName, (event) => {
+        const parsed = macCaptureEventSchema.safeParse(event.payload)
+
+        if (parsed.success) {
+          onEvent(parsed.data)
+        }
+      }),
+    ),
+  )
+
+  return () => {
+    for (const unlisten of unlistenEntries) {
+      void unlisten()
+    }
+  }
 }

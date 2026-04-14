@@ -107,6 +107,42 @@ export const ruleRecordSchema = z.object({
   updated_at: z.string().min(1),
 })
 
+export const macCaptureEventSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('session-started'),
+    sessionId: z.string(),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    hasAudio: z.boolean(),
+  }),
+  z.object({
+    type: z.literal('frame'),
+    sessionId: z.string(),
+    tsMs: z.number(),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    pixelBufferRef: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('audio'),
+    sessionId: z.string(),
+    tsMs: z.number(),
+    pcmRef: z.string().min(1),
+    sampleRate: z.number().positive(),
+    channels: z.number().int().positive(),
+  }),
+  z.object({
+    type: z.literal('error'),
+    sessionId: z.string(),
+    code: z.string().min(1),
+    message: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('session-stopped'),
+    sessionId: z.string(),
+  }),
+])
+
 export const voiceReplySchema = z.object({
   text: z.string().min(1),
   audioRef: z.string().optional(),

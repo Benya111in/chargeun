@@ -41,3 +41,8 @@
 
 - 이유: Rust와 Swift를 직접 FFI로 묶기보다 Swift executable을 호출하는 편이 현재 로컬 개발 환경에서 구현 속도와 디버깅성이 높다.
 - 영향: Tauri command는 우선 `MacCaptureBridge`를 subprocess로 호출하고, 이후 frame/audio 브리지 단계에서 더 직접적인 연결이 필요해지면 FFI 또는 plugin 경로를 재검토한다.
+
+### D-009 native preview는 저주기 snapshot event로 먼저 연결
+
+- 이유: 실시간 raw frame을 바로 Tauri로 밀어 넣는 경로는 현재 데모 단계에서 비용과 복잡도가 크다.
+- 영향: macOS 우선 경로는 우선 low-fps JPEG data URL snapshot을 `capture/frame` 이벤트로 흘리고, Shadow replay lane은 기존 ring buffer와 분리 유지한다.
