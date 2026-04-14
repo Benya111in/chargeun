@@ -48,7 +48,7 @@
    - source docs: `docs/04_PRODUCT_UX_ACCESSIBILITY_REQUIREMENTS.md`, `docs/14_FRONTEND_PLAYER_UI.md`
    - goal: SegmentCard, Panic Mode, evidence drawer polish
 
-10. `pending` storage/jobs skeleton
+10. `done` storage/jobs skeleton
     - source docs: `docs/15_BACKEND_STORAGE_AND_JOBS.md`
     - goal: session log/export, local job skeleton
 

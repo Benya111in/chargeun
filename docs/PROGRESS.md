@@ -44,14 +44,17 @@
 - 음성 unavailable 환경에서는 자동으로 텍스트-only fallback으로 남기고, 재생 중지 버튼과 상태 배지를 추가
 - 근거 패널을 `EvidenceDrawer`로 분리하고 matcher의 `matchedSignals`, 규칙 후보 score, packet evidence, grounded ids를 그대로 보여 주도록 정리
 - segment/evidence/voice 영역을 더 읽기 쉬운 발표용 정보 흐름으로 정리하고, evidence toggle이 실제 drawer 성격의 패널을 여닫도록 다듬음
+- `packages/local-store` 패키지를 추가해 로컬 runtime directory policy(`.slowlearner/cache|export|logs`), SQLite schema 아티팩트, session JSONL 로그, export snapshot writer를 구현
+- `LocalLatestJobQueue`로 queue depth 제한과 latest-only cancellation이 걸린 local job skeleton을 추가
+- 루트 build/test/typecheck 스크립트에 local-store를 편입하고 `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`로 storage slice까지 workspace 검증 완료
 
 ### 진행 중
 
-- mock segment에서 실제 segment/rule 매칭 입력으로 교체
-- storage/jobs skeleton
+- live capture `captureInput`를 perception/segment/session log로 실시간 연결
+- safety/privacy/compliance pass
 
 ### 다음
 
-1. storage/jobs skeleton
-2. safety/privacy/compliance pass
-3. evaluation and QA tooling
+1. safety/privacy/compliance pass
+2. evaluation and QA tooling
+3. demo runbook and backup mode

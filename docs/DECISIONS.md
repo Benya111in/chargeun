@@ -81,3 +81,8 @@
 
 - 이유: 심사나 협업 상황에서는 "왜 이 규칙이 선택됐는지"가 즉시 드러나야 한다.
 - 영향: 근거 패널은 요약 문장 대신 `matchedSignals`, candidate rule score, OCR/ASR/object hints, packet window를 직접 노출한다.
+
+### D-017 storage는 우선 file-backed skeleton으로 시작
+
+- 이유: 현 단계에서 필요한 것은 앱 전체 persistence보다 세션 로그, export, job control의 계약을 먼저 고정하는 것이다.
+- 영향: `local-store`는 SQLite schema를 아티팩트로 남기고 실제 메타데이터는 JSONL/export 파일로 먼저 다룬다. 실제 앱 재시작 복원과 SQLite 연결은 후속 slice에서 붙인다.
