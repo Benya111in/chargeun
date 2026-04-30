@@ -47,4 +47,18 @@ describe('ShadowBuffer', () => {
     expect(buffer.getMarkerCrossing(4000, 5200)?.id).toBe('segment-start')
     expect(buffer.replaySegment('segment-start')).toBe(5000)
   })
+
+  it('keeps the live edge stable when frames arrive out of order', () => {
+    const buffer = new ShadowBuffer({ delayMs: 4000, capacityMs: 8000 })
+
+    buffer.appendFrame({ id: 'late', tsMs: 10000, durationMs: 1000 })
+    buffer.appendFrame({ id: 'early', tsMs: 5000, durationMs: 1000 })
+
+    expect(buffer.getFrames().map((frame) => frame.id)).toEqual([
+      'early',
+      'late',
+    ])
+    expect(buffer.getLiveEdgeMs()).toBe(10000)
+    expect(buffer.getBufferStartMs()).toBe(5000)
+  })
 })

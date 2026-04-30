@@ -315,6 +315,7 @@ export function useVoiceRuntime() {
     return new Promise<VoiceIntentRecognitionResult>((resolve) => {
       const recognition = new Recognition()
       let settled = false
+      let timeoutId: number | null = null
 
       recognition.continuous = false
       recognition.interimResults = false
@@ -328,6 +329,9 @@ export function useVoiceRuntime() {
         }
 
         settled = true
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId)
+        }
         browserRecognitionRef.current = null
         resolve(result)
       }
@@ -364,7 +368,24 @@ export function useVoiceRuntime() {
         })
       }
 
-      recognition.start()
+      timeoutId = window.setTimeout(() => {
+        recognition.abort()
+        finish({
+          message: '음성 입력 시간이 지났습니다.',
+          source: 'browser-stt',
+          status: 'timeout',
+        })
+      }, 6_000)
+
+      try {
+        recognition.start()
+      } catch {
+        finish({
+          message: '브라우저 음성 인식을 시작하지 못했습니다.',
+          source: 'browser-stt',
+          status: 'error',
+        })
+      }
     })
   }, [])
 

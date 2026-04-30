@@ -5,6 +5,7 @@ import { extractOcrTokens } from './desktop-bridge'
 
 type OcrFrameEntry = {
   frameId: string
+  status: 'browser-preview' | 'recognized'
   tokens: string[]
   tsMs: number
 }
@@ -49,6 +50,7 @@ export function useLiveOcrTokens(captureInput: CaptureInputState) {
           ),
           {
             frameId,
+            status: result.status,
             tokens: result.tokens,
             tsMs: frame.tsMs,
           },
@@ -100,13 +102,22 @@ export function useLiveOcrTokens(captureInput: CaptureInputState) {
     )
   }, [visibleEntries])
 
-  return {
-    ocrTokens,
-    status:
-      captureInput.shadowStatus === 'idle'
-        ? 'idle'
-        : visibleEntries.length > 0
+  const lastEntry = visibleEntries[visibleEntries.length - 1] ?? null
+  const status =
+    captureInput.shadowStatus === 'idle'
+      ? 'idle'
+      : lastEntry?.status === 'browser-preview'
+        ? 'unavailable'
+        : ocrTokens.length > 0
           ? 'ready'
-          : 'scanning',
+          : 'scanning'
+
+  return {
+    message:
+      status === 'unavailable'
+        ? '브라우저 미리보기에서는 네이티브 OCR이 연결되지 않습니다.'
+        : null,
+    ocrTokens,
+    status,
   } as const
 }

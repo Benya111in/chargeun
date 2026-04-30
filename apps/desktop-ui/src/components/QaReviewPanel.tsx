@@ -23,6 +23,7 @@ import { cn } from '../lib/utils'
 
 export function QaReviewPanel({
   busy,
+  clipPreviewPath,
   clipPreviewSrc,
   clipPreviewTitle,
   manualReviewDraft,
@@ -37,6 +38,7 @@ export function QaReviewPanel({
   selectedFixtureId,
 }: {
   busy: boolean
+  clipPreviewPath: string
   clipPreviewSrc: string | null
   clipPreviewTitle: string
   manualReviewDraft: {
@@ -269,14 +271,18 @@ export function QaReviewPanel({
                   />
                 ) : (
                   <div className="flex aspect-video items-center justify-center px-6 text-center text-sm leading-6 text-white/72">
-                    local clip path를 넣으면 여기서 바로 preview 할 수 있습니다.
+                    {clipPreviewPath
+                      ? '로컬 영상 미리보기는 데스크톱 앱에서 확인할 수 있습니다.'
+                      : 'local clip path를 넣으면 여기서 바로 preview 할 수 있습니다.'}
                   </div>
                 )}
               </div>
               <p className="text-xs leading-5 text-[var(--muted)]">
                 {clipPreviewSrc
                   ? `${clipPreviewTitle}: ${clipPreviewSrc}`
-                  : 'actual clip path가 아직 없습니다.'}
+                  : clipPreviewPath
+                    ? `${clipPreviewTitle}: ${clipPreviewPath} (브라우저에서는 미리보기 불가)`
+                    : 'actual clip path가 아직 없습니다.'}
               </p>
 
               <LabeledInput

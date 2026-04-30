@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Play, RotateCcw } from 'lucide-react'
 
@@ -32,6 +32,8 @@ export default function DemoTheaterPage() {
   >({})
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoPauseSegmentRef = useRef<string | null>(null)
+  const stageHeadingRef = useRef<HTMLHeadingElement | null>(null)
+  const didMountRef = useRef(false)
   const trackKey = `${show.id}:${segment.id}`
   const selectedTrack =
     trackOverrides[trackKey] ?? getDefaultTrack(segment.explanation)
@@ -63,8 +65,14 @@ export default function DemoTheaterPage() {
     try {
       await video.play()
     } catch (error) {
+      if (isExpectedPlaybackInterruption(error)) {
+        return
+      }
+
       const message =
-        error instanceof Error ? error.message : '재생을 시작하지 못했습니다.'
+        error instanceof Error && error.name === 'NotAllowedError'
+          ? '브라우저가 자동 재생을 막았습니다. 시작하기를 다시 눌러 주세요.'
+          : '영상을 바로 재생하지 못했습니다. 다시 눌러 주세요.'
       setPlaybackNotice(message)
       setStage('ready')
     }
@@ -93,7 +101,7 @@ export default function DemoTheaterPage() {
 
   const goToNextSegment = () => {
     if (segmentIndex >= show.segments.length - 1) {
-      loadSegment(0)
+      void playSegment(0)
       return
     }
 
@@ -115,9 +123,19 @@ export default function DemoTheaterPage() {
     setPlaybackNotice('')
   }
 
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
+
+    stageHeadingRef.current?.focus()
+  }, [segment.id, stage])
+
   return (
     <main className="min-h-screen bg-[#07090c] text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-[1180px] flex-col px-4 py-5 lg:px-6 lg:py-6">
+        <h1 className="sr-only">안심트랙 재난 행동 안내</h1>
         <div className="flex flex-wrap gap-2">
           {theaterShows.map((item) => (
             <button
@@ -218,24 +236,32 @@ export default function DemoTheaterPage() {
               <button
                 key={item.id}
                 aria-label={`${index + 1}번째 장면`}
-                className={cn(
-                  'h-2 flex-1 rounded-full transition',
-                  index < segmentIndex
-                    ? 'bg-emerald-300'
-                    : index === segmentIndex
-                      ? 'bg-white'
-                      : 'bg-white/16',
-                )}
+                className="flex min-h-11 flex-1 items-center rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 onClick={() => loadSegment(index)}
                 type="button"
-              />
+              >
+                <span
+                  className={cn(
+                    'h-2 w-full rounded-full transition',
+                    index < segmentIndex
+                      ? 'bg-emerald-300'
+                      : index === segmentIndex
+                        ? 'bg-white'
+                        : 'bg-white/16',
+                  )}
+                />
+              </button>
             ))}
           </div>
 
           <section className="rounded-md border border-white/10 bg-[#101418] p-6 lg:p-8">
-            <p className="text-sm font-semibold text-white/62">
+            <h2
+              ref={stageHeadingRef}
+              className="text-sm font-semibold text-white/62 outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              tabIndex={-1}
+            >
               {segment.label}
-            </p>
+            </h2>
 
             {stage === 'explanation' ? (
               <>
@@ -352,4 +378,15 @@ function getTrackEntries(
       return [track, text] as [TrackKey, string]
     })
     .filter((entry): entry is [TrackKey, string] => Boolean(entry))
+}
+
+function isExpectedPlaybackInterruption(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  return (
+    error.name === 'AbortError' ||
+    error.message.includes('interrupted by a call to pause')
+  )
 }

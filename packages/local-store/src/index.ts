@@ -84,10 +84,22 @@ export type LocalJobKind =
   | 'export'
 
 type QueueItem<T> = {
+  cancel: (reason: string) => void
   jobId: string
   kind: LocalJobKind
   latestOnly: boolean
   run: () => Promise<T>
+}
+
+export class LocalJobCancelledError extends Error {
+  constructor(
+    readonly jobId: string,
+    readonly kind: LocalJobKind,
+    reason: string,
+  ) {
+    super(`Local job ${jobId} (${kind}) was cancelled: ${reason}`)
+    this.name = 'LocalJobCancelledError'
+  }
 }
 
 export class LocalLatestJobQueue {
@@ -101,45 +113,53 @@ export class LocalLatestJobQueue {
     latestOnly?: boolean
     run: () => Promise<T>
   }) {
+    const jobId = `${input.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    let resolvePromise!: (value: T | PromiseLike<T>) => void
+    let rejectPromise!: (reason?: unknown) => void
+    const promise = new Promise<T>((resolve, reject) => {
+      resolvePromise = resolve
+      rejectPromise = reject
+    })
     const item: QueueItem<T> = {
-      jobId: `${input.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      cancel: (reason) => {
+        rejectPromise(new LocalJobCancelledError(jobId, input.kind, reason))
+      },
+      jobId,
       kind: input.kind,
       latestOnly: input.latestOnly ?? true,
-      run: input.run,
+      run: async () => {
+        try {
+          const result = await input.run()
+          resolvePromise(result)
+          return result
+        } catch (error) {
+          rejectPromise(error)
+          throw error
+        }
+      },
     }
 
     if (item.latestOnly) {
-      this.pending = this.pending.filter(
-        (pendingJob) => pendingJob.kind !== item.kind,
-      )
+      const retained: QueueItem<unknown>[] = []
+      for (const pendingJob of this.pending) {
+        if (pendingJob.kind === item.kind) {
+          pendingJob.cancel('superseded by newer job')
+        } else {
+          retained.push(pendingJob)
+        }
+      }
+      this.pending = retained
     }
 
     this.pending.push(item)
-    if (this.pending.length > this.depthLimit) {
-      this.pending = this.pending.slice(-this.depthLimit)
+    while (this.pending.length > this.depthLimit) {
+      this.pending.shift()?.cancel('queue depth limit exceeded')
     }
 
-    const promise = new Promise<T>((resolve, reject) => {
-      const wrapped: QueueItem<T> = {
-        ...item,
-        run: async () => {
-          try {
-            const result = await item.run()
-            resolve(result)
-            return result
-          } catch (error) {
-            reject(error)
-            throw error
-          }
-        },
-      }
-
-      this.pending[this.pending.length - 1] = wrapped
-      this.drain()
-    })
+    this.drain()
 
     return {
-      jobId: item.jobId,
+      jobId,
       promise,
       queuedDepth: this.pending.length,
     }

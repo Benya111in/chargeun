@@ -12,6 +12,9 @@ import {
   type NativeCaptureSessionRecord,
   type NativeCaptureSourceRecord,
 } from './capture-contract'
+import annotatedSegmentsSeed from '../../../../data/eval/annotated_segments.json'
+import manualReviewRunsSeed from '../../../../data/eval/manual_review_runs.json'
+import rehearsalRunsSeed from '../../../../data/eval/rehearsal_runs.json'
 import {
   defaultAppRuntimeState,
   mergeRuntimeState,
@@ -24,7 +27,10 @@ import type {
 } from './live-analysis-contract'
 import type {
   ManualReviewRunRecord,
+  QaFixtureRecord,
+  QaSourceReference,
   QaReviewState,
+  QaSourceClipPlan,
   RehearsalRunRecord,
 } from './qa-review'
 
@@ -434,7 +440,7 @@ export function resolveLocalMediaSrc(path: string) {
     return path
   }
 
-  return isTauri() ? convertFileSrc(path) : path
+  return isTauri() ? convertFileSrc(path) : null
 }
 
 function loadRuntimeStateFromBrowser() {
@@ -483,30 +489,20 @@ function loadLiveAnalysisSnapshotFromBrowser() {
 
 function loadQaReviewStateFromBrowser(): QaReviewState {
   if (typeof window === 'undefined') {
-    return {
-      fixtures: [],
-      manualReviewRuns: [],
-      rehearsalRuns: [],
-    }
+    return buildBrowserQaSeed()
   }
 
   try {
     const raw = window.localStorage.getItem(qaReviewStateStorageKey)
     if (!raw) {
-      return {
-        fixtures: [],
-        manualReviewRuns: [],
-        rehearsalRuns: [],
-      }
+      const seed = buildBrowserQaSeed()
+      saveQaReviewStateToBrowser(seed)
+      return seed
     }
 
     return JSON.parse(raw) as QaReviewState
   } catch {
-    return {
-      fixtures: [],
-      manualReviewRuns: [],
-      rehearsalRuns: [],
-    }
+    return buildBrowserQaSeed()
   }
 }
 
@@ -562,6 +558,30 @@ function appendManualReviewRunInBrowser(
   }
   saveQaReviewStateToBrowser(next)
   return next
+}
+
+function buildBrowserQaSeed(): QaReviewState {
+  return {
+    fixtures: annotatedSegmentsSeed.map((fixture) => {
+      const sourceClipPlan =
+        (fixture.sourceClipPlan as QaSourceClipPlan | undefined) ?? null
+      const outputRelativePath = sourceClipPlan?.outputRelativePath ?? null
+      return {
+        clipId: fixture.clipId,
+        description: fixture.description,
+        expectedRuleIds: fixture.expectedRuleIds,
+        hasAudio: fixture.hasAudio,
+        hazard: fixture.hazard,
+        localClipPath: outputRelativePath,
+        phase: fixture.phase,
+        sourceClipPlan,
+        sourceReference:
+          (fixture.sourceReference as QaSourceReference | undefined) ?? null,
+      } satisfies QaFixtureRecord
+    }),
+    manualReviewRuns: manualReviewRunsSeed as ManualReviewRunRecord[],
+    rehearsalRuns: rehearsalRunsSeed as RehearsalRunRecord[],
+  }
 }
 
 function appendRehearsalRunInBrowser(input: RehearsalRunRecord): QaReviewState {

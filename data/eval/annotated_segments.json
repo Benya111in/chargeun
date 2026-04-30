@@ -3,7 +3,7 @@
     "clipId": "fire-door-control-001",
     "description": "복도와 계단으로 빠져나가며 문을 닫는 화재 대피 장면",
     "hazard": "fire",
-    "phase": "route_selection",
+    "phase": "door_control",
     "sourceReference": {
       "kind": "safetv",
       "title": "[사회재난] 아파트 화재 시 이렇게 행동합시다",

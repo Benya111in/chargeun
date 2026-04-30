@@ -22,15 +22,15 @@
 - `qa:sync`는 manual review/rehearsal markdown을 최신화하지만, 실제 clip을 재생하고 UI를 눈으로 검수하는 작업 자체를 자동화하지는 않는다.
 - standalone release bundle은 이제 eval fixture와 seed QA JSON을 포함하고 app-local data로 복사해 쓰지만, local mp4/mov clip 자체를 번들에 포함하거나 자동으로 복사하지는 않는다.
 - OpenAI transcription fallback은 환경변수(`OPENAI_API_KEY` 또는 `SLOWLEARNER_OPENAI_API_KEY`)가 있어야만 동작하며, 현재 앱 내부 secure secret 입력/저장 UI는 없다.
-- QA workspace의 local clip preview는 사용자가 직접 넣은 local path와 비디오 확장자(`mp4`, `mov`, `m4v`, `webm`, `ogg`)에 의존하며, 폴더 스캔이나 clip 존재 확인 UI는 아직 없다.
+- QA workspace의 local clip preview는 Tauri 데스크톱 실행에서만 실제 파일을 `asset:` URL로 열 수 있다. 브라우저 preview에서는 local path를 깨진 `<video>`로 열지 않고 데스크톱 앱 전용 preview로 안내한다.
 - QA workspace의 release checklist snapshot은 현재 rehearsal JSON에 있는 항목만 파생하므로, Shadow Player pause/seek/replay marker 같은 세부 동작은 여전히 사람이 수동으로 확인해야 한다.
 - fixture에 외부 source reference를 붙일 수는 있지만, YouTube 원본에서 필요한 구간을 자동으로 잘라 주거나 duration/timestamp를 자동 태깅하는 intake 도구는 아직 없다.
 - `pnpm qa:prepare-clips`는 local source path와 source start/end timestamp가 채워져 있어야만 실제 clip을 뽑을 수 있으며, 현재 example 파일에는 그 값이 비어 있다.
 - 저장소에는 실제 mp4/mov clip 자산을 계속 tracked로 넣지 않으므로, 팀원별 `data/eval/sources/*.mp4`와 `data/eval/clips/*.mp4` 준비 여부는 로컬 작업 상태에 의존한다.
 - fire/earthquake/review local clip은 모두 준비했지만, `manual_review_runs.json`과 `rehearsal_runs.json`의 최신 상태는 아직 `pending`/`in_progress`라 실제 UI walkthrough와 native permission rehearsal pass 기록이 남아 있다.
-- eval fixture audit는 `PerceptionPacket` synthetic input 기준으로는 통과하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
+- eval fixture audit는 exact rule id와 overlay target까지 검사하지만, 실제 영상 clip 기반 segment boundary와 UI walkthrough는 manual review queue에 남아 있다.
 - demo rehearsal checklist 파일은 추가됐지만 10회 연속 시연 기록은 아직 채워지지 않았다.
-- runtime state 복원은 demo/UI 상태와 last session metadata 기준이며, 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
+- runtime state 복원은 demo/UI 상태와 last session metadata 기준이며, 마지막 live analysis는 별도 복원 상태로 표시된다. 실제 live capture 세션 자체를 재개(resume)하지는 않는다.
 - `pnpm check-env`는 로컬 툴체인과 env scaffold만 점검하며, Screen Recording/마이크 권한 허용 여부는 런타임에서 직접 확인해야 한다.
 - `pnpm prompts:validate`는 prompt 자산 존재와 핵심 제약 문구만 검사하며, 실제 모델 응답 품질이나 JSON 안정성은 별도 eval로 계속 확인해야 한다.
 - localhost 브라우저 데모는 이제 scenario frame을 보여 주지만, 여전히 진짜 동영상 playback이 아니라 sampled/static frame replay라서 연속 영상처럼 보이지는 않는다.
@@ -39,3 +39,4 @@
 - `/demo`는 이제 멀티트랙/grounded 정보를 함께 보여 주지만, 현재 cue timeline은 실제 segment detector 결과가 아니라 영상 길이를 track 수로 균등 분할한 발표용 cue 스케줄이다.
 - `/demo` scene-stepper의 장면 window는 현재 수동으로 정의한 presentation metadata라서, 실제 라이브 segment detector 결과와 자동 동기화되지는 않는다.
 - 사용자용 `/demo`는 의도적으로 grounding 근거, 관찰 신호, 운영자 제어를 숨기므로, QA나 규칙 검증이 필요할 때는 `/` 검증 화면으로 돌아가야 한다.
+- `/` 검증 화면에는 아직 일부 운영자용 영어/내부 용어가 남아 있다. 핵심 동작은 고쳤지만, 최종 사용자 배포 전에는 제품 용어로 한 번 더 정리해야 한다.

@@ -101,6 +101,32 @@ describe('qa-review helpers', () => {
     })
   })
 
+  it('uses the latest manual review status when a later run fails', () => {
+    const nextState: QaReviewState = {
+      ...state,
+      manualReviewRuns: [
+        ...state.manualReviewRuns,
+        {
+          clipId: 'fire-1',
+          createdAt: '2026-04-15T12:00:00.000Z',
+          date: '2026-04-15',
+          notes: 'later fail',
+          operator: 'A',
+          path: 'actual',
+          status: 'fail',
+        },
+      ],
+    }
+
+    expect(
+      getLatestManualReviewRun(nextState.manualReviewRuns, 'fire-1')?.status,
+    ).toBe('fail')
+    expect(getManualReviewCoverage(nextState)).toEqual({
+      passed: 0,
+      total: 2,
+    })
+  })
+
   it('counts passed rehearsals', () => {
     expect(getRehearsalPassCount(state)).toBe(1)
   })

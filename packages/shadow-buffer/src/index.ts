@@ -34,7 +34,14 @@ export class ShadowBuffer<TPayload = undefined> {
   }
 
   appendFrame(frame: ShadowFrame<TPayload>) {
-    this.#frames.push(frame)
+    const existingIndex = this.#frames.findIndex((item) => item.id === frame.id)
+    if (existingIndex >= 0) {
+      this.#frames.splice(existingIndex, 1, frame)
+    } else {
+      this.#frames.push(frame)
+    }
+
+    this.#frames.sort((left, right) => left.tsMs - right.tsMs)
     this.#pruneFrames()
   }
 

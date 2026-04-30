@@ -18,6 +18,7 @@ export function LiveCapturePreview({
   asrStatus,
   asrText,
   notice,
+  ocrMessage,
   ocrStatus,
   ocrTokenCount,
   selectedSource,
@@ -32,7 +33,8 @@ export function LiveCapturePreview({
   asrText: string
   notice: string
   captureInput: CaptureInputState
-  ocrStatus: 'idle' | 'ready' | 'scanning'
+  ocrMessage: string | null
+  ocrStatus: 'idle' | 'ready' | 'scanning' | 'unavailable'
   ocrTokenCount: number
   selectedSource: CaptureSourceOption | null
   session: CaptureSession | null
@@ -78,7 +80,7 @@ export function LiveCapturePreview({
           />
         ) : (
           <div className="flex aspect-video items-center justify-center px-6 text-center text-sm leading-6 text-white/70">
-            live preview lane 대기 중
+            실시간 미리보기 대기 중
           </div>
         )}
       </div>
@@ -86,7 +88,7 @@ export function LiveCapturePreview({
       <div className="grid gap-3 rounded-md border border-[var(--line)] bg-white p-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-            live preview
+            실시간 미리보기
           </p>
           <p className="mt-2 text-sm font-semibold text-[var(--ink)]">
             {session?.displayName ??
@@ -108,7 +110,7 @@ export function LiveCapturePreview({
               : 'bg-[var(--soft)] text-[var(--muted)]',
           )}
         >
-          replay lane과 분리된 preview 상태: {getStatusLabel(status)}
+          다시보기와 분리된 미리보기 상태: {getStatusLabel(status)}
         </div>
         <div className="grid gap-2 rounded-md border border-[var(--line)] bg-[var(--soft)] px-3 py-3 text-sm text-[var(--muted)]">
           <p>
@@ -116,7 +118,7 @@ export function LiveCapturePreview({
             {stream
               ? '브라우저 MediaStream'
               : nativePreview.lastFrame
-                ? 'native frame snapshot'
+                ? '앱 화면 샘플'
                 : '미연결'}
           </p>
           <p>
@@ -131,7 +133,7 @@ export function LiveCapturePreview({
               : nativePreview.audioState === 'requested'
                 ? '요청됨'
                 : nativePreview.audioState === 'fallback'
-                  ? '미연결, 영상 preview만 유지'
+                  ? '미연결, 영상 미리보기만 유지'
                   : '없음'}
           </p>
           {nativePreview.lastAudioAtMs ? (
@@ -141,13 +143,13 @@ export function LiveCapturePreview({
             </p>
           ) : null}
           <p>
-            native frame 수: {nativePreview.frameCount}
+            화면 샘플 수: {nativePreview.frameCount}
             {nativePreview.lastFrameAtMs
               ? ` · 최근 ${new Date(nativePreview.lastFrameAtMs).toLocaleTimeString()}`
               : ''}
           </p>
           <p>
-            analysis frame 창: {captureInput.frameWindow.length}개 · shadow 입력{' '}
+            분석 화면 묶음: {captureInput.frameWindow.length}개 · 다시보기 입력{' '}
             {captureInput.shadowStatus === 'ready'
               ? '실행 중'
               : captureInput.shadowStatus === 'preview-only'
@@ -161,15 +163,18 @@ export function LiveCapturePreview({
               : '대기 중'}
           </p>
           <p>
-            OCR adapter:{' '}
+            화면 글자 인식:{' '}
             {ocrStatus === 'ready'
               ? `${ocrTokenCount}개 token`
               : ocrStatus === 'scanning'
                 ? '인식 중'
-                : '대기 중'}
+                : ocrStatus === 'unavailable'
+                  ? '브라우저에서는 미연결'
+                  : '대기 중'}
           </p>
+          {ocrMessage ? <p>{ocrMessage}</p> : null}
           <p>
-            ASR adapter:{' '}
+            음성 글자 변환:{' '}
             {asrStatus === 'ready'
               ? '전사 준비됨'
               : asrStatus === 'transcribing'

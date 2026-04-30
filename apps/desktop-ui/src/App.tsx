@@ -66,6 +66,7 @@ import { demoScenarios } from './lib/mock-session'
 import {
   defaultQaReviewState,
   getLatestManualReviewRun,
+  getManualReviewQueue,
   type QaReviewState,
   type RehearsalRunRecord,
 } from './lib/qa-review'
@@ -128,6 +129,9 @@ function App() {
   const [activeRunbookStepId, setActiveRunbookStepId] = useState(
     demoRunbookSteps[0]?.id ?? 'problem',
   )
+  const [selectedBackupSessionId, setSelectedBackupSessionId] = useState<
+    string | null
+  >(null)
   const [scenarioId, setScenarioId] = useState(initialScenario.id)
   const [requestedTrack, setRequestedTrack] = useState<TrackKey>(
     getPreferredTrack(initialExplanation),
@@ -329,6 +333,15 @@ function App() {
           : scenario.id,
       overlaySummary: analysis.overlaySummary,
       overlayTargets: analysis.overlayTargets,
+      playbackMode: liveAnalysis
+        ? ('live' as const)
+        : restoredAnalysis
+          ? ('restored' as const)
+          : ('demo' as const),
+      restoredSessionLabel:
+        restoredLiveSnapshot?.session.session.displayName ??
+        restoredRuntimeState.lastSession?.displayName ??
+        null,
       segment: {
         endMs: analysis.segment.endMs,
         hazard: analysis.segment.hazard,
@@ -342,7 +355,9 @@ function App() {
       capture.state.activeSession?.id,
       liveAnalysis,
       restoredAnalysis,
+      restoredLiveSnapshot?.session.session.displayName,
       restoredLiveSnapshot?.session.session.id,
+      restoredRuntimeState.lastSession?.displayName,
       scenario.demoFrames,
       scenario.id,
     ],
@@ -381,6 +396,12 @@ function App() {
         selectedQaFixture.clipId,
       )
     : null
+  const nextQaFixtureId =
+    getManualReviewQueue(qaState).find(
+      (fixture) => fixture.latestRun?.status !== 'pass',
+    )?.clipId ??
+    getManualReviewQueue(qaState)[0]?.clipId ??
+    null
   const selectedQaPreviewPath =
     manualReviewDraft.path ||
     selectedQaFixture?.localClipPath ||
@@ -457,10 +478,28 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!selectedQaFixtureId && qaState.fixtures[0]?.clipId) {
-      setSelectedQaFixtureId(qaState.fixtures[0].clipId)
+    if (
+      (!selectedQaFixtureId ||
+        !qaState.fixtures.some(
+          (fixture) => fixture.clipId === selectedQaFixtureId,
+        )) &&
+      nextQaFixtureId
+    ) {
+      setSelectedQaFixtureId(nextQaFixtureId)
     }
-  }, [qaState.fixtures, selectedQaFixtureId])
+  }, [nextQaFixtureId, qaState.fixtures, selectedQaFixtureId])
+
+  useEffect(() => {
+    if (!selectedQaFixture) {
+      return
+    }
+
+    setManualReviewDraft((current) => ({
+      ...current,
+      notes: '',
+      path: selectedQaLatestRun?.path ?? selectedQaFixture.localClipPath ?? '',
+    }))
+  }, [selectedQaFixture, selectedQaLatestRun])
 
   useEffect(() => {
     if (!runtimeHydrated) {
@@ -671,6 +710,7 @@ function App() {
     try {
       const nextQaState = await appendManualReviewRun({
         clipId: selectedQaFixtureId,
+        createdAt: new Date().toISOString(),
         date: formatDateInput(new Date()),
         notes: manualReviewDraft.notes || 'manual walkthrough result',
         operator: manualReviewDraft.operator || 'unknown',
@@ -702,6 +742,7 @@ function App() {
     try {
       const nextQaState = await appendRehearsalRun({
         ...rehearsalDraft,
+        createdAt: new Date().toISOString(),
         date: rehearsalDraft.date || formatDateInput(new Date()),
       })
       setQaState(nextQaState)
@@ -721,10 +762,15 @@ function App() {
   const startCaptureWithConsent = async (mode: PendingCaptureStart) => {
     setShowEvidence(true)
     setDemoMode('live-priority')
-    if (mode === 'native') {
-      await capture.actions.startNativeMonitor()
-    } else {
-      await capture.actions.startBrowserFallback()
+    const result =
+      mode === 'native'
+        ? await capture.actions.startNativeMonitor()
+        : await capture.actions.startBrowserFallback()
+
+    if (!result.ok) {
+      setPrivacyNotice(result.notice)
+      setShowRestoredLiveSnapshot(false)
+      return
     }
 
     setPrivacyNotice(
@@ -900,6 +946,7 @@ function App() {
     }
 
     setDemoMode('backup-replay')
+    setSelectedBackupSessionId(session.id)
     setShowRestoredLiveSnapshot(false)
     setScenarioId(session.scenarioId)
     if (session.preferredTrack) {
@@ -1027,6 +1074,7 @@ function App() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <ActionButton
+                    disabled={Boolean(capture.state.activeSession)}
                     icon={<MonitorPlay className="size-4" />}
                     onClick={() => requestCaptureStart('native')}
                     variant="primary"
@@ -1034,6 +1082,7 @@ function App() {
                     현재 모니터 읽기 시작
                   </ActionButton>
                   <ActionButton
+                    disabled={Boolean(capture.state.activeSession)}
                     icon={<ScreenShare className="size-4" />}
                     onClick={() => requestCaptureStart('browser')}
                   >
@@ -1091,7 +1140,9 @@ function App() {
                           : 'text-[var(--muted)]',
                       )}
                     >
-                      {source.priority === 'primary' ? '우선 경로' : 'fallback'}{' '}
+                      {source.priority === 'primary'
+                        ? '우선 경로'
+                        : '보조 경로'}{' '}
                       · {source.ready ? '준비됨' : '준비 중'}
                     </span>
                   </button>
@@ -1105,6 +1156,7 @@ function App() {
                 captureInput={capture.state.captureInput}
                 nativePreview={capture.state.nativePreview}
                 notice={capture.state.notice}
+                ocrMessage={liveOcr.message}
                 ocrStatus={liveOcr.status}
                 ocrTokenCount={liveOcr.ocrTokens.length}
                 selectedSource={capture.state.selectedSource}
@@ -1237,11 +1289,13 @@ function App() {
               onSelectBackupSession={handleSelectBackupSession}
               onSelectStep={handleSelectRunbookStep}
               onSetDemoMode={setDemoMode}
+              selectedBackupSessionId={selectedBackupSessionId}
               showEvidence={showEvidence}
               steps={demoRunbookSteps}
             />
             <QaReviewPanel
               busy={qaBusy}
+              clipPreviewPath={selectedQaPreviewPath}
               clipPreviewSrc={selectedQaPreviewSrc}
               clipPreviewTitle={
                 manualReviewDraft.path
@@ -1401,7 +1455,10 @@ function App() {
                       마이크 intent
                     </ActionButton>
                     <ActionButton
-                      disabled={!voiceRuntime.state.speaking}
+                      disabled={
+                        !voiceRuntime.state.speaking &&
+                        !voiceRuntime.state.listening
+                      }
                       icon={<Square className="size-4" />}
                       onClick={() => void voiceRuntime.stop()}
                     >
@@ -1410,7 +1467,8 @@ function App() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <input
-                      className="min-w-[240px] flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)] outline-none"
+                      aria-label="텍스트로 질문하기"
+                      className="min-w-[240px] flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
                       onChange={(event) =>
                         setVoiceCommandInput(event.target.value)
                       }

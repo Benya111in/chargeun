@@ -76,6 +76,9 @@ const main = async () => {
     ]
       .filter(Boolean)
       .join(' ')
+    const actualOverlayLabels = guarded.explanation.overlayTargets.map(
+      (target) => target.label,
+    )
 
     const checks: AuditCheck[] = [
       {
@@ -90,10 +93,15 @@ const main = async () => {
       },
       {
         label: 'rule ids',
-        ok: fixture.expectedRuleIds.every((ruleId) =>
-          segment.officialRuleIds.includes(ruleId),
-        ),
+        ok: sameStringSet(segment.officialRuleIds, fixture.expectedRuleIds),
         details: `${segment.officialRuleIds.join(', ') || 'none'} vs ${fixture.expectedRuleIds.join(', ') || 'none'}`,
+      },
+      {
+        label: 'overlay targets',
+        ok: fixture.overlayTargets.every((expectedOverlay) =>
+          actualOverlayLabels.some((label) => label.includes(expectedOverlay)),
+        ),
+        details: `${actualOverlayLabels.join(', ') || 'none'} vs ${fixture.overlayTargets.join(', ') || 'none'}`,
       },
       {
         label: 'safety mode',
@@ -177,6 +185,15 @@ const loadRulesByHazard = async (): Promise<{
 const loadRules = async (file: string) => {
   const raw = await readFile(file, 'utf8')
   return ruleRecordSchema.array().parse(JSON.parse(raw))
+}
+
+const sameStringSet = (actual: string[], expected: string[]) => {
+  if (actual.length !== expected.length) {
+    return false
+  }
+
+  const actualSet = new Set(actual)
+  return expected.every((value) => actualSet.has(value))
 }
 
 void main()

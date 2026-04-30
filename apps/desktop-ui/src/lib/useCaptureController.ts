@@ -50,6 +50,11 @@ type CaptureControllerState = {
   status: CaptureControllerStatus
 }
 
+type CaptureStartResult = {
+  notice: string
+  ok: boolean
+}
+
 const browserCaptureSupported =
   typeof navigator !== 'undefined' &&
   Boolean(navigator.mediaDevices?.getDisplayMedia)
@@ -225,7 +230,14 @@ export function useCaptureController() {
     setNotice(nextNotice)
   }
 
-  const startBrowserFallback = async () => {
+  const startBrowserFallback = async (): Promise<CaptureStartResult> => {
+    if (activeSession) {
+      const nextNotice =
+        '이미 캡처가 실행 중입니다. 먼저 현재 캡처를 중지해 주세요.'
+      setNotice(nextNotice)
+      return { notice: nextNotice, ok: false }
+    }
+
     const source = sources.find(
       (candidate) => candidate.id === BROWSER_FALLBACK_SOURCE_ID,
     )
@@ -238,7 +250,11 @@ export function useCaptureController() {
       setNotice(
         '이 환경에서는 브라우저 화면 공유 fallback을 사용할 수 없습니다.',
       )
-      return
+      return {
+        notice:
+          '이 환경에서는 브라우저 화면 공유 fallback을 사용할 수 없습니다.',
+        ok: false,
+      }
     }
 
     setStatus('starting')
@@ -281,6 +297,11 @@ export function useCaptureController() {
       setNotice(
         '브라우저 fallback live preview가 켜졌습니다. Shadow Player replay lane에도 실제 browser sample이 연결됩니다.',
       )
+      return {
+        notice:
+          '브라우저 화면 공유가 시작되었습니다. 실제 화면 샘플이 분석 화면에 연결됩니다.',
+        ok: true,
+      }
     } catch (error) {
       const nextPermission =
         error instanceof DOMException && error.name === 'NotAllowedError'
@@ -289,15 +310,23 @@ export function useCaptureController() {
 
       setPermission(nextPermission)
       setStatus('error')
-      setNotice(
+      const nextNotice =
         nextPermission === 'denied'
           ? '사용자가 브라우저 화면 공유 권한을 취소했습니다.'
-          : '브라우저 화면 공유를 시작하지 못했습니다.',
-      )
+          : '브라우저 화면 공유를 시작하지 못했습니다.'
+      setNotice(nextNotice)
+      return { notice: nextNotice, ok: false }
     }
   }
 
-  const startNativeMonitor = async () => {
+  const startNativeMonitor = async (): Promise<CaptureStartResult> => {
+    if (activeSession) {
+      const nextNotice =
+        '이미 캡처가 실행 중입니다. 먼저 현재 캡처를 중지해 주세요.'
+      setNotice(nextNotice)
+      return { notice: nextNotice, ok: false }
+    }
+
     const source =
       selectedSource?.runtime === 'native-mac'
         ? selectedSource
@@ -309,7 +338,11 @@ export function useCaptureController() {
       setNotice(
         '현재 native capture 경로가 준비되지 않았습니다. 브라우저 fallback preview로 먼저 검증하세요.',
       )
-      return
+      return {
+        notice:
+          '현재 모니터 읽기를 시작하지 못했습니다. 브라우저 공유로 먼저 볼 수 있습니다.',
+        ok: false,
+      }
     }
 
     setSelectedSourceId(source.id)
@@ -333,11 +366,17 @@ export function useCaptureController() {
       setNotice(
         'native capture 세션이 시작되었습니다. preview lane은 native frame snapshot을 받고, Shadow Player replay lane도 같은 live input을 사용합니다.',
       )
+      return {
+        notice:
+          '현재 모니터 읽기가 시작되었습니다. 화면 샘플이 분석 화면에 연결됩니다.',
+        ok: true,
+      }
     } catch {
       setStatus('error')
-      setNotice(
-        'native capture 세션을 시작하지 못했습니다. 브라우저 fallback preview로 계속 검증할 수 있습니다.',
-      )
+      const nextNotice =
+        '현재 모니터 읽기를 시작하지 못했습니다. 브라우저 공유로 계속 볼 수 있습니다.'
+      setNotice(nextNotice)
+      return { notice: nextNotice, ok: false }
     }
   }
 

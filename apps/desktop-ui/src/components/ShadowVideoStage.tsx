@@ -27,6 +27,8 @@ type ShadowStageScenario = {
   id: string
   overlaySummary: string
   overlayTargets: Array<{ label: string }>
+  playbackMode?: 'demo' | 'live' | 'restored'
+  restoredSessionLabel?: string | null
   segment: {
     endMs: number
     hazard: HazardType
@@ -49,8 +51,11 @@ export function ShadowVideoStage({
   panicMode: boolean
   scenario: ShadowStageScenario
 }) {
+  const isRestoredSnapshot = scenario.playbackMode === 'restored'
   const liveShadowEnabled =
-    captureInput.shadowStatus === 'ready' && captureInput.frameWindow.length > 0
+    !isRestoredSnapshot &&
+    captureInput.shadowStatus === 'ready' &&
+    captureInput.frameWindow.length > 0
 
   const livePlayer = useShadowLivePlayer({
     captureInput,
@@ -59,7 +64,7 @@ export function ShadowVideoStage({
     segmentEndMs: scenario.segment.endMs,
   })
   const demoPlayer = useShadowDemoPlayer({
-    enabled: !liveShadowEnabled,
+    enabled: !liveShadowEnabled && !isRestoredSnapshot,
     segmentStartMs: scenario.segment.startMs,
     segmentEndMs: scenario.segment.endMs,
   })
@@ -96,24 +101,59 @@ export function ShadowVideoStage({
     player.state.bufferStartMs,
     player.state.liveEdgeMs,
   )
+  const statusLabel = isRestoredSnapshot
+    ? '복원된 분석 · 새 캡처 대기'
+    : player.state.isUnderrun
+      ? isLiveReplay
+        ? 'shadow buffer warming up'
+        : 'buffer underrun'
+      : isLiveReplay
+        ? '실제 live 입력 · 4초 shadow'
+        : 'demo shadow · 4초'
+  const statusDotClass = isRestoredSnapshot
+    ? 'bg-sky-300'
+    : player.state.isUnderrun
+      ? 'bg-amber-300'
+      : 'bg-emerald-400'
+  const replayBadgeLabel = isRestoredSnapshot
+    ? '복원된 분석'
+    : isLiveReplay
+      ? 'Shadow Replay'
+      : 'Demo Replay'
+  const framePlaceholder = isRestoredSnapshot
+    ? `이전 분석을 복원했습니다${
+        scenario.restoredSessionLabel
+          ? `: ${scenario.restoredSessionLabel}`
+          : ''
+      }. 새 캡처를 시작하면 Shadow 영상이 다시 들어옵니다.`
+    : 'replay frame을 아직 받지 못했습니다. capture를 시작하거나 demo preset을 선택해 주세요.'
+  const controlsDisabled = isRestoredSnapshot
+  const metricValues = isRestoredSnapshot
+    ? {
+        analysis: '복원된 근거',
+        delay: '대기 중',
+        live: '새 캡처 대기',
+        replay: `${formatClock(scenario.segment.startMs)} - ${formatClock(
+          scenario.segment.endMs,
+        )}`,
+      }
+    : {
+        analysis:
+          player.state.analysisMode === 'burst' ? 'burst 4-6fps' : 'base 1fps',
+        delay: `${(
+          (player.state.liveEdgeMs - player.state.replayCursorMs) /
+          1000
+        ).toFixed(1)}초`,
+        live: formatClock(player.state.liveEdgeMs),
+        replay: formatClock(player.state.replayCursorMs),
+      }
 
   return (
     <div className="relative overflow-hidden rounded-md border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(210,34,63,0.28),_transparent_28%),linear-gradient(180deg,#1a1c20_0%,#101215_100%)]">
       <div className="absolute inset-x-0 top-0 flex items-center justify-between border-b border-white/10 px-4 py-3 text-sm text-white/75">
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              'size-2 rounded-full',
-              player.state.isUnderrun ? 'bg-amber-300' : 'bg-emerald-400',
-            )}
-          />
-          {player.state.isUnderrun
-            ? isLiveReplay
-              ? 'shadow buffer warming up'
-              : 'buffer underrun'
-            : isLiveReplay
-              ? '실제 live 입력 · 4초 shadow'
-              : 'demo shadow · 4초'}
+          <span className={cn('size-2 rounded-full', statusDotClass)} />
+          {statusLabel}
         </div>
         <div className="flex items-center gap-2">
           {scenario.segment.hazard === 'fire' ? (
@@ -136,15 +176,14 @@ export function ShadowVideoStage({
               />
             ) : (
               <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_transparent_36%),linear-gradient(180deg,rgba(13,16,20,0.82),rgba(4,6,9,0.98))] px-6 text-center text-sm leading-6 text-white/70">
-                replay frame을 아직 받지 못했습니다. capture를 시작하거나 demo
-                preset을 선택해 주세요.
+                {framePlaceholder}
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/30 to-transparent" />
             <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 rounded-md border border-white/12 bg-black/42 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/70">
                 <MonitorPlay className="size-4" />
-                {isLiveReplay ? 'Shadow Replay' : 'Demo Replay'}
+                {replayBadgeLabel}
               </span>
               {player.state.replayFrameOrigin ? (
                 <span className="rounded-md border border-white/12 bg-black/32 px-3 py-2 text-xs text-white/65">
@@ -192,34 +231,26 @@ export function ShadowVideoStage({
 
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-4">
-            <StageMetric
-              label="Replay"
-              value={formatClock(player.state.replayCursorMs)}
-            />
-            <StageMetric
-              label="Live"
-              value={formatClock(player.state.liveEdgeMs)}
-            />
-            <StageMetric
-              label="Delay"
-              value={`${((player.state.liveEdgeMs - player.state.replayCursorMs) / 1000).toFixed(1)}초`}
-            />
-            <StageMetric
-              label="Analysis"
-              value={
-                player.state.analysisMode === 'burst'
-                  ? 'burst 4-6fps'
-                  : 'base 1fps'
-              }
-            />
+            <StageMetric label="Replay" value={metricValues.replay} />
+            <StageMetric label="Live" value={metricValues.live} />
+            <StageMetric label="Delay" value={metricValues.delay} />
+            <StageMetric label="Analysis" value={metricValues.analysis} />
           </div>
 
           <div className="rounded-md border border-white/10 bg-black/28 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.12em] text-white/55">
               <span>
-                {isLiveReplay ? '실시간 세그먼트 마커' : '세그먼트 마커'}
+                {isRestoredSnapshot
+                  ? '복원된 세그먼트'
+                  : isLiveReplay
+                    ? '실시간 세그먼트 마커'
+                    : '세그먼트 마커'}
               </span>
-              <span>{player.state.lastEvent}</span>
+              <span>
+                {isRestoredSnapshot
+                  ? '이전 분석을 복원했습니다.'
+                  : player.state.lastEvent}
+              </span>
             </div>
             <div className="relative mt-3 h-3 rounded-full bg-white/8">
               <div className="absolute inset-y-0 left-0 right-0 rounded-full bg-white/6" />
@@ -247,12 +278,18 @@ export function ShadowVideoStage({
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
               <span>
-                buffer {shadowDemoDefaults.capacityMs / 1000}초 유지 ·{' '}
-                {isLiveReplay ? 'live lane 직결' : 'demo seed'}
+                {isRestoredSnapshot
+                  ? '이전 분석 결과 유지 · 새 캡처 대기'
+                  : `buffer ${shadowDemoDefaults.capacityMs / 1000}초 유지 · ${
+                      isLiveReplay ? 'live lane 직결' : 'demo seed'
+                    }`}
               </span>
               <span>
-                auto-pause {player.state.autoPauseEnabled ? 'on' : 'off'} ·{' '}
-                {player.state.isPaused ? 'paused' : 'playing'}
+                {isRestoredSnapshot
+                  ? '재생 제어는 새 캡처 후 사용할 수 있습니다.'
+                  : `auto-pause ${
+                      player.state.autoPauseEnabled ? 'on' : 'off'
+                    } · ${player.state.isPaused ? 'paused' : 'playing'}`}
               </span>
             </div>
           </div>
@@ -261,6 +298,7 @@ export function ShadowVideoStage({
             <div className="flex flex-wrap items-center gap-2 text-sm text-white/75">
               <button
                 className="icon-button"
+                disabled={controlsDisabled}
                 type="button"
                 aria-label="재생"
                 onClick={player.controls.resume}
@@ -269,6 +307,7 @@ export function ShadowVideoStage({
               </button>
               <button
                 className="icon-button"
+                disabled={controlsDisabled}
                 type="button"
                 aria-label="일시정지"
                 onClick={player.controls.pause}
@@ -277,6 +316,7 @@ export function ShadowVideoStage({
               </button>
               <button
                 className="icon-button"
+                disabled={controlsDisabled}
                 type="button"
                 aria-label="5초 되감기"
                 onClick={player.controls.seekBackFiveSeconds}
@@ -285,6 +325,7 @@ export function ShadowVideoStage({
               </button>
               <button
                 className="icon-button"
+                disabled={controlsDisabled}
                 type="button"
                 aria-label="현재 세그먼트 다시 보기"
                 onClick={player.controls.replaySegment}
@@ -298,6 +339,7 @@ export function ShadowVideoStage({
                     ? 'border-white/18 bg-white/12 text-white'
                     : 'border-white/10 bg-transparent text-white/70 hover:bg-white/8',
                 )}
+                disabled={controlsDisabled}
                 onClick={player.controls.toggleAutoPause}
                 type="button"
               >

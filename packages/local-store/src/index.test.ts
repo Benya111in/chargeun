@@ -5,6 +5,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
+  LocalJobCancelledError,
   LocalLatestJobQueue,
   appendSessionLog,
   clearLocalRuntime,
@@ -96,5 +97,35 @@ describe('LocalLatestJobQueue', () => {
     expect(thirdResult).toBe('third')
     expect(queue.getPendingKinds()).toHaveLength(0)
     expect(execution.includes('third')).toBe(true)
+  })
+
+  it('rejects superseded pending latest-only jobs', async () => {
+    const queue = new LocalLatestJobQueue(3)
+    let releaseFirstJob!: () => void
+
+    const first = queue.enqueue({
+      kind: 'ocr',
+      run: () =>
+        new Promise<string>((resolve) => {
+          releaseFirstJob = () => resolve('first')
+        }),
+    })
+
+    const second = queue.enqueue({
+      kind: 'asr',
+      run: async () => 'second',
+    })
+
+    const third = queue.enqueue({
+      kind: 'asr',
+      run: async () => 'third',
+    })
+
+    await expect(second.promise).rejects.toBeInstanceOf(LocalJobCancelledError)
+
+    releaseFirstJob()
+
+    await expect(first.promise).resolves.toBe('first')
+    await expect(third.promise).resolves.toBe('third')
   })
 })

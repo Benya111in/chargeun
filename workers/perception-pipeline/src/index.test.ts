@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { CaptureFrameSample } from '@ansimtrack/shared-types'
 
 import {
+  buildPerceptionCacheKey,
   buildPerceptionFoundation,
   buildPerceptionPacket,
   deriveObjectHints,
@@ -60,6 +61,23 @@ describe('buildPerceptionFoundation', () => {
     expect(result.cacheKey).toContain('session-1')
     expect(result.packet.keyframes.length).toBeGreaterThan(0)
     expect(result.plan.mode).toBe('base')
+  })
+
+  it('changes cache keys when frame refs change inside the same time window', () => {
+    const first = buildPerceptionCacheKey({
+      sessionId: 'session-1',
+      tStartMs: 1_000,
+      tEndMs: 2_000,
+      keyframes: ['frame-a', 'frame-b'],
+    })
+    const second = buildPerceptionCacheKey({
+      sessionId: 'session-1',
+      tStartMs: 1_000,
+      tEndMs: 2_000,
+      keyframes: ['frame-x', 'frame-y'],
+    })
+
+    expect(first).not.toBe(second)
   })
 })
 

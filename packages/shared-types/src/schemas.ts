@@ -26,23 +26,63 @@ export const captureSessionSchema = z.object({
 })
 
 export const captureSampleOriginSchema = z.enum(['browser', 'native'])
+const bboxSchema = z
+  .tuple([z.number(), z.number(), z.number(), z.number()])
+  .superRefine((value, ctx) => {
+    const [x, y, width, height] = value
 
-export const segmentSchema = z.object({
-  id: z.string(),
-  sessionId: z.string(),
-  hazard: hazardTypeSchema,
-  phase: z.string(),
-  startMs: z.number(),
-  endMs: z.number(),
-  confidence: z.number().min(0).max(1),
-  officialRuleIds: z.array(z.string()),
-})
+    if (x < 0 || y < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'bbox origin must be non-negative',
+      })
+    }
 
-export const overlayTargetSchema = z.object({
-  label: z.string(),
-  bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
-  frameRange: z.tuple([z.number(), z.number()]),
-})
+    if (width <= 0 || height <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'bbox size must be positive',
+      })
+    }
+  })
+
+export const segmentSchema = z
+  .object({
+    id: z.string(),
+    sessionId: z.string(),
+    hazard: hazardTypeSchema,
+    phase: z.string(),
+    startMs: z.number(),
+    endMs: z.number(),
+    confidence: z.number().min(0).max(1),
+    officialRuleIds: z.array(z.string()),
+  })
+  .superRefine((value, ctx) => {
+    if (value.endMs < value.startMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'segment endMs must be greater than or equal to startMs',
+        path: ['endMs'],
+      })
+    }
+  })
+
+export const overlayTargetSchema = z
+  .object({
+    label: z.string(),
+    bbox: bboxSchema,
+    frameRange: z.tuple([z.number(), z.number()]),
+  })
+  .superRefine((value, ctx) => {
+    if (value.frameRange[1] < value.frameRange[0]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'overlay frame range end must be greater than or equal to start',
+        path: ['frameRange'],
+      })
+    }
+  })
 
 export const trackSetSchema = z.object({
   basic: z.string().min(1),
@@ -89,28 +129,38 @@ export const segmentExplanationSchema = z
     }
   })
 
-export const perceptionPacketSchema = z.object({
-  sessionId: z.string(),
-  tStartMs: z.number(),
-  tEndMs: z.number(),
-  asrText: z.string(),
-  ocrTokens: z.array(z.string()),
-  uiElements: z.array(
-    z.object({
-      label: z.string(),
-      bbox: z.array(z.number()).length(4),
-      conf: z.number().min(0).max(1),
-    }),
-  ),
-  objectHints: z.array(
-    z.object({
-      label: z.string(),
-      bbox: z.array(z.number()).length(4),
-      conf: z.number().min(0).max(1),
-    }),
-  ),
-  keyframes: z.array(z.string()),
-})
+export const perceptionPacketSchema = z
+  .object({
+    sessionId: z.string(),
+    tStartMs: z.number(),
+    tEndMs: z.number(),
+    asrText: z.string(),
+    ocrTokens: z.array(z.string()),
+    uiElements: z.array(
+      z.object({
+        label: z.string(),
+        bbox: bboxSchema,
+        conf: z.number().min(0).max(1),
+      }),
+    ),
+    objectHints: z.array(
+      z.object({
+        label: z.string(),
+        bbox: bboxSchema,
+        conf: z.number().min(0).max(1),
+      }),
+    ),
+    keyframes: z.array(z.string()),
+  })
+  .superRefine((value, ctx) => {
+    if (value.tEndMs < value.tStartMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'packet tEndMs must be greater than or equal to tStartMs',
+        path: ['tEndMs'],
+      })
+    }
+  })
 
 export const captureFrameSampleSchema = z.object({
   sessionId: z.string(),

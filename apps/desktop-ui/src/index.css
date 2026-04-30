@@ -55,6 +55,6 @@
   }
 
   .icon-button {
-    @apply inline-flex size-9 items-center justify-center rounded-md border border-white/14 bg-white/8 text-white transition hover:bg-white/14;
+    @apply inline-flex size-9 items-center justify-center rounded-md border border-white/14 bg-white/8 text-white transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-white/8;
   }
 }

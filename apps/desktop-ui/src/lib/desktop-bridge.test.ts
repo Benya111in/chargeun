@@ -47,10 +47,9 @@ describe('resolveLocalMediaSrc', () => {
     expect(mockConvertFileSrc).toHaveBeenCalledWith('/Users/demo/fire-clip.mov')
   })
 
-  it('keeps local file paths unchanged in browser preview mode', () => {
-    expect(resolveLocalMediaSrc('/Users/demo/fire-clip.mov')).toBe(
-      '/Users/demo/fire-clip.mov',
-    )
+  it('does not expose local file paths as playable URLs in browser preview mode', () => {
+    expect(resolveLocalMediaSrc('/Users/demo/fire-clip.mov')).toBeNull()
+    expect(resolveLocalMediaSrc('data/eval/clips/fire.mp4')).toBeNull()
     expect(mockConvertFileSrc).not.toHaveBeenCalled()
   })
 })

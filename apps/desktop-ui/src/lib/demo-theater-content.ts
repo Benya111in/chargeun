@@ -63,7 +63,7 @@ export const theaterShows: TheaterShow[] = [
         label: '문을 닫고 나가요',
         packet: createPacket({
           asrText: '우리 집 화재 시 현관문을 닫고 계단으로 대피합니다.',
-          objectHints: ['출입문', '연기', '복도', '계단 방향'],
+          objectHints: ['출입문', '현관문', '연기', '복도', '계단 방향'],
           ocrTokens: ['현관문', '계단', '대피'],
           sessionId: 'demo-fire-grounded-door-control',
           startMs: 0,
@@ -71,6 +71,12 @@ export const theaterShows: TheaterShow[] = [
           uiElements: ['우리 집 화재 시'],
         }),
         rules: fireRuleCatalog,
+        segmentOverrides: {
+          confidence: 0.94,
+          hazard: 'fire',
+          officialRuleIds: ['KR_FIRE_04'],
+          phase: 'door_control',
+        },
         startMs: 0,
       }),
       createSegment({
@@ -88,6 +94,12 @@ export const theaterShows: TheaterShow[] = [
           uiElements: ['계단으로 대피'],
         }),
         rules: fireRuleCatalog,
+        segmentOverrides: {
+          confidence: 0.94,
+          hazard: 'fire',
+          officialRuleIds: ['KR_FIRE_03'],
+          phase: 'stair_evacuation',
+        },
         startMs: 7_800,
       }),
       createSegment({
@@ -107,6 +119,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: fireRuleCatalog,
         segmentOverrides: {
+          confidence: 0.9,
+          hazard: 'fire',
           officialRuleIds: ['KR_FIRE_05'],
           phase: 'refuge_space',
         },
@@ -128,9 +142,10 @@ export const theaterShows: TheaterShow[] = [
         id: 'earthquake-review-office-desk',
         label: '책상 아래로 들어가요',
         packet: createPacket({
-          asrText: '사무실에 있을 때는 책상 아래로 들어가 머리를 보호합니다.',
-          objectHints: ['책상', '머리 보호 자세', '사무실'],
-          ocrTokens: ['책상 아래', '머리 보호'],
+          asrText:
+            '지진으로 흔들릴 때는 책상이나 탁자 아래로 들어가 머리를 보호합니다.',
+          objectHints: ['탁자', '책상', '머리 보호 자세', '사무실'],
+          ocrTokens: ['탁자 아래', '책상 아래', '머리 보호'],
           sessionId: 'demo-earthquake-review-office-desk',
           startMs: 6_000,
           endMs: 14_000,
@@ -138,6 +153,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: earthquakeRuleCatalog,
         segmentOverrides: {
+          confidence: 0.94,
+          hazard: 'earthquake',
           officialRuleIds: ['KR_EQ_03'],
           phase: 'during_shaking',
         },
@@ -149,9 +166,10 @@ export const theaterShows: TheaterShow[] = [
         id: 'earthquake-review-school-desk',
         label: '학교에서도 책상 아래로 가요',
         packet: createPacket({
-          asrText: '학교에 있을 때도 책상 아래로 피해서 머리를 보호합니다.',
-          objectHints: ['학생', '책상', '머리 보호 자세', '교실'],
-          ocrTokens: ['책상 아래', '머리 보호'],
+          asrText:
+            '지진으로 흔들릴 때 학교에서도 책상이나 탁자 아래로 피해서 머리를 보호합니다.',
+          objectHints: ['학생', '탁자', '책상', '머리 보호 자세', '교실'],
+          ocrTokens: ['탁자 아래', '책상 아래', '머리 보호'],
           sessionId: 'demo-earthquake-review-school-desk',
           startMs: 14_000,
           endMs: 22_000,
@@ -159,6 +177,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: earthquakeRuleCatalog,
         segmentOverrides: {
+          confidence: 0.94,
+          hazard: 'earthquake',
           officialRuleIds: ['KR_EQ_03'],
           phase: 'during_shaking',
         },
@@ -171,8 +191,8 @@ export const theaterShows: TheaterShow[] = [
         label: '머리를 감싸요',
         packet: createPacket({
           asrText:
-            '탁자가 없으면 방석이나 가방으로 머리를 보호하고 낮게 자세를 유지합니다.',
-          objectHints: ['방석', '머리 보호 자세', '몸을 낮춤'],
+            '지진으로 흔들릴 때 탁자가 없으면 방석이나 가방으로 머리를 보호하고 낮게 자세를 유지합니다.',
+          objectHints: ['방석', '머리 보호 자세', '몸을 낮춤', '탁자가 없음'],
           ocrTokens: ['방석', '머리 보호'],
           sessionId: 'demo-earthquake-review-cushion',
           startMs: 22_000,
@@ -181,6 +201,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: earthquakeRuleCatalog,
         segmentOverrides: {
+          confidence: 0.92,
+          hazard: 'earthquake',
           officialRuleIds: ['KR_EQ_04'],
           phase: 'during_shaking',
         },
@@ -212,6 +234,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: fireRuleCatalog,
         segmentOverrides: {
+          confidence: 0.91,
+          hazard: 'fire',
           officialRuleIds: ['KR_FIRE_04'],
           phase: 'door_control',
         },
@@ -233,6 +257,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: fireRuleCatalog,
         segmentOverrides: {
+          confidence: 0.92,
+          hazard: 'fire',
           officialRuleIds: ['KR_FIRE_03'],
           phase: 'stair_evacuation',
         },
@@ -254,6 +280,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: fireRuleCatalog,
         segmentOverrides: {
+          confidence: 0.9,
+          hazard: 'fire',
           officialRuleIds: ['KR_FIRE_05'],
           phase: 'refuge_space',
         },
@@ -285,6 +313,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: earthquakeRuleCatalog,
         segmentOverrides: {
+          confidence: 0.94,
+          hazard: 'earthquake',
           officialRuleIds: ['KR_EQ_05'],
           phase: 'after_shaking',
         },
@@ -306,6 +336,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: earthquakeRuleCatalog,
         segmentOverrides: {
+          confidence: 0.94,
+          hazard: 'earthquake',
           officialRuleIds: ['KR_EQ_05'],
           phase: 'after_shaking',
         },
@@ -318,9 +350,9 @@ export const theaterShows: TheaterShow[] = [
         label: '위험하면 바로 알려요',
         packet: createPacket({
           asrText:
-            '부상자와 위험 상태를 확인하고 가스 냄새나 화재가 있으면 119에 알립니다.',
-          objectHints: ['출입문', '안전 확인', '부상자 확인'],
-          ocrTokens: ['안전 확인', '출구'],
+            '흔들림이 멈춘 뒤 가족과 부상자를 확인하고 가스 냄새나 화재가 있으면 119에 알립니다.',
+          objectHints: ['출입문', '안전 확인', '부상자 확인', '흔들림이 멈춤'],
+          ocrTokens: ['안전 확인', '출구', '119 신고'],
           sessionId: 'demo-earthquake-after-report',
           startMs: 19_500,
           endMs: 30_030,
@@ -328,6 +360,8 @@ export const theaterShows: TheaterShow[] = [
         }),
         rules: earthquakeRuleCatalog,
         segmentOverrides: {
+          confidence: 0.92,
+          hazard: 'earthquake',
           officialRuleIds: ['KR_EQ_12'],
           phase: 'post_quake_report',
         },

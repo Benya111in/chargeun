@@ -29,6 +29,7 @@ export type ManualReviewStatus = 'blocked' | 'fail' | 'pass' | 'pending'
 
 export type ManualReviewRunRecord = {
   clipId: string
+  createdAt?: string
   date: string
   notes: string
   operator: string
@@ -40,6 +41,7 @@ export type RehearsalResult = 'blocked' | 'fail' | 'in_progress' | 'pass'
 
 export type RehearsalRunRecord = {
   backupReady: boolean
+  createdAt?: string
   date: string
   evidenceAndCacheWorks: boolean
   fallbackWorks: boolean
@@ -84,20 +86,18 @@ export function getLatestManualReviewRun(
   runs: ManualReviewRunRecord[],
   clipId: string,
 ) {
-  return (
-    runs.filter((run) => run.clipId === clipId).sort(compareDateDesc)[0] ?? null
-  )
+  return getLatestRun(runs.filter((run) => run.clipId === clipId))
 }
 
 export function getManualReviewCoverage(state: QaReviewState) {
-  const passedClipIds = new Set(
-    state.manualReviewRuns
-      .filter((run) => run.status === 'pass')
-      .map((run) => run.clipId),
-  )
+  const passedCount = state.fixtures.filter(
+    (fixture) =>
+      getLatestManualReviewRun(state.manualReviewRuns, fixture.clipId)
+        ?.status === 'pass',
+  ).length
 
   return {
-    passed: passedClipIds.size,
+    passed: passedCount,
     total: state.fixtures.length,
   }
 }
@@ -107,7 +107,7 @@ export function getRehearsalPassCount(state: QaReviewState) {
 }
 
 export function getLatestRehearsalRun(state: QaReviewState) {
-  return state.rehearsalRuns.slice().sort(compareDateDesc)[0] ?? null
+  return getLatestRun(state.rehearsalRuns)
 }
 
 export function getManualReviewQueue(state: QaReviewState): QaQueuedFixture[] {
@@ -229,8 +229,27 @@ export function getReleaseChecklistItems(
   ]
 }
 
-function compareDateDesc<T extends { date: string }>(left: T, right: T) {
-  return right.date.localeCompare(left.date)
+function getLatestRun<T extends { createdAt?: string; date: string }>(
+  runs: T[],
+) {
+  let latest: T | null = null
+
+  for (const run of runs) {
+    if (!latest || compareRunAsc(latest, run) <= 0) {
+      latest = run
+    }
+  }
+
+  return latest
+}
+
+function compareRunAsc<T extends { createdAt?: string; date: string }>(
+  left: T,
+  right: T,
+) {
+  const leftKey = left.createdAt ?? left.date
+  const rightKey = right.createdAt ?? right.date
+  return leftKey.localeCompare(rightKey)
 }
 
 function getManualReviewPriority(run: ManualReviewRunRecord | null) {

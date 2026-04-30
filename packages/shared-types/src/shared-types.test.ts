@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   captureFrameSampleSchema,
   macCaptureEventSchema,
+  perceptionPacketSchema,
+  segmentSchema,
   segmentExplanationSchema,
 } from './schemas'
 
@@ -80,5 +82,39 @@ describe('captureFrameSampleSchema', () => {
     })
 
     expect(result.success).toBe(true)
+  })
+})
+
+describe('segmentSchema', () => {
+  it('rejects inverted segment time windows', () => {
+    const result = segmentSchema.safeParse({
+      id: 'seg-bad',
+      sessionId: 'session-1',
+      hazard: 'fire',
+      phase: 'route_selection',
+      startMs: 5_000,
+      endMs: 4_000,
+      confidence: 0.9,
+      officialRuleIds: [],
+    })
+
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('perceptionPacketSchema', () => {
+  it('rejects inverted packet windows and invalid bounding boxes', () => {
+    const result = perceptionPacketSchema.safeParse({
+      sessionId: 'session-1',
+      tStartMs: 5_000,
+      tEndMs: 4_000,
+      asrText: '',
+      ocrTokens: [],
+      uiElements: [{ label: 'bad', bbox: [-1, 0, 0, 1], conf: 0.8 }],
+      objectHints: [],
+      keyframes: ['frame-a'],
+    })
+
+    expect(result.success).toBe(false)
   })
 })

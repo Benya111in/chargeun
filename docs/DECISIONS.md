@@ -226,3 +226,28 @@
 
 - 이유: 느린학습자가 보는 화면에 grounding, signal, fallback 같은 내부 용어가 섞이면 핵심 행동보다 시스템 설명이 먼저 읽힌다.
 - 영향: `/demo`에는 영상, 현재 장면, 쉬운 설명, 하지 말 것, 다음 행동만 남기고 근거·운영자·검증 정보는 `/` workspace에만 둔다.
+
+### D-046 rule id는 근거가 아니라 후보 단서로만 취급한다
+
+- 이유: caller가 넣은 `officialRuleIds`만으로 행동 문장을 출력하면 실제 장면 근거 없이 재난 행동을 확정할 수 있다.
+- 영향: grounded rule 선택은 현재 ASR/OCR/object/UI evidence의 `when:` 또는 `evidence:` 신호가 있어야만 통과한다. `segment:`와 `continuity:`는 점수 보조로만 쓰고 단독 grounding 근거가 될 수 없다.
+
+### D-047 QA 브라우저 fallback도 seed 데이터를 로드한다
+
+- 이유: localhost 검증에서 QA workspace가 비어 보이면 실제 fixture와 release checklist 흐름을 검수할 수 없다.
+- 영향: Tauri가 아닌 브라우저 실행도 tracked `data/eval/*.json` seed를 localStorage에 초기화한다. 단, local filesystem clip preview는 브라우저에서 깨진 video로 열지 않고 데스크톱 앱 전용으로 안내한다.
+
+### D-048 capture 시작 실패는 세션 시작으로 취급하지 않는다
+
+- 이유: 권한 취소나 native unavailable 상태에서 "캡처를 시작했습니다"가 나오면 사용자가 실제 분석이 된다고 오해한다.
+- 영향: capture start action은 성공/실패 결과를 반환하고, privacy notice와 restored-live 표시 전환은 성공한 경우에만 적용한다. 이미 세션이 실행 중이면 다른 capture start를 막는다.
+
+### D-049 live buffer와 job queue는 비동기 순서 흔들림을 방어한다
+
+- 이유: frame/event/job은 실제 런타임에서 순서가 어긋나거나 supersede될 수 있고, 이때 live edge나 promise가 조용히 망가지면 복구가 어렵다.
+- 영향: Shadow buffer는 timestamp 정렬을 유지하고, latest-only job queue는 취소된 pending promise를 명시적으로 reject한다. perception cache key는 frame ref hash를 포함한다.
+
+### D-050 복원된 live snapshot은 replay가 아니라 recovery state다
+
+- 이유: 마지막 분석 스냅샷은 세그먼트와 설명을 복원할 수 있지만, 실제 frame buffer나 live capture session을 재개하는 데이터는 아니다. 이를 `demo shadow`로 렌더링하면 사용자와 QA가 빈 데모 플레이어로 오해한다.
+- 영향: active live frame이 없는 restored snapshot은 Shadow Player에서 별도 복원 상태로 표시하고 재생/되감기/auto-pause 제어를 비활성화한다. 새 캡처가 시작돼 live frame이 들어오면 기존 live Shadow 경로가 다시 우선한다.

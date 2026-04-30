@@ -89,6 +89,7 @@ export type SafetyGuardrailResult = {
 export const buildExplanation = (input: {
   segment: Segment
   matchedRules: RuleRecord[]
+  overlayTargets?: SegmentExplanation['overlayTargets']
 }): SegmentExplanation => {
   const primaryRule = input.matchedRules[0]
   const reviewMode =
@@ -101,16 +102,16 @@ export const buildExplanation = (input: {
     tracks: {
       basic: primaryRule
         ? `${humanizeHazard(input.segment.hazard)} 상황으로 보입니다.`
-        : '현재 장면의 공식 행동요령을 먼저 확인해 주세요.',
+        : '지금은 확실히 말하기 어려워요.',
       easy: primaryRule
         ? simplify(primaryRule.action)
-        : '아직 근거가 부족해서 공식 안내를 먼저 보여 드릴게요.',
+        : '잠깐 멈추고 주변 어른이나 공식 안내를 확인해요.',
       action: reviewMode ? undefined : primaryRule.action,
-      reason: primaryRule?.why ?? '행동 근거를 다시 확인하는 편이 안전합니다.',
+      reason: primaryRule?.why ?? '잘못 말하지 않기 위해 한 번 더 확인해요.',
       caregiver: primaryRule?.caregiver,
       report: reviewMode ? undefined : primaryRule?.report_script,
     },
-    overlayTargets: [],
+    overlayTargets: input.overlayTargets ?? [],
   }
 
   return segmentExplanationSchema.parse(explanation)
@@ -130,6 +131,7 @@ export const buildGroundedExplanation = (input: {
   }).map((candidate) => candidate.rule)
 
   return buildExplanation({
+    overlayTargets: buildOverlayTargets(input.evidence, input.segment),
     segment: {
       ...input.segment,
       officialRuleIds:
@@ -140,6 +142,49 @@ export const buildGroundedExplanation = (input: {
     matchedRules,
   })
 }
+
+const buildOverlayTargets = (
+  evidence: MatchableEvidence,
+  segment: Segment,
+): SegmentExplanation['overlayTargets'] => {
+  const targets = [
+    ...evidence.objectHints.map((item) => ({
+      bbox: toBboxTuple(item.bbox),
+      label: item.label,
+    })),
+    ...evidence.uiElements.map((item) => ({
+      bbox: toBboxTuple(item.bbox),
+      label: item.label,
+    })),
+    ...evidence.ocrTokens.map((label, index) => ({
+      bbox: [index * 2, 0, 1, 1] as [number, number, number, number],
+      label,
+    })),
+  ]
+
+  const seen = new Set<string>()
+  return targets
+    .filter((target) => {
+      if (seen.has(target.label)) {
+        return false
+      }
+
+      seen.add(target.label)
+      return true
+    })
+    .slice(0, 8)
+    .map((target) => ({
+      ...target,
+      frameRange: [segment.startMs, segment.endMs] as [number, number],
+    }))
+}
+
+const toBboxTuple = (bbox: number[]): [number, number, number, number] => [
+  bbox[0] ?? 0,
+  bbox[1] ?? 0,
+  Math.max(1, bbox[2] ?? 1),
+  Math.max(1, bbox[3] ?? 1),
+]
 
 export const applySafetyGuardrails = (input: {
   evidenceVisible: boolean
@@ -297,7 +342,7 @@ export const buildSegmentFromPerception = (input: {
     segment: provisionalSegment,
   })
 
-  const officialRuleIds = matches.map((match) => match.rule.rule_id)
+  const officialRuleIds = matches.slice(0, 1).map((match) => match.rule.rule_id)
   const boundary = detectSegmentBoundary({
     next: provisionalSegment,
     previous: input.previousSegment,
@@ -407,6 +452,28 @@ const scoreGroundedRule = (input: {
     matchedSignals.push(`continuity:${input.rule.rule_id}`)
   }
 
+  if (
+    input.rule.rule_id === 'KR_EQ_03' &&
+    hasAnyToken(Array.from(input.evidenceTokens), ['탁자', '책상'])
+  ) {
+    score += 0.7
+    matchedSignals.push('evidence:탁자')
+  }
+
+  if (
+    input.rule.rule_id === 'KR_EQ_04' &&
+    hasAnyToken(Array.from(input.evidenceTokens), ['탁자', '책상']) &&
+    !hasAnyToken(Array.from(input.evidenceTokens), [
+      '방석',
+      '가방',
+      '없음',
+      '없으면',
+      '없어서',
+    ])
+  ) {
+    score -= 1.2
+  }
+
   return {
     matchedSignals,
     rule: input.rule,
@@ -416,11 +483,7 @@ const scoreGroundedRule = (input: {
 
 const hasGroundingEvidence = (candidate: GroundedRuleMatch) =>
   candidate.matchedSignals.some(
-    (signal) =>
-      signal.startsWith('when:') ||
-      signal.startsWith('evidence:') ||
-      signal.startsWith('segment:') ||
-      signal.startsWith('continuity:'),
+    (signal) => signal.startsWith('when:') || signal.startsWith('evidence:'),
   )
 
 const collectEvidenceTokens = (evidence: MatchableEvidence) => {
@@ -442,10 +505,17 @@ const collectEvidenceTokens = (evidence: MatchableEvidence) => {
 
 const matchTokens = (texts: string[], evidenceTokens: Set<string>) => {
   const matches = new Set<string>()
+  const evidence = Array.from(evidenceTokens)
 
   for (const text of texts) {
     for (const token of tokenize(text)) {
-      if (evidenceTokens.has(token)) {
+      if (
+        evidenceTokens.has(token) ||
+        evidence.some(
+          (evidenceToken) =>
+            evidenceToken.includes(token) || token.includes(evidenceToken),
+        )
+      ) {
         matches.add(token)
       }
     }
@@ -566,6 +636,10 @@ const collectCueSignals = (
 const classifyFirePhase = (tokens: string[]) => {
   if (hasAnyToken(tokens, ['119', '신고'])) {
     return 'report'
+  }
+
+  if (hasAnyToken(tokens, ['현관문', '문닫', '닫고'])) {
+    return 'door_control'
   }
 
   if (hasAnyToken(tokens, ['손잡이', '문손잡이', '뜨거운문'])) {

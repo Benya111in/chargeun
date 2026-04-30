@@ -1,5 +1,31 @@
 # PROGRESS
 
+## 2026-04-30
+
+### 완료
+
+- GPT-5.5 explorer agent 6개를 `/demo`, `/`, capture fallback, QA workspace, domain regression, 접근성 축으로 나눠 병렬 검수하게 하고, 재현 가능한 P1/P2 지적을 한 라운드에서 통합 수정했다
+- 근거 없는 `officialRuleIds`만으로 action/report가 grounded 처리되던 문제를 차단하고, `matchGroundedRules`가 현재 장면의 `when:` 또는 `evidence:` 신호가 있을 때만 rule을 선택하도록 보강했다
+- `pnpm eval:audit`를 exact rule id와 overlay target까지 검증하도록 강화하고, door-control fixture phase를 실제 규칙 단계와 맞춰 `fire-door-control-001`이 `KR_FIRE_04`만 통과하도록 고정했다
+- `/demo`의 첫 화재 장면, 지진 보호 장면, 대피공간 장면, 지진 후 신고 장면이 각 장면에 맞는 learner-facing 설명을 내도록 curated segment override와 evidence hints를 보강했다
+- `/demo` 마지막 장면의 `처음부터 다시 보기`가 준비 화면으로 돌아가기만 하던 문제를 수정해 첫 장면을 바로 재생하게 했고, scene stepper의 터치 타겟, heading, focus 이동, raw playback error 숨김을 개선했다
+- 루트 검증 화면에서 capture 시작 실패 후에도 "캡처를 시작했습니다"가 표시되던 문제를 수정하고, 이미 캡처 중일 때 다른 capture 시작 버튼이 세션 상태를 오염시키지 않도록 막았다
+- native capture bridge stdout EOF가 `session-stopped` 없이 끝나도 UI가 running에 갇히지 않도록 fatal error와 stop event를 내보내게 했다
+- 브라우저 preview에서 OCR/ASR이 실제 adapter-ready처럼 보이던 문제를 수정해 native OCR/ASR 미연결 상태를 명확히 표시하도록 했다
+- QA workspace 브라우저 fallback이 tracked eval JSON seed를 로드하도록 바꾸고, manual review coverage가 같은 fixture의 최신 pass/fail/block 상태만 보도록 고쳤다
+- QA fixture 선택 시 추천 queue와 selected fixture가 어긋나거나 이전 fixture의 clip path가 새 fixture로 새는 문제를 수정하고, 브라우저에서는 local clip path를 깨진 `<video>`로 열지 않도록 막았다
+- 마이크 intent가 브라우저 SpeechRecognition 무응답에서 무한 `마이크 대기`로 남던 문제를 timeout과 stop 가능 상태로 수정했다
+- Shadow buffer out-of-order frame, LocalLatestJobQueue superseded promise hang, perception cache key collision, shared schema의 inverted time/bbox validation 누락을 각각 regression test와 함께 보강했다
+- 복원된 live-analysis snapshot이 Shadow Player에서 빈 `demo shadow`로 보이던 문제를 수정해, 이전 분석은 별도 복원 상태와 비활성 재생 제어로 표시하고 새 캡처 대기임을 명확히 했다
+- 문서 언어를 `ko`, title을 `안심트랙`으로 수정하고, 백업 시나리오 선택 상태와 일부 기술 용어 라벨을 더 한국어 중심으로 정리했다
+- 검증: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm eval:audit`, `cargo fmt --manifest-path apps/desktop-ui/src-tauri/Cargo.toml --check`, `cargo check --manifest-path apps/desktop-ui/src-tauri/Cargo.toml`, Playwright `/demo` 및 `/` 재현 검증을 통과했고, Linnaeus agent의 restored snapshot 재검증도 clear 처리했다
+
+### 다음
+
+1. 실제 macOS Screen Recording 권한 허용 상태에서 native capture full rehearsal 기록
+2. `/` 검증 화면의 남은 운영자용 영어/내부 용어를 제품 용어로 추가 정리
+3. local clip asset pipeline과 발표용 long clip pipeline 자동 동기화
+
 ## 2026-04-14
 
 ### 완료

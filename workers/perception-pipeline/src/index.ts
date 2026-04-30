@@ -211,8 +211,18 @@ export const buildPerceptionCacheKey = (
     packet.sessionId,
     packet.tStartMs,
     packet.tEndMs,
-    packet.keyframes.length,
+    hashCachePart(packet.keyframes.join('|')),
   ].join(':')
+
+const hashCachePart = (value: string) => {
+  let hash = 5381
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 33) ^ value.charCodeAt(index)
+  }
+
+  return (hash >>> 0).toString(36)
+}
 
 const normalizeTokens = (values: string[]) =>
   values

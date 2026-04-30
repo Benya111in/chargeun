@@ -90,6 +90,26 @@ describe('matchGroundedRules', () => {
 
     expect(matches[0]?.rule.rule_id).toBe('KR_FIRE_03')
   })
+
+  it('does not ground a rule from caller-supplied rule ids alone', () => {
+    const matches = matchGroundedRules({
+      evidence: {
+        asrText: '',
+        ocrTokens: [],
+        uiElements: [],
+        objectHints: [],
+      },
+      rules: fireRules,
+      segment: {
+        confidence: 0.92,
+        hazard: 'fire',
+        phase: 'stair_evacuation',
+        officialRuleIds: ['KR_FIRE_03'],
+      },
+    })
+
+    expect(matches).toHaveLength(0)
+  })
 })
 
 describe('buildGroundedExplanation', () => {

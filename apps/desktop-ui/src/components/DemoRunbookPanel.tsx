@@ -19,6 +19,7 @@ export function DemoRunbookPanel({
   onSelectBackupSession,
   onSelectStep,
   onSetDemoMode,
+  selectedBackupSessionId,
   showEvidence,
   steps,
 }: {
@@ -34,6 +35,7 @@ export function DemoRunbookPanel({
   onSelectBackupSession: (sessionId: string) => void
   onSelectStep: (stepId: string) => void
   onSetDemoMode: (mode: 'backup-replay' | 'live-priority') => void
+  selectedBackupSessionId: string | null
   showEvidence: boolean
   steps: DemoRunbookStep[]
 }) {
@@ -59,7 +61,7 @@ export function DemoRunbookPanel({
             active={demoMode === 'backup-replay'}
             onClick={() => onSetDemoMode('backup-replay')}
           >
-            backup replay
+            백업 재생
           </ModeButton>
         </div>
       </div>
@@ -154,31 +156,44 @@ export function DemoRunbookPanel({
           <div className="grid gap-2">
             <div className="flex items-center gap-2 text-[var(--ink)]">
               <Clapperboard className="size-4" />
-              <p className="text-sm font-semibold">prerecorded backup</p>
+              <p className="text-sm font-semibold">미리 준비한 백업</p>
             </div>
-            {backupSessions.map((session) => (
-              <button
-                key={session.id}
-                className={cn(
-                  'grid gap-1 rounded-md border px-3 py-3 text-left transition',
-                  demoMode === 'backup-replay'
-                    ? 'border-[var(--line)] bg-white hover:border-[var(--ink)]/40'
-                    : 'border-[var(--line)] bg-[var(--soft)] hover:border-[var(--ink)]/30',
-                )}
-                onClick={() => onSelectBackupSession(session.id)}
-                type="button"
-              >
-                <span className="text-sm font-semibold text-[var(--ink)]">
-                  {session.title}
-                </span>
-                <span className="text-xs text-[var(--muted)]">
-                  {session.trigger}
-                </span>
-                <span className="text-sm leading-6 text-[var(--muted)]">
-                  {session.note}
-                </span>
-              </button>
-            ))}
+            {backupSessions.map((session) => {
+              const isSelected =
+                demoMode === 'backup-replay' &&
+                selectedBackupSessionId === session.id
+
+              return (
+                <button
+                  key={session.id}
+                  className={cn(
+                    'grid gap-1 rounded-md border px-3 py-3 text-left transition',
+                    isSelected
+                      ? 'border-[var(--ink)] bg-white'
+                      : demoMode === 'backup-replay'
+                        ? 'border-[var(--line)] bg-white hover:border-[var(--ink)]/40'
+                        : 'border-[var(--line)] bg-[var(--soft)] hover:border-[var(--ink)]/30',
+                  )}
+                  onClick={() => onSelectBackupSession(session.id)}
+                  type="button"
+                >
+                  <span className="flex items-center justify-between gap-2 text-sm font-semibold text-[var(--ink)]">
+                    {session.title}
+                    {isSelected ? (
+                      <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs text-emerald-800">
+                        선택됨
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="text-xs text-[var(--muted)]">
+                    {session.trigger}
+                  </span>
+                  <span className="text-sm leading-6 text-[var(--muted)]">
+                    {session.note}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>

@@ -133,24 +133,29 @@ export function useLiveAsrText(
 
   const lastEntry = visibleEntries[visibleEntries.length - 1] ?? null
   const status =
-    nativePreview.audioState === 'idle'
-      ? 'idle'
-      : nativePreview.audioState === 'fallback'
-        ? 'unavailable'
-        : asrText
-          ? 'ready'
-          : lastEntry &&
-              ['unavailable', 'missing-file', 'error'].includes(
-                lastEntry.status,
-              )
-            ? 'unavailable'
-            : nativePreview.lastAudioPcmRef
-              ? 'transcribing'
-              : 'idle'
+    nativePreview.audioState === 'idle' && captureInput.shadowStatus !== 'idle'
+      ? 'unavailable'
+      : nativePreview.audioState === 'idle'
+        ? 'idle'
+        : nativePreview.audioState === 'fallback'
+          ? 'unavailable'
+          : asrText
+            ? 'ready'
+            : lastEntry &&
+                ['unavailable', 'missing-file', 'error'].includes(
+                  lastEntry.status,
+                )
+              ? 'unavailable'
+              : nativePreview.lastAudioPcmRef
+                ? 'transcribing'
+                : 'idle'
 
   return {
     asrText,
-    message: lastEntry?.message ?? null,
+    message:
+      status === 'unavailable' && !lastEntry?.message
+        ? '브라우저 미리보기에서는 네이티브 음성 인식이 연결되지 않습니다.'
+        : (lastEntry?.message ?? null),
     status,
   } as const
 }

@@ -5,8 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
-    env,
-    fs,
+    env, fs,
     io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     process::{Child, ChildStderr, ChildStdout, Command, Stdio},
@@ -663,7 +662,9 @@ fn extract_ocr_tokens(
 }
 
 #[tauri::command]
-fn transcribe_audio_sample(input: TranscribeAudioSampleInput) -> Result<TranscribeAudioSampleResult, String> {
+fn transcribe_audio_sample(
+    input: TranscribeAudioSampleInput,
+) -> Result<TranscribeAudioSampleResult, String> {
     let mut args = vec![
         "transcribe-audio".to_string(),
         "--audio-path".to_string(),
@@ -1006,23 +1007,50 @@ fn native_session_from_start_event(
 }
 
 fn spawn_stdout_forwarder(app: AppHandle, session_id: String, mut reader: BufReader<ChildStdout>) {
-    std::thread::spawn(move || loop {
-        match read_stream_event(&mut reader) {
-            Ok(Some(event)) => {
-                let _ = emit_capture_event(&app, event);
-            }
-            Ok(None) => break,
-            Err(error) => {
-                let _ = emit_system_error(
-                    &app,
-                    json!({
-                        "type": "error",
-                        "sessionId": session_id,
-                        "code": "native-preview-parse-error",
-                        "message": error,
-                    }),
-                );
-                break;
+    std::thread::spawn(move || {
+        let mut saw_session_stopped = false;
+
+        loop {
+            match read_stream_event(&mut reader) {
+                Ok(Some(event)) => {
+                    if event.get("type").and_then(Value::as_str) == Some("session-stopped") {
+                        saw_session_stopped = true;
+                    }
+                    let _ = emit_capture_event(&app, event);
+                }
+                Ok(None) => {
+                    if !saw_session_stopped {
+                        let _ = emit_system_error(
+                            &app,
+                            json!({
+                                "type": "error",
+                                "sessionId": session_id,
+                                "code": "native-preview-eof",
+                                "message": "Native capture bridge stopped unexpectedly.",
+                            }),
+                        );
+                        let _ = emit_capture_event(
+                            &app,
+                            json!({
+                                "type": "session-stopped",
+                                "sessionId": session_id,
+                            }),
+                        );
+                    }
+                    break;
+                }
+                Err(error) => {
+                    let _ = emit_system_error(
+                        &app,
+                        json!({
+                            "type": "error",
+                            "sessionId": session_id,
+                            "code": "native-preview-parse-error",
+                            "message": error,
+                        }),
+                    );
+                    break;
+                }
             }
         }
     });
@@ -1247,7 +1275,9 @@ fn transcribe_audio_with_openai(
     })
 }
 
-fn prepare_audio_upload_for_openai(audio_path: &str) -> Result<(PathBuf, Option<PathBuf>, String), String> {
+fn prepare_audio_upload_for_openai(
+    audio_path: &str,
+) -> Result<(PathBuf, Option<PathBuf>, String), String> {
     let path = PathBuf::from(audio_path);
     let extension = path
         .extension()
@@ -1286,7 +1316,11 @@ fn prepare_audio_upload_for_openai(audio_path: &str) -> Result<(PathBuf, Option<
         return Err(if stderr.is_empty() { stdout } else { stderr });
     }
 
-    Ok((converted_path.clone(), Some(converted_path), "audio/wav".into()))
+    Ok((
+        converted_path.clone(),
+        Some(converted_path),
+        "audio/wav".into(),
+    ))
 }
 
 fn mime_type_for_audio_extension(extension: &str) -> &'static str {
