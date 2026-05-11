@@ -24,10 +24,11 @@ import { cn, formatClock } from '../lib/utils'
 
 type ShadowStageScenario = {
   demoFrames?: Array<{ imageRef: string; tsMs: number }>
+  emptyFrameMessage?: string
   id: string
   overlaySummary: string
   overlayTargets: Array<{ label: string }>
-  playbackMode?: 'demo' | 'live' | 'restored'
+  playbackMode?: 'demo' | 'live' | 'restored' | 'waiting'
   restoredSessionLabel?: string | null
   segment: {
     endMs: number
@@ -52,8 +53,10 @@ export function ShadowVideoStage({
   scenario: ShadowStageScenario
 }) {
   const isRestoredSnapshot = scenario.playbackMode === 'restored'
+  const isWaitingForShare = scenario.playbackMode === 'waiting'
   const liveShadowEnabled =
     !isRestoredSnapshot &&
+    !isWaitingForShare &&
     captureInput.shadowStatus === 'ready' &&
     captureInput.frameWindow.length > 0
 
@@ -64,7 +67,7 @@ export function ShadowVideoStage({
     segmentEndMs: scenario.segment.endMs,
   })
   const demoPlayer = useShadowDemoPlayer({
-    enabled: !liveShadowEnabled && !isRestoredSnapshot,
+    enabled: !liveShadowEnabled && !isRestoredSnapshot && !isWaitingForShare,
     segmentStartMs: scenario.segment.startMs,
     segmentEndMs: scenario.segment.endMs,
   })
@@ -103,31 +106,38 @@ export function ShadowVideoStage({
   )
   const statusLabel = isRestoredSnapshot
     ? '복원된 분석 · 새 캡처 대기'
-    : player.state.isUnderrun
-      ? isLiveReplay
-        ? 'shadow buffer warming up'
-        : 'buffer underrun'
-      : isLiveReplay
-        ? '실제 live 입력 · 4초 shadow'
-        : 'demo shadow · 4초'
+    : isWaitingForShare
+      ? '화면 공유 대기 · 4초 shadow'
+      : player.state.isUnderrun
+        ? isLiveReplay
+          ? 'shadow buffer warming up'
+          : 'buffer underrun'
+        : isLiveReplay
+          ? '실제 live 입력 · 4초 shadow'
+          : 'demo shadow · 4초'
   const statusDotClass = isRestoredSnapshot
     ? 'bg-sky-300'
-    : player.state.isUnderrun
-      ? 'bg-amber-300'
-      : 'bg-emerald-400'
+    : isWaitingForShare
+      ? 'bg-white/45'
+      : player.state.isUnderrun
+        ? 'bg-amber-300'
+        : 'bg-emerald-400'
   const replayBadgeLabel = isRestoredSnapshot
     ? '복원된 분석'
-    : isLiveReplay
-      ? 'Shadow Replay'
-      : 'Demo Replay'
+    : isWaitingForShare
+      ? '공유 대기'
+      : isLiveReplay
+        ? 'Shadow Replay'
+        : 'Demo Replay'
   const framePlaceholder = isRestoredSnapshot
     ? `이전 분석을 복원했습니다${
         scenario.restoredSessionLabel
           ? `: ${scenario.restoredSessionLabel}`
           : ''
       }. 새 캡처를 시작하면 Shadow 영상이 다시 들어옵니다.`
-    : 'replay frame을 아직 받지 못했습니다. capture를 시작하거나 demo preset을 선택해 주세요.'
-  const controlsDisabled = isRestoredSnapshot
+    : (scenario.emptyFrameMessage ??
+      'replay frame을 아직 받지 못했습니다. capture를 시작하거나 demo preset을 선택해 주세요.')
+  const controlsDisabled = isRestoredSnapshot || isWaitingForShare
   const metricValues = isRestoredSnapshot
     ? {
         analysis: '복원된 근거',
@@ -137,16 +147,25 @@ export function ShadowVideoStage({
           scenario.segment.endMs,
         )}`,
       }
-    : {
-        analysis:
-          player.state.analysisMode === 'burst' ? 'burst 4-6fps' : 'base 1fps',
-        delay: `${(
-          (player.state.liveEdgeMs - player.state.replayCursorMs) /
-          1000
-        ).toFixed(1)}초`,
-        live: formatClock(player.state.liveEdgeMs),
-        replay: formatClock(player.state.replayCursorMs),
-      }
+    : isWaitingForShare
+      ? {
+          analysis: '대기 중',
+          delay: '4.0초',
+          live: '화면 공유 전',
+          replay: '화면 공유 전',
+        }
+      : {
+          analysis:
+            player.state.analysisMode === 'burst'
+              ? 'burst 4-6fps'
+              : 'base 1fps',
+          delay: `${(
+            (player.state.liveEdgeMs - player.state.replayCursorMs) /
+            1000
+          ).toFixed(1)}초`,
+          live: formatClock(player.state.liveEdgeMs),
+          replay: formatClock(player.state.replayCursorMs),
+        }
 
   return (
     <div className="relative overflow-hidden rounded-md border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(210,34,63,0.28),_transparent_28%),linear-gradient(180deg,#1a1c20_0%,#101215_100%)]">
@@ -242,14 +261,18 @@ export function ShadowVideoStage({
               <span>
                 {isRestoredSnapshot
                   ? '복원된 세그먼트'
-                  : isLiveReplay
-                    ? '실시간 세그먼트 마커'
-                    : '세그먼트 마커'}
+                  : isWaitingForShare
+                    ? '화면 공유 대기'
+                    : isLiveReplay
+                      ? '실시간 세그먼트 마커'
+                      : '세그먼트 마커'}
               </span>
               <span>
                 {isRestoredSnapshot
                   ? '이전 분석을 복원했습니다.'
-                  : player.state.lastEvent}
+                  : isWaitingForShare
+                    ? '화면을 공유하면 Shadow Player가 시작됩니다.'
+                    : player.state.lastEvent}
               </span>
             </div>
             <div className="relative mt-3 h-3 rounded-full bg-white/8">
@@ -280,16 +303,20 @@ export function ShadowVideoStage({
               <span>
                 {isRestoredSnapshot
                   ? '이전 분석 결과 유지 · 새 캡처 대기'
-                  : `buffer ${shadowDemoDefaults.capacityMs / 1000}초 유지 · ${
-                      isLiveReplay ? 'live lane 직결' : 'demo seed'
-                    }`}
+                  : isWaitingForShare
+                    ? '화면 공유 후 4초 지연 replay 시작'
+                    : `buffer ${shadowDemoDefaults.capacityMs / 1000}초 유지 · ${
+                        isLiveReplay ? 'live lane 직결' : 'demo seed'
+                      }`}
               </span>
               <span>
                 {isRestoredSnapshot
                   ? '재생 제어는 새 캡처 후 사용할 수 있습니다.'
-                  : `auto-pause ${
-                      player.state.autoPauseEnabled ? 'on' : 'off'
-                    } · ${player.state.isPaused ? 'paused' : 'playing'}`}
+                  : isWaitingForShare
+                    ? '재생 제어는 화면 공유 후 사용할 수 있습니다.'
+                    : `auto-pause ${
+                        player.state.autoPauseEnabled ? 'on' : 'off'
+                      } · ${player.state.isPaused ? 'paused' : 'playing'}`}
               </span>
             </div>
           </div>

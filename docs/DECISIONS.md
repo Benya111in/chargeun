@@ -251,3 +251,13 @@
 
 - 이유: 마지막 분석 스냅샷은 세그먼트와 설명을 복원할 수 있지만, 실제 frame buffer나 live capture session을 재개하는 데이터는 아니다. 이를 `demo shadow`로 렌더링하면 사용자와 QA가 빈 데모 플레이어로 오해한다.
 - 영향: active live frame이 없는 restored snapshot은 Shadow Player에서 별도 복원 상태로 표시하고 재생/되감기/auto-pause 제어를 비활성화한다. 새 캡처가 시작돼 live frame이 들어오면 기존 live Shadow 경로가 다시 우선한다.
+
+### D-051 첫 배포 단위는 웹 화면공유 제품이다
+
+- 이유: 설치형 앱보다 웹 링크 배포가 심사/베타 사용자에게 즉시 전달하기 쉽고, 현재 브라우저 `getDisplayMedia` path를 제품 루트로 세우는 편이 배포 속도가 빠르다.
+- 영향: `/`는 사용자용 웹 앱, `/demo`는 API-free 백업 데모, `/qa`는 내부 검증 워크스페이스로 분리한다. Tauri/macOS native path는 삭제하지 않고 후속 desktop extension으로 보류한다.
+
+### D-052 서버는 perception extraction만 담당한다
+
+- 이유: OpenAI key와 비용 제어는 서버에 있어야 하지만, 행동 문장을 모델이 자유 생성하면 grounding safety가 흔들린다.
+- 영향: Vercel API는 frame/audio를 받아 OCR-like token, object hint, transcript만 반환한다. 최종 세그먼트, rule 선택, action/report 노출, safety fallback은 계속 클라이언트의 deterministic rule engine에서 결정한다.

@@ -1,5 +1,9 @@
 # KNOWN_ISSUES
 
+- 웹 배포 path는 추가됐지만, Vercel preview 환경변수와 HTTPS 화면공유 실호출 rehearsal은 아직 실행 전이다.
+- 웹 API rate limit은 현재 serverless instance memory 기반이므로, 장기 공개 배포 전에는 durable KV/Redis 기반으로 바꾸는 것이 맞다.
+- 웹 분석 서버는 raw frame/audio를 저장하지 않지만, OpenAI API로 짧은 frame/audio payload를 전송하므로 베타 사용자 고지와 접근 코드 관리가 필요하다.
+- 웹 화면공유 P0는 Chrome desktop 기준이다. Safari/mobile은 live capture 대신 `/demo` 안내가 기본이다.
 - macOS ScreenCaptureKit 경로는 preview/audio callback과 sampled-frame Shadow replay까지 붙었지만, full continuous video stream을 encoded playback으로 바로 재생하는 단계는 아직 미완성이다.
 - Windows capture는 문서화 및 TODO만 있다.
 - 음성 입력은 이제 네이티브/브라우저 경로가 있지만, 여전히 버튼 intent와 텍스트 fallback이 가장 안정적인 시연 경로다.

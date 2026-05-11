@@ -1,17 +1,22 @@
 # 안심트랙 Live
 
-경진대회용 macOS 우선 데스크톱 앱입니다. 현재 모니터의 재난안전 영상을 읽고, 4초 지연 Shadow Player 위에서 판단 전환 지점별 멀티트랙 설명을 제공합니다.
+경진대회용 웹 우선 재난 영상 Shadow Player입니다. 브라우저 화면공유로 재난안전 영상을 읽고, 4초 지연 Shadow Player 위에서 판단 전환 지점별 멀티트랙 설명을 제공합니다.
 
 ## 현재 상태
 
-- macOS 우선 capture command, browser fallback preview, Shadow Player demo path 구현
+- 웹 루트(`/`)는 브라우저 화면공유 기반 베타 제품 화면으로 전환
+- `/demo`는 API 장애 시에도 동작하는 mp4 scene-stepper 백업 데모로 유지
+- `/qa`는 기존 운영자 검증 워크스페이스, QA fixture, rehearsal log 화면으로 분리
+- Vercel 정적 프론트 + same-origin serverless API 프록시 설정 추가
+- 서버 API는 OpenAI key를 클라이언트에 노출하지 않고 frame perception extraction / audio transcription만 담당
+- macOS 우선 capture command, browser preview, Shadow Player demo path 구현
 - fire/earthquake grounded rule matcher, segment engine, voice fallback, evidence drawer 구현
 - live capture frame window에서 local `PerceptionPacket -> Segment -> explanation` 갱신과 snapshot/session log 저장 경로 구현
 - Tauri runtime에 SQLite-backed app/session restore를 추가해 마지막 라이브 분석 요약과 runtime state를 재시작 후 복원 가능하게 정리
 - ScreenCaptureKit audio callback 기반 native preview audio 상태와 macOS TTS/STT + browser/text fallback voice runtime 구현
 - actual clip manual review와 3분 rehearsal 결과를 앱 안에서 기록하고 `data/eval` 로그로 동기화하는 QA workspace 구현
 - safety/privacy guardrail, QA audit, demo runbook/backup mode, runtime restore/export 경로 구현
-- 아직 남은 핵심은 실제 OCR/ASR 모델 연결, live audio의 ASR/Shadow buffer 직결, 실제 clip 기반 rehearsal 축적
+- 아직 남은 핵심은 배포 환경변수 설정 후 실제 HTTPS 화면공유 rehearsal, API 비용/속도 튜닝, 실제 clip 기반 반복 QA 축적
 
 ## 권장 환경
 
@@ -35,7 +40,7 @@ pnpm check-env
 pnpm check-env
 pnpm install
 cp .env.example .env.local
-pnpm dev # 브라우저 셸
+pnpm dev # 웹 셸
 pnpm dev:desktop # Tauri 셸
 ```
 
@@ -48,6 +53,40 @@ cp .env.example .env.local
 ```
 
 `.env.local`에는 실제 비밀키를 넣되, 현재 저장소 기본 경로는 로컬 우선과 mock/demo path를 기본으로 둡니다. `ENABLE_DEMO_BACKUP_MODE=true`가 기본이라 모델 호출이 없어도 시연 경로를 바로 올릴 수 있습니다.
+
+웹 배포에는 Vercel 환경변수로 다음 값이 필요합니다.
+
+```bash
+OPENAI_API_KEY=
+OPENAI_ANALYSIS_MODEL=gpt-5.4-mini
+OPENAI_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+BETA_ACCESS_CODES=judge-demo-1,team-beta-1
+MAX_SESSION_MINUTES=10
+MAX_FRAMES_PER_ANALYSIS=3
+```
+
+`OPENAI_API_KEY`는 서버 함수에서만 읽고, 클라이언트 번들에는 포함하지 않습니다.
+
+## 웹 라우트
+
+- `/`: 실제 사용자용 화면공유 분석
+- `/demo`: API 없이 동작하는 샘플 데모
+- `/qa`: 내부 운영자/검증 워크스페이스
+
+## Vercel 배포
+
+이 저장소는 루트 `vercel.json`을 포함합니다.
+
+```bash
+pnpm install
+pnpm --filter desktop-ui build
+```
+
+Vercel 설정:
+
+- Build command: `pnpm --filter desktop-ui build`
+- Output directory: `apps/desktop-ui/dist`
+- API functions: `api/*.ts`
 
 ## 실행 전 점검
 

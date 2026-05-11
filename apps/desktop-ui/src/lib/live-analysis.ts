@@ -5,7 +5,9 @@ import {
   type GroundedRuleMatch,
 } from '@ansimtrack/llm-orchestrator'
 import {
+  buildPerceptionCacheKey,
   buildPerceptionFoundation,
+  selectFrameSamplingPlan,
   type FrameSamplingPlan,
 } from '@ansimtrack/perception-pipeline'
 import type {
@@ -99,6 +101,62 @@ export function buildLiveAnalysis(input: {
     videoCaption: buildLiveVideoCaption({
       overlayLabels,
       plan: foundation.plan,
+      segment,
+      session: input.session,
+    }),
+  }
+}
+
+export function buildLiveAnalysisFromPacket(input: {
+  packet: PerceptionPacket
+  plan?: FrameSamplingPlan
+  rules: RuleRecord[]
+  session: CaptureSession
+}): LiveAnalysisResult {
+  const segment = buildSegmentFromPerception({
+    packet: input.packet,
+    rules: input.rules,
+  })
+  const ruleMatches = matchGroundedRules({
+    evidence: input.packet,
+    rules: input.rules,
+    segment,
+  })
+  const explanation = buildGroundedExplanation({
+    evidence: input.packet,
+    rules: input.rules,
+    segment,
+  })
+  const overlayLabels = collectOverlayLabels(input.packet)
+  const title = buildLiveSegmentTitle(segment)
+  const phaseLabel = buildLivePhaseLabel(segment)
+  const plan =
+    input.plan ??
+    selectFrameSamplingPlan({
+      asrText: input.packet.asrText,
+      objectLabels: input.packet.objectHints.map((hint) => hint.label),
+      ocrTokens: input.packet.ocrTokens,
+    })
+
+  return {
+    cacheKey: buildPerceptionCacheKey(input.packet),
+    explanation,
+    overlaySummary:
+      overlayLabels.join(', ') || '화면 단서 수집 중, 공식 확인 우선',
+    overlayTargets: overlayLabels.map((label) => ({ label })),
+    packet: input.packet,
+    packetSummary: summarizePacket(input.packet),
+    phaseLabel,
+    plan,
+    ruleMatches,
+    segment: {
+      ...segment,
+      phaseLabel,
+      title,
+    },
+    videoCaption: buildLiveVideoCaption({
+      overlayLabels,
+      plan,
       segment,
       session: input.session,
     }),

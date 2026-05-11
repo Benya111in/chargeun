@@ -1,0 +1,16 @@
+{
+  "buildCommand": "pnpm --filter desktop-ui build",
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": "apps/desktop-ui/dist",
+  "rewrites": [
+    {
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

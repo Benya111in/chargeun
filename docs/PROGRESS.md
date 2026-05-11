@@ -1,5 +1,23 @@
 # PROGRESS
 
+## 2026-05-11
+
+### 완료
+
+- 배포 목표를 macOS 앱이 아니라 웹 링크 기반 베타/심사용 제품으로 재정의하고, `/`를 브라우저 화면공유 중심 사용자 화면으로 전환했다
+- 기존 운영자 검증 워크스페이스는 `/qa`로 이동하고, `/demo`는 API 장애 시에도 동작하는 mp4 scene-stepper 백업 데모로 유지했다
+- Vercel 루트 설정과 `api/health`, `api/analyze-frame-window`, `api/transcribe-audio`, `api/client-event` serverless function 초안을 추가했다
+- 서버 API는 beta code, same-origin check, payload size/type validation, in-memory rate limit을 적용하고 OpenAI key를 서버 환경변수로만 읽도록 구성했다
+- 웹 전용 capture controller, 화면공유 audio recorder, frame-window perception analysis hook을 추가해 Tauri/native command 없이도 브라우저 capture path가 동작하도록 분리했다
+- 클라이언트 분석 흐름은 서버가 반환한 `PerceptionPacket`을 기존 deterministic `Segment -> grounded rule -> explanation -> safety guardrail` 경로에 넣도록 유지했다
+- `.env.example`과 `README.md`에 Vercel/OpenAI/beta access 배포 환경변수와 `/`, `/demo`, `/qa` 라우트 기준을 반영했다
+
+### 다음
+
+1. Vercel preview 환경변수 설정 후 HTTPS 화면공유 + API 실호출 rehearsal
+2. API latency/cost 로그를 기준으로 frame sampling 간격과 rate limit 튜닝
+3. Chrome 실제 YouTube 탭 공유 기준 화재/지진 각 10회 QA pass 기록
+
 ## 2026-04-30
 
 ### 완료
