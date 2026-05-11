@@ -11,6 +11,8 @@
 - 웹 전용 capture controller, 화면공유 audio recorder, frame-window perception analysis hook을 추가해 Tauri/native command 없이도 브라우저 capture path가 동작하도록 분리했다
 - 클라이언트 분석 흐름은 서버가 반환한 `PerceptionPacket`을 기존 deterministic `Segment -> grounded rule -> explanation -> safety guardrail` 경로에 넣도록 유지했다
 - `.env.example`과 `README.md`에 Vercel/OpenAI/beta access 배포 환경변수와 `/`, `/demo`, `/qa` 라우트 기준을 반영했다
+- tester agent와 브라우저/Playwright 검증을 돌려 stale E2E 기대값을 발견했고, `/`, `/demo`, `/qa`, mocked 화면공유 분석 loop를 검증하는 E2E로 교체했다
+- `pnpm web:preview` 로컬 서버를 추가해 정적 앱과 `api/*.ts`를 same-origin으로 함께 띄우고, 로컬에서도 `/api/health` 404 없이 배포 구조를 확인할 수 있게 했다
 
 ### 다음
 

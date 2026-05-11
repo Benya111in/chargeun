@@ -85,6 +85,9 @@ export default async function handler(req: any, res: any) {
 
   try {
     const config = getConfig()
+    const body = await readJsonBody(req)
+    const input = validateAnalyzeBody(body, config.maxFramesPerAnalysis)
+
     if (!config.hasOpenAiKey) {
       sendJson(res, 503, {
         error: 'openai_key_missing',
@@ -92,9 +95,6 @@ export default async function handler(req: any, res: any) {
       })
       return
     }
-
-    const body = await readJsonBody(req)
-    const input = validateAnalyzeBody(body, config.maxFramesPerAnalysis)
 
     if (
       !assertRateLimit({

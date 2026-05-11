@@ -41,6 +41,7 @@ pnpm check-env
 pnpm install
 cp .env.example .env.local
 pnpm dev # 웹 셸
+pnpm build && pnpm web:preview # API 포함 로컬 웹 프리뷰
 pnpm dev:desktop # Tauri 셸
 ```
 

@@ -27,20 +27,22 @@ export default async function handler(req: any, res: any) {
 
   try {
     const config = getConfig()
-    if (!config.hasOpenAiKey) {
-      sendJson(res, 503, {
-        error: 'openai_key_missing',
-        message: '서버에 OpenAI API key가 설정되지 않았습니다.',
-      })
-      return
-    }
-
     const body = await readJsonBody(req)
     const sessionId = sanitizeText(body?.sessionId, 120)
     const durationMs = Math.max(0, Number(body?.durationMs) || 0)
 
     if (!sessionId) {
       throw new ValidationError('session_id_required', 'sessionId is required.')
+    }
+
+    const audio = parseAudioDataUrl(body?.audioDataUrl)
+
+    if (!config.hasOpenAiKey) {
+      sendJson(res, 503, {
+        error: 'openai_key_missing',
+        message: '서버에 OpenAI API key가 설정되지 않았습니다.',
+      })
+      return
     }
 
     if (
@@ -56,7 +58,6 @@ export default async function handler(req: any, res: any) {
       return
     }
 
-    const audio = parseAudioDataUrl(body?.audioDataUrl)
     const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     })
