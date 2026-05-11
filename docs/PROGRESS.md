@@ -17,12 +17,13 @@
 - `/` 학습 홈, `/scenario/:id` 학습자 플레이어, `/teacher` 진행자 화면을 추가하고 기존 화면공유 경로는 `/live-lab` 실험 기능으로 격리했다
 - `docs/WHY_SLOWLEARNER_DISASTER_TRAINING.md`에 짧은 장면, 멈춤, 쉬운말, 행동 카드, teach-back, 교사/보호자 동반이 필요한 이유를 기록했다
 - `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm --filter desktop-ui test:e2e`, `pnpm rules:validate`, `pnpm eval:audit`, `pnpm prompts:validate`, browser preview route check로 학습 MVP 전환을 검증했다
+- 분야별 테스터 에이전트 5개로 학습자 흐름, 접근성, 콘텐츠 안전, live-lab/API, chaos regression을 검수했고, 재현된 문제를 수정했다: 학습자 홈 내부 용어 제거, 쉬운말 큰 설명 분리, 위험한 오답 문구 완화, 정답 후 선택 잠금, teach-back 정답 전 다음 장면 잠금, `/teacher` 공식 근거 확장, `/live-lab` beta code 검증, `/qa` 게이트와 unknown route 처리
 
 ### 다음
 
 1. 느린학습자/보호자/교사 대상 폐쇄형 사용성 검증 설계
 2. 화재/지진 시나리오별 그림 카드와 음성 읽어주기 추가
-3. `/live-lab` 실험 기능의 배포 접근 통제와 비용 제한 검증
+3. `/live-lab` 실험 기능의 Vercel beta code/env 설정과 HTTPS 화면공유 rehearsal
 
 ## 2026-04-30
 

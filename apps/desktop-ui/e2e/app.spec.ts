@@ -15,6 +15,7 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
     ),
   ).toBeVisible()
   await expect(page.getByText('화면 공유 시작')).toHaveCount(0)
+  await expect(page.getByText('화면공유 AI 분석')).toHaveCount(0)
 
   await page.getByRole('link', { name: /화재가 났을 때/ }).click()
   await expect(page).toHaveURL(/\/scenario\/fire-grounded-flow$/)
@@ -32,14 +33,30 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(
     page.getByRole('listitem').filter({ hasText: '문을 닫아요' }),
   ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '다음 장면 보기' }),
+  ).toBeDisabled()
+
+  await page.getByRole('button', { name: '엘리베이터' }).click()
+  await expect(
+    page.getByText('괜찮아요. 엘리베이터보다 계단과 출구를 찾아요.'),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '다음 장면 보기' }),
+  ).toBeDisabled()
 
   await page.getByRole('button', { name: '문을 닫고 나가요' }).click()
   await expect(
     page.getByText('맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.'),
   ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '다음 장면 보기' }),
+  ).toBeEnabled()
+  await expect(page.getByRole('button', { name: '엘리베이터' })).toBeDisabled()
 
   await page.getByRole('button', { name: '왜요?' }).click()
-  await expect(page.getByText('왜요?').nth(1)).toBeVisible()
+  await expect(page.getByRole('button', { name: '이유 닫기' })).toBeVisible()
+  await expect(page.getByText('이유', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '쉬기' }).click()
   await expect(page.getByText('잠깐 쉬어도 괜찮아요.')).toBeVisible()
@@ -96,21 +113,40 @@ test('keeps live screen-share analysis isolated under /live-lab', async ({
   await page.goto('/live-lab')
 
   await expect(page.getByText('안심트랙 Live Lab')).toBeVisible()
+  await expect(page.getByLabel('베타 접근 코드')).toBeVisible()
   await expect(
     page.getByRole('heading', { name: '화면공유 AI 분석을 테스트합니다.' }),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '화면 공유 시작' }),
+  ).toBeDisabled()
+})
+
+test('gates the operator workspace on direct /qa access', async ({ page }) => {
+  await page.goto('/qa')
+
+  await expect(
+    page.getByRole('heading', { name: 'QA 화면은 공개되어 있지 않습니다.' }),
   ).toBeVisible()
 })
 
-test('keeps the operator workspace on /qa only', async ({ page }) => {
-  await page.goto('/qa')
+test('keeps the operator workspace behind the internal QA flag', async ({
+  page,
+}) => {
+  await page.goto('/qa?internal=qa')
 
   await expect(
     page.getByText('4초 Shadow Player로 행동 판단을 붙잡아 줍니다.'),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '현재 모니터 읽기 시작' }),
+  ).toBeVisible()
+})
+
+test('renders a clear not-found state for unknown routes', async ({ page }) => {
+  await page.goto('/does-not-exist')
+
+  await expect(
+    page.getByRole('heading', { name: '연습 화면을 찾지 못했어요.' }),
   ).toBeVisible()
 })

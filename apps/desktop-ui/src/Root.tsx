@@ -8,6 +8,13 @@ const TeacherGuidePage = lazy(() => import('./TeacherGuidePage.tsx'))
 
 export function Root() {
   const normalizedPathname = window.location.pathname.replace(/\/+$/, '') || '/'
+  const isKnownPath =
+    normalizedPathname === '/' ||
+    normalizedPathname === '/demo' ||
+    normalizedPathname === '/teacher' ||
+    normalizedPathname === '/live-lab' ||
+    normalizedPathname === '/qa' ||
+    normalizedPathname.startsWith('/scenario/')
   const Page =
     normalizedPathname === '/demo' ||
     normalizedPathname.startsWith('/scenario/')
@@ -17,8 +24,14 @@ export function Root() {
         : normalizedPathname === '/live-lab'
           ? LiveLabPage
           : normalizedPathname === '/qa'
-            ? QaWorkspacePage
-            : LearningHomePage
+            ? isQaUnlocked()
+              ? QaWorkspacePage
+              : InternalQaGatePage
+            : normalizedPathname === '/'
+              ? LearningHomePage
+              : isKnownPath
+                ? LearningHomePage
+                : NotFoundPage
 
   return (
     <Suspense
@@ -30,5 +43,65 @@ export function Root() {
     >
       <Page />
     </Suspense>
+  )
+}
+
+function isQaUnlocked() {
+  const params = new URLSearchParams(window.location.search)
+
+  if (params.get('internal') === 'qa') {
+    try {
+      window.localStorage.setItem('ansimtrack.internal.qa', 'enabled')
+    } catch {
+      // Ignore storage failures; the current URL still unlocks this session.
+    }
+    return true
+  }
+
+  try {
+    return window.localStorage.getItem('ansimtrack.internal.qa') === 'enabled'
+  } catch {
+    return false
+  }
+}
+
+function InternalQaGatePage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[var(--surface)] px-4 text-[var(--ink)]">
+      <section className="max-w-lg rounded-md border border-[var(--line)] bg-white p-6">
+        <p className="text-sm font-semibold text-[var(--muted)]">내부 전용</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+          QA 화면은 공개되어 있지 않습니다.
+        </h1>
+        <p className="mt-3 text-base leading-7 text-[var(--muted)]">
+          학습자는 연습 홈을 사용해 주세요. 내부 검증이 필요한 팀원은 승인된
+          링크로 접속해야 합니다.
+        </p>
+        <a className="link-button mt-5" href="/">
+          연습 홈으로 가기
+        </a>
+      </section>
+    </main>
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[var(--surface)] px-4 text-[var(--ink)]">
+      <section className="max-w-lg rounded-md border border-[var(--line)] bg-white p-6">
+        <p className="text-sm font-semibold text-[var(--muted)]">
+          찾을 수 없는 주소
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+          연습 화면을 찾지 못했어요.
+        </h1>
+        <p className="mt-3 text-base leading-7 text-[var(--muted)]">
+          홈으로 돌아가서 화재나 지진 연습을 다시 골라 주세요.
+        </p>
+        <a className="link-button mt-5" href="/">
+          연습 홈으로 가기
+        </a>
+      </section>
+    </main>
   )
 }

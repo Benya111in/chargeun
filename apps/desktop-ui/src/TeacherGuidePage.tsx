@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { BookOpenCheck, ShieldAlert } from 'lucide-react'
+import type { RuleRecord } from '@ansimtrack/shared-types'
 
 import { learningScenarios } from './lib/demo-theater-content'
+import { liveRuleCatalog } from './lib/rule-catalog'
 import { cn } from './lib/utils'
 
 export default function TeacherGuidePage() {
@@ -66,8 +68,8 @@ export default function TeacherGuidePage() {
             <div className="rounded-md border border-amber-300 bg-amber-50 p-5 text-amber-950">
               <p className="text-sm font-semibold">진행 원칙</p>
               <p className="mt-2 text-xl font-semibold leading-8">
-                이 화면은 수업과 가정 연습을 위한 보조 도구입니다. 실제 위험하면
-                119·112·주변 어른·현장 안내를 먼저 따르도록 반복해 주세요.
+                이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장
+                안내를 먼저 따르세요.
               </p>
             </div>
 
@@ -85,8 +87,12 @@ export default function TeacherGuidePage() {
                       {segment.label}
                     </h2>
                   </div>
-                  <a className="link-button" href={`/scenario/${scenario.id}`}>
-                    학습자 화면 열기
+                  <a
+                    aria-label={`장면 ${index + 1} ${segment.label} 학습자 화면 열기`}
+                    className="link-button"
+                    href={`/scenario/${scenario.id}`}
+                  >
+                    장면 {index + 1} 학습자 화면 열기
                   </a>
                 </div>
 
@@ -110,10 +116,9 @@ export default function TeacherGuidePage() {
                     {segment.explanation.tracks.report ??
                       '위험하면 119·112 또는 주변 어른에게 바로 알려요.'}
                   </GuideBlock>
-                  <GuideBlock title="공식 근거">
-                    {segment.segment.officialRuleIds.join(', ') ||
-                      '공식 근거 확인 필요'}
-                  </GuideBlock>
+                  <OfficialEvidenceBlock
+                    ruleIds={segment.segment.officialRuleIds}
+                  />
                 </div>
 
                 <div className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
@@ -145,6 +150,52 @@ export default function TeacherGuidePage() {
         </section>
       </div>
     </main>
+  )
+}
+
+function OfficialEvidenceBlock({ ruleIds }: { ruleIds: string[] }) {
+  const rules = ruleIds
+    .map((ruleId) => liveRuleCatalog.find((rule) => rule.rule_id === ruleId))
+    .filter((rule): rule is RuleRecord => Boolean(rule))
+
+  return (
+    <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#596257]">
+        공식 근거
+      </p>
+      {rules.length ? (
+        <div className="mt-3 grid gap-3">
+          {rules.map((rule) => (
+            <div
+              key={rule.rule_id}
+              className="rounded-md border border-[#dfe4da] bg-white p-3"
+            >
+              <p className="text-sm font-semibold text-[#596257]">
+                {rule.rule_id} · {rule.source_title}
+              </p>
+              <p className="mt-2 text-base font-semibold leading-7">
+                {rule.action}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[#596257]">
+                이유: {rule.why}
+              </p>
+              <a
+                className="mt-2 inline-flex text-sm font-semibold underline underline-offset-4"
+                href={rule.source_url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                공식 출처 열기
+              </a>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-base font-semibold leading-7">
+          공식 근거 확인 필요
+        </p>
+      )}
+    </section>
   )
 }
 

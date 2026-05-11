@@ -108,9 +108,7 @@ export default function LearningHomePage() {
         </section>
 
         <footer className="mt-auto border-t border-[#dfe4da] py-4 text-sm text-[#596257]">
-          <a className="underline underline-offset-4" href="/live-lab">
-            실험 기능: 화면공유 AI 분석
-          </a>
+          선생님이나 보호자와 함께 천천히 연습해요.
         </footer>
       </div>
     </main>

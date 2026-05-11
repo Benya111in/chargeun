@@ -285,6 +285,8 @@ function PracticePanel({
   showReason: boolean
   stage: PracticeStage
 }) {
+  const canContinue = selectedAnswer?.correct === true
+
   if (stage === 'rest') {
     return (
       <section className="rounded-md border border-[#dfe4da] bg-white p-6">
@@ -312,10 +314,12 @@ function PracticePanel({
           영상을 보고 멈추면 같이 연습해요.
         </h1>
         <div className="mt-5 flex flex-wrap gap-2">
-          <button className="link-button" onClick={onReplay} type="button">
-            <Play className="size-4" />
-            {stage === 'playback' ? '다시 보기' : '시작하기'}
-          </button>
+          {stage === 'playback' ? (
+            <button className="link-button" onClick={onReplay} type="button">
+              <Play className="size-4" />
+              다시 보기
+            </button>
+          ) : null}
           <button className="link-button" onClick={onRest} type="button">
             <PauseCircle className="size-4" />
             쉬기
@@ -336,7 +340,7 @@ function PracticePanel({
         {segment.learnerPrompt}
       </p>
       <h1 className="mt-3 text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1.08] tracking-tight">
-        {segment.explanation.tracks.easy ?? segment.description}
+        {segment.learnerExplanation}
       </h1>
 
       <div className="mt-6 grid gap-3">
@@ -364,13 +368,25 @@ function PracticePanel({
               key={option.id}
               className={cn(
                 'rounded-md border px-4 py-4 text-left text-lg font-semibold transition',
+                selectedAnswer?.correct &&
+                  selectedAnswerId !== option.id &&
+                  'cursor-not-allowed opacity-55',
                 selectedAnswerId === option.id
                   ? option.correct
                     ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
                     : 'border-amber-500 bg-amber-50 text-amber-950'
                   : 'border-[#dfe4da] bg-white text-[#151713] hover:border-[#151713]/40',
               )}
-              onClick={() => setSelectedAnswerId(option.id)}
+              disabled={
+                selectedAnswer?.correct && selectedAnswerId !== option.id
+              }
+              onClick={() => {
+                if (selectedAnswer?.correct) {
+                  return
+                }
+
+                setSelectedAnswerId(option.id)
+              }}
               type="button"
             >
               {option.label}
@@ -382,12 +398,16 @@ function PracticePanel({
             <CheckCircle2 className="size-5" />
             {selectedAnswer.feedback}
           </p>
-        ) : null}
+        ) : (
+          <p className="mt-3 text-sm font-semibold leading-6 text-[#596257]">
+            하나를 골라 보면 다음 장면으로 갈 수 있어요.
+          </p>
+        )}
       </section>
 
       {showReason ? (
         <div className="mt-5 rounded-md border border-[#dfe4da] bg-white px-4 py-4">
-          <p className="text-sm font-semibold text-[#596257]">왜요?</p>
+          <p className="text-sm font-semibold text-[#596257]">이유</p>
           <p className="mt-2 text-xl font-semibold leading-8">
             {segment.explanation.tracks.reason}
           </p>
@@ -398,16 +418,25 @@ function PracticePanel({
         <button className="link-button" onClick={onReplay} type="button">
           <RotateCcw className="size-4" />이 장면 다시 보기
         </button>
-        <button className="link-button" onClick={onToggleReason} type="button">
+        <button
+          aria-expanded={showReason}
+          className="link-button"
+          onClick={onToggleReason}
+          type="button"
+        >
           <HelpCircle className="size-4" />
-          왜요?
+          {showReason ? '이유 닫기' : '왜요?'}
         </button>
         <button className="link-button" onClick={onRest} type="button">
           <PauseCircle className="size-4" />
           쉬기
         </button>
         <button
-          className="inline-flex items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white"
+          className={cn(
+            'inline-flex items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white',
+            !canContinue && 'cursor-not-allowed opacity-50',
+          )}
+          disabled={!canContinue}
           onClick={onNext}
           type="button"
         >

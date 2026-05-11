@@ -49,6 +49,10 @@ export type TranscribeAudioChunkResult = {
   transcript: string
 }
 
+export type VerifyBetaCodeResult = {
+  ok: boolean
+}
+
 export class WebApiError extends Error {
   readonly code: string
   readonly status: number
@@ -67,6 +71,21 @@ export async function getWebApiHealth(): Promise<WebApiHealth> {
     },
   })
   return parseJsonResponse<WebApiHealth>(response)
+}
+
+export async function verifyBetaCode(
+  betaCode: string,
+): Promise<VerifyBetaCodeResult> {
+  const response = await fetch('/api/verify-beta-code', {
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-beta-code': betaCode,
+    },
+    method: 'POST',
+  })
+
+  return parseJsonResponse<VerifyBetaCodeResult>(response)
 }
 
 export async function analyzeFrameWindow(

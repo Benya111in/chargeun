@@ -8,8 +8,7 @@ export default function handler(req: any, res: any) {
   const config = getConfig()
 
   sendJson(res, 200, {
-    betaAccessConfigured:
-      config.betaCodes.length > 0 || process.env.VERCEL_ENV !== 'production',
+    betaAccessConfigured: config.betaCodes.length > 0,
     hasOpenAiKey: config.hasOpenAiKey,
     maxFramesPerAnalysis: config.maxFramesPerAnalysis,
     maxSessionMinutes: config.maxSessionMinutes,

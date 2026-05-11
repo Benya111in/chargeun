@@ -36,6 +36,7 @@ import { cn, formatClock, formatPercent } from './lib/utils'
 import {
   getWebApiHealth,
   sendClientEvent,
+  verifyBetaCode,
   type WebApiHealth,
 } from './lib/web-analysis-api'
 import {
@@ -97,11 +98,15 @@ function WebAppPage() {
   const [healthMessage, setHealthMessage] = useState(
     '분석 서버 상태를 확인하는 중입니다.',
   )
+  const [betaMessage, setBetaMessage] = useState('')
+  const [betaStatus, setBetaStatus] = useState<
+    'idle' | 'checking' | 'invalid' | 'valid'
+  >('idle')
   const [panicMode, setPanicMode] = useState(false)
   const [requestedTrack, setRequestedTrack] = useState<TrackKey>('easy')
   const [showEvidence, setShowEvidence] = useState(false)
   const capture = useWebCaptureController()
-  const betaReady = betaCode.trim().length > 0
+  const betaReady = betaStatus === 'valid' && betaCode.trim().length > 0
   const desktopReady = isDesktopBrowserForLiveCapture()
   const audio = useWebAudioTranscription({
     betaCode,
@@ -249,10 +254,40 @@ function WebAppPage() {
     ],
   )
 
-  const handleSaveBetaCode = () => {
+  const handleSaveBetaCode = async () => {
     const nextCode = betaInput.trim()
-    setBetaCode(nextCode)
-    saveStoredBetaCode(nextCode)
+
+    if (!nextCode) {
+      setBetaCode('')
+      setBetaStatus('idle')
+      setBetaMessage('')
+      saveStoredBetaCode('')
+      return
+    }
+
+    if (health && !health.betaAccessConfigured) {
+      setBetaCode('')
+      setBetaStatus('invalid')
+      setBetaMessage('서버에 베타 접근 코드가 설정되지 않았습니다.')
+      saveStoredBetaCode('')
+      return
+    }
+
+    setBetaStatus('checking')
+    setBetaMessage('')
+
+    try {
+      await verifyBetaCode(nextCode)
+      setBetaCode(nextCode)
+      setBetaStatus('valid')
+      setBetaMessage('베타 코드가 확인되었습니다.')
+      saveStoredBetaCode(nextCode)
+    } catch {
+      setBetaCode('')
+      setBetaStatus('invalid')
+      setBetaMessage('베타 코드를 확인하지 못했습니다.')
+      saveStoredBetaCode('')
+    }
   }
 
   const handleStartShare = async () => {
@@ -287,7 +322,7 @@ function WebAppPage() {
               {healthMessage}
             </StatusPill>
             <StatusPill tone={betaReady ? 'grounded' : 'review'}>
-              {betaReady ? '베타 코드 연결됨' : '베타 코드 필요'}
+              {betaReady ? '베타 코드 확인됨' : '베타 코드 필요'}
             </StatusPill>
           </div>
         </header>
@@ -313,8 +348,10 @@ function WebAppPage() {
                   <BetaAccessForm
                     betaInput={betaInput}
                     betaReady={betaReady}
+                    message={betaMessage}
                     onChange={setBetaInput}
                     onSubmit={handleSaveBetaCode}
+                    status={betaStatus}
                   />
                   <div className="grid gap-2">
                     <StepLine
@@ -560,14 +597,20 @@ function ActionButton({
 function BetaAccessForm({
   betaInput,
   betaReady,
+  message,
   onChange,
   onSubmit,
+  status,
 }: {
   betaInput: string
   betaReady: boolean
+  message: string
   onChange: (value: string) => void
-  onSubmit: () => void
+  onSubmit: () => void | Promise<void>
+  status: 'idle' | 'checking' | 'invalid' | 'valid'
 }) {
+  const inputId = 'live-lab-beta-code'
+
   return (
     <form
       className="rounded-md border border-[var(--line)] bg-white px-4 py-4"
@@ -576,12 +619,16 @@ function BetaAccessForm({
         onSubmit()
       }}
     >
-      <label className="text-sm font-semibold text-[var(--ink)]">
+      <label
+        className="text-sm font-semibold text-[var(--ink)]"
+        htmlFor={inputId}
+      >
         베타 접근 코드
       </label>
       <div className="mt-2 flex gap-2">
         <input
           className="min-w-0 flex-1 rounded-md border border-[var(--line)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
+          id={inputId}
           onChange={(event) => onChange(event.target.value)}
           placeholder="코드 입력"
           type="password"
@@ -589,15 +636,17 @@ function BetaAccessForm({
         />
         <button
           className="rounded-md border border-[var(--ink)] bg-[var(--ink)] px-3 py-2 text-sm font-medium text-white"
+          disabled={status === 'checking'}
           type="submit"
         >
-          저장
+          {status === 'checking' ? '확인 중' : '확인'}
         </button>
       </div>
       <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
-        {betaReady
-          ? '이 브라우저에만 저장됩니다.'
-          : '코드가 없으면 실험 분석은 사용할 수 없습니다.'}
+        {message ||
+          (betaReady
+            ? '이 브라우저에만 저장됩니다.'
+            : '코드가 확인되어야 실험 분석을 사용할 수 있습니다.')}
       </p>
     </form>
   )

@@ -85,10 +85,14 @@ export function validateBetaAccess(req: any, res: any) {
   const betaCode = getHeader(req, 'x-beta-code')
   const hasConfiguredCodes = config.betaCodes.length > 0
 
-  if (!hasConfiguredCodes && process.env.VERCEL_ENV !== 'production') {
+  if (!hasConfiguredCodes) {
+    sendJson(res, 401, {
+      error: 'beta_code_required',
+      message: '베타 접근 코드가 설정되지 않았습니다.',
+    })
     return {
-      betaCode: betaCode || 'dev-beta',
-      ok: true,
+      betaCode: '',
+      ok: false,
     }
   }
 

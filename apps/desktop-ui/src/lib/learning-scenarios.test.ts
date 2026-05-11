@@ -10,6 +10,8 @@ describe('learningScenarios', () => {
       expect(scenario.segments.length).toBeGreaterThan(0)
 
       for (const segment of scenario.segments) {
+        expect(segment.learnerExplanation).toBeTruthy()
+        expect(segment.learnerExplanation.length).toBeLessThanOrEqual(35)
         expect(segment.learnerPrompt).toBeTruthy()
         expect(segment.actionSteps.length).toBeGreaterThanOrEqual(1)
         expect(segment.actionSteps.length).toBeLessThanOrEqual(3)

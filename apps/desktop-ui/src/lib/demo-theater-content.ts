@@ -28,6 +28,7 @@ export type TheaterSegment = {
   explanation: SegmentExplanation
   id: string
   label: string
+  learnerExplanation: string
   learnerPrompt: string
   packet: PerceptionPacket
   primarySourceTitle: string | null
@@ -62,6 +63,7 @@ type SegmentSeed = {
   endMs: number
   id: string
   label: string
+  learnerExplanation?: string
   learnerPrompt?: string
   packet: PerceptionPacket
   rules: RuleRecord[]
@@ -77,7 +79,7 @@ export const learningScenarios: TheaterShow[] = [
   {
     accentClassName: 'bg-rose-400',
     id: 'fire-grounded-flow',
-    note: '문 닫기 -> 계단 대피 -> 대피공간 전환',
+    note: '문을 닫고, 계단을 찾고, 막히면 도움을 불러요',
     posterSrc: '/demo/fire-grounded-02.jpg',
     segments: [
       createSegment({
@@ -85,8 +87,9 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 7_800,
         id: 'fire-grounded-door-control',
         label: '문을 닫고 나가요',
+        learnerExplanation: '나갈 때는 문을 닫아요.',
         learnerPrompt: '불이 났어요. 연기가 퍼질 수 있어요.',
-        actionSteps: ['문을 닫아요', '몸을 낮춰요', '계단 쪽으로 가요'],
+        actionSteps: ['문을 닫아요', '문을 열어 두지 않아요'],
         checkQuestion: '먼저 무엇을 할까요?',
         answerOptions: [
           {
@@ -99,7 +102,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 엘리베이터보다 계단과 출구를 찾아요.',
             id: 'use-elevator',
-            label: '엘리베이터를 타요',
+            label: '엘리베이터',
           },
         ],
         packet: createPacket({
@@ -133,6 +136,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 16_000,
         id: 'fire-grounded-stairs',
         label: '계단으로 가요',
+        learnerExplanation: '화재 때는 계단을 찾아요.',
         learnerPrompt: '나갈 수 있으면 계단을 찾아요.',
         actionSteps: [
           '비상구를 봐요',
@@ -184,6 +188,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 28_028,
         id: 'fire-grounded-refuge',
         label: '다른 대피공간으로 가요',
+        learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
         learnerPrompt: '문 밖으로 나가기 어려울 수 있어요.',
         actionSteps: [
           '억지로 나가지 않아요',
@@ -202,7 +207,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 연기가 많으면 무리해서 지나가지 않아요.',
             id: 'force-exit',
-            label: '연기 속으로 뛰어가요',
+            label: '연기가 많은 길',
           },
         ],
         packet: createPacket({
@@ -239,7 +244,7 @@ export const learningScenarios: TheaterShow[] = [
   {
     accentClassName: 'bg-sky-400',
     id: 'earthquake-protect-flow',
-    note: 'review -> 책상 아래 보호 -> 방석 머리 보호',
+    note: '흔들릴 때 책상 아래에서 머리를 보호해요',
     posterSrc: '/demo/earthquake-review-02.jpg',
     segments: [
       createSegment({
@@ -247,6 +252,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 14_000,
         id: 'earthquake-review-office-desk',
         label: '책상 아래로 들어가요',
+        learnerExplanation: '흔들릴 때는 책상 아래로 들어가요.',
         learnerPrompt: '땅이 흔들려요. 물건이 떨어질 수 있어요.',
         actionSteps: [
           '책상 아래로 들어가요',
@@ -265,7 +271,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 흔들리는 동안 뛰어나가면 다칠 수 있어요.',
             id: 'run-out',
-            label: '밖으로 뛰어나가요',
+            label: '밖으로 바로 나가기',
           },
         ],
         packet: createPacket({
@@ -299,6 +305,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 22_000,
         id: 'earthquake-review-school-desk',
         label: '학교에서도 책상 아래로 가요',
+        learnerExplanation: '교실에서도 책상 아래로 들어가요.',
         learnerPrompt: '교실에서도 같은 방법을 써요.',
         actionSteps: [
           '책상 아래로 들어가요',
@@ -317,7 +324,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 먼저 뛰지 말고 선생님 안내를 들어요.',
             id: 'run-hall',
-            label: '복도로 뛰어나가요',
+            label: '복도로 바로 나가기',
           },
         ],
         packet: createPacket({
@@ -353,6 +360,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 28_028,
         id: 'earthquake-review-cushion',
         label: '머리를 감싸요',
+        learnerExplanation: '책상이 없으면 머리를 감싸요.',
         learnerPrompt: '책상이 없을 때도 머리를 보호해요.',
         actionSteps: [
           '몸을 낮춰요',
@@ -407,7 +415,7 @@ export const learningScenarios: TheaterShow[] = [
   {
     accentClassName: 'bg-orange-400',
     id: 'fire-visual-flow',
-    note: '무음에서도 장면 단위 grounded 전환 유지',
+    note: '소리가 없어도 표지와 행동을 보고 연습해요',
     posterSrc: '/demo/fire-visual-02.jpg',
     segments: [
       createSegment({
@@ -415,8 +423,9 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 8_000,
         id: 'fire-visual-door-control',
         label: '문을 닫고 나가요',
+        learnerExplanation: '소리가 없어도 문과 계단을 볼 수 있어요.',
         learnerPrompt: '소리가 없어도 장면을 보고 연습해요.',
-        actionSteps: ['문을 닫아요', '계단 방향을 봐요', '어른에게 알려요'],
+        actionSteps: ['문을 닫아요', '계단 방향을 봐요'],
         checkQuestion: '소리가 없어도 먼저 무엇을 볼까요?',
         answerOptions: [
           {
@@ -462,6 +471,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 15_500,
         id: 'fire-visual-stairs',
         label: '계단으로 가요',
+        learnerExplanation: '비상구 표지를 보고 계단을 찾아요.',
         learnerPrompt: '표지와 움직임을 보고 계단을 찾아요.',
         actionSteps: [
           '비상구 표지를 봐요',
@@ -512,6 +522,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 24_023,
         id: 'fire-visual-refuge',
         label: '다른 대피공간으로 가요',
+        learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
         learnerPrompt: '길이 막혔을 때 다른 안전한 곳을 찾아요.',
         actionSteps: [
           '무리해서 지나가지 않아요',
@@ -530,7 +541,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 위험한 길로 억지로 가지 않아요.',
             id: 'visual-force',
-            label: '막힌 길로 가요',
+            label: '막힌 길',
           },
         ],
         packet: createPacket({
@@ -566,7 +577,7 @@ export const learningScenarios: TheaterShow[] = [
   {
     accentClassName: 'bg-teal-400',
     id: 'earthquake-after-flow',
-    note: '출구 확보 -> 가스/전기 확인 -> 신고 전환',
+    note: '흔들림이 멈춘 뒤 어른과 함께 확인해요',
     posterSrc: '/demo/earthquake-after-02.jpg',
     segments: [
       createSegment({
@@ -574,6 +585,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 9_500,
         id: 'earthquake-after-exit',
         label: '문을 열어요',
+        learnerExplanation: '흔들림이 멈추면 나갈 길을 확인해요.',
         learnerPrompt: '흔들림이 멈췄어요. 나갈 길을 확인해요.',
         actionSteps: [
           '천천히 일어나요',
@@ -592,7 +604,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 바로 뛰지 말고 출구와 안내를 확인해요.',
             id: 'run-fast',
-            label: '바로 뛰어나가요',
+            label: '바로 뛰기',
           },
         ],
         packet: createPacket({
@@ -625,6 +637,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 19_500,
         id: 'earthquake-after-gas',
         label: '가스와 전기를 살펴요',
+        learnerExplanation: '가스 냄새가 나면 어른에게 말해요.',
         learnerPrompt: '다친 곳과 위험한 냄새를 확인해요.',
         actionSteps: [
           '가스 냄새를 맡으면 멀리 가요',
@@ -643,7 +656,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 혼자 만지지 말고 어른에게 알려요.',
             id: 'touch-gas',
-            label: '혼자 만져요',
+            label: '가스 밸브',
           },
         ],
         packet: createPacket({
@@ -676,6 +689,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 30_030,
         id: 'earthquake-after-report',
         label: '위험하면 바로 알려요',
+        learnerExplanation: '다친 사람이나 불이 있으면 도움을 불러요.',
         learnerPrompt: '다친 사람이나 불이 있으면 도움을 불러요.',
         actionSteps: [
           '다친 사람이 있는지 봐요',
@@ -780,6 +794,7 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     explanation: safetyView.explanation,
     id: seed.id,
     label: seed.label,
+    learnerExplanation: seed.learnerExplanation ?? seed.description,
     learnerPrompt: seed.learnerPrompt ?? seed.description,
     packet: seed.packet,
     primarySourceTitle: ruleMatches[0]?.rule.source_title ?? null,
