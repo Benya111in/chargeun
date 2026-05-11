@@ -13,12 +13,16 @@
 - `.env.example`과 `README.md`에 Vercel/OpenAI/beta access 배포 환경변수와 `/`, `/demo`, `/qa` 라우트 기준을 반영했다
 - tester agent와 브라우저/Playwright 검증을 돌려 stale E2E 기대값을 발견했고, `/`, `/demo`, `/qa`, mocked 화면공유 분석 loop를 검증하는 E2E로 교체했다
 - `pnpm web:preview` 로컬 서버를 추가해 정적 앱과 `api/*.ts`를 same-origin으로 함께 띄우고, 로컬에서도 `/api/health` 404 없이 배포 구조를 확인할 수 있게 했다
+- 리서치 결과에 따라 기본 제품을 화면공유 AI 분석에서 공식 자료 기반 재난안전 연습 도구로 전환했다
+- `/` 학습 홈, `/scenario/:id` 학습자 플레이어, `/teacher` 진행자 화면을 추가하고 기존 화면공유 경로는 `/live-lab` 실험 기능으로 격리했다
+- `docs/WHY_SLOWLEARNER_DISASTER_TRAINING.md`에 짧은 장면, 멈춤, 쉬운말, 행동 카드, teach-back, 교사/보호자 동반이 필요한 이유를 기록했다
+- `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm --filter desktop-ui test:e2e`, `pnpm rules:validate`, `pnpm eval:audit`, `pnpm prompts:validate`, browser preview route check로 학습 MVP 전환을 검증했다
 
 ### 다음
 
-1. Vercel preview 환경변수 설정 후 HTTPS 화면공유 + API 실호출 rehearsal
-2. API latency/cost 로그를 기준으로 frame sampling 간격과 rate limit 튜닝
-3. Chrome 실제 YouTube 탭 공유 기준 화재/지진 각 10회 QA pass 기록
+1. 느린학습자/보호자/교사 대상 폐쇄형 사용성 검증 설계
+2. 화재/지진 시나리오별 그림 카드와 음성 읽어주기 추가
+3. `/live-lab` 실험 기능의 배포 접근 통제와 비용 제한 검증
 
 ## 2026-04-30
 

@@ -1,5 +1,9 @@
 # KNOWN_ISSUES
 
+- 새 학습 MVP는 실제 느린학습자/보호자/교사 대상 사용성 검증 전이다. 현재는 리서치 기반 제품 방향과 구현된 학습 흐름까지만 갖췄다.
+- 행동 카드는 현재 텍스트 카드 중심이다. 실제 Easy Read 품질을 위해서는 연령과 문해력에 맞는 그림/아이콘 검증이 필요하다.
+- `/teacher`는 진행자 문구와 공식 근거를 보여 주지만, 학습 기록·세션 저장·인쇄 카드 출력은 아직 없다.
+- `/live-lab`는 실험 기능으로 격리됐지만, 배포 시에는 접근 통제와 비용 제한이 필요하다.
 - 웹 배포 path는 추가됐지만, Vercel preview 환경변수와 HTTPS 화면공유 실호출 rehearsal은 아직 실행 전이다.
 - 웹 API rate limit은 현재 serverless instance memory 기반이므로, 장기 공개 배포 전에는 durable KV/Redis 기반으로 바꾸는 것이 맞다.
 - 웹 분석 서버는 raw frame/audio를 저장하지 않지만, OpenAI API로 짧은 frame/audio payload를 전송하므로 베타 사용자 고지와 접근 코드 관리가 필요하다.
@@ -42,5 +46,5 @@
 - `/demo` 발표 화면의 롱클립은 현재 원본에서 수동으로 다시 잘라 넣은 복사본이라, QA fixture window와 발표용 window를 자동으로 동기화하는 파이프라인은 아직 없다.
 - `/demo`는 이제 멀티트랙/grounded 정보를 함께 보여 주지만, 현재 cue timeline은 실제 segment detector 결과가 아니라 영상 길이를 track 수로 균등 분할한 발표용 cue 스케줄이다.
 - `/demo` scene-stepper의 장면 window는 현재 수동으로 정의한 presentation metadata라서, 실제 라이브 segment detector 결과와 자동 동기화되지는 않는다.
-- 사용자용 `/demo`는 의도적으로 grounding 근거, 관찰 신호, 운영자 제어를 숨기므로, QA나 규칙 검증이 필요할 때는 `/` 검증 화면으로 돌아가야 한다.
-- `/` 검증 화면에는 아직 일부 운영자용 영어/내부 용어가 남아 있다. 핵심 동작은 고쳤지만, 최종 사용자 배포 전에는 제품 용어로 한 번 더 정리해야 한다.
+- `/demo`는 발표 호환 경로로 `/scenario/fire-grounded-flow` 학습 플레이어를 연다. grounding 근거, 관찰 신호, 운영자 제어가 필요하면 `/teacher` 또는 `/qa`를 사용해야 한다.
+- `/qa` 검증 화면에는 아직 일부 운영자용 영어/내부 용어가 남아 있다. 기본 학습자 경로에서는 숨겼지만, 내부 QA 배포 전에는 접근 통제와 용어 정리가 더 필요하다.

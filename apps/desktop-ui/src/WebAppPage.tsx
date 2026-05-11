@@ -279,7 +279,7 @@ function WebAppPage() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-md bg-[var(--ink)] px-3 py-1 text-sm font-semibold text-white">
               <ShieldAlert className="size-4" />
-              안심트랙 Live
+              안심트랙 Live Lab
             </span>
             <StatusPill
               tone={health?.status === 'ready' ? 'grounded' : 'review'}
@@ -298,14 +298,14 @@ function WebAppPage() {
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                    웹 베타
+                    실험 기능
                   </p>
                   <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">
-                    화면을 공유하면 위험한 장면을 4초 늦게 다시 설명합니다.
+                    화면공유 AI 분석을 테스트합니다.
                   </h1>
                   <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--muted)]">
-                    공식 재난행동요령과 현재 화면 단서가 함께 맞을 때만 행동을
-                    알려 줍니다. 응급 상황에서는 119와 현장 안내를 우선하세요.
+                    이 화면은 실험실 기능입니다. 실제 학습은 안심트랙 연습
+                    홈에서 검수된 재난안전 장면으로 진행해 주세요.
                   </p>
                 </div>
 
@@ -375,8 +375,8 @@ function WebAppPage() {
                 >
                   근거 보기
                 </ActionButton>
-                <a className="link-button" href="/demo">
-                  샘플로 먼저 보기
+                <a className="link-button" href="/">
+                  연습 홈으로 가기
                 </a>
               </div>
 
@@ -597,7 +597,7 @@ function BetaAccessForm({
       <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
         {betaReady
           ? '이 브라우저에만 저장됩니다.'
-          : '코드가 없으면 샘플 데모만 볼 수 있습니다.'}
+          : '코드가 없으면 실험 분석은 사용할 수 없습니다.'}
       </p>
     </form>
   )

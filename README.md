@@ -1,11 +1,14 @@
-# 안심트랙 Live
+# 안심트랙 연습
 
-경진대회용 웹 우선 재난 영상 Shadow Player입니다. 브라우저 화면공유로 재난안전 영상을 읽고, 4초 지연 Shadow Player 위에서 판단 전환 지점별 멀티트랙 설명을 제공합니다.
+느린학습자가 재난안전 영상을 짧게 멈춰 보고, 쉬운말과 행동 카드로 반복 연습하는 웹 학습 도구입니다. 실시간 화면공유 AI 분석은 기본 제품이 아니라 `/live-lab` 실험 기능으로 분리합니다.
 
 ## 현재 상태
 
-- 웹 루트(`/`)는 브라우저 화면공유 기반 베타 제품 화면으로 전환
-- `/demo`는 API 장애 시에도 동작하는 mp4 scene-stepper 백업 데모로 유지
+- 웹 루트(`/`)는 공식 자료 기반 재난안전 연습 홈으로 전환
+- `/scenario/:id`는 장면 자동 정지, 쉬운말, 행동 카드, teach-back을 제공하는 학습자 플레이어
+- `/demo`는 `/scenario/fire-grounded-flow` 호환 경로로 유지
+- `/teacher`는 교사/보호자 진행자 화면
+- `/live-lab`는 기존 브라우저 화면공유 AI 분석 실험 기능
 - `/qa`는 기존 운영자 검증 워크스페이스, QA fixture, rehearsal log 화면으로 분리
 - Vercel 정적 프론트 + same-origin serverless API 프록시 설정 추가
 - 서버 API는 OpenAI key를 클라이언트에 노출하지 않고 frame perception extraction / audio transcription만 담당
@@ -16,7 +19,7 @@
 - ScreenCaptureKit audio callback 기반 native preview audio 상태와 macOS TTS/STT + browser/text fallback voice runtime 구현
 - actual clip manual review와 3분 rehearsal 결과를 앱 안에서 기록하고 `data/eval` 로그로 동기화하는 QA workspace 구현
 - safety/privacy guardrail, QA audit, demo runbook/backup mode, runtime restore/export 경로 구현
-- 아직 남은 핵심은 배포 환경변수 설정 후 실제 HTTPS 화면공유 rehearsal, API 비용/속도 튜닝, 실제 clip 기반 반복 QA 축적
+- 아직 남은 핵심은 실제 느린학습자/보호자/교사 대상 이해도·불안·반복 기억 검증과 콘텐츠 검수 축적
 
 ## 권장 환경
 
@@ -70,8 +73,11 @@ MAX_FRAMES_PER_ANALYSIS=3
 
 ## 웹 라우트
 
-- `/`: 실제 사용자용 화면공유 분석
-- `/demo`: API 없이 동작하는 샘플 데모
+- `/`: 느린학습자용 재난안전 연습 홈
+- `/scenario/:id`: 시나리오 학습자 플레이어
+- `/demo`: 화재 연습 호환 경로
+- `/teacher`: 교사/보호자 진행자 화면
+- `/live-lab`: 화면공유 AI 분석 실험 기능
 - `/qa`: 내부 운영자/검증 워크스페이스
 
 ## Vercel 배포

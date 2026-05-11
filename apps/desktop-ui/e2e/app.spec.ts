@@ -1,6 +1,76 @@
 import { expect, test } from '@playwright/test'
 
-test('renders the web live landing with beta gating', async ({ page }) => {
+test('renders the learning home and opens a scenario', async ({ page }) => {
+  await page.goto('/')
+
+  await expect(page.getByText('안심트랙 연습')).toBeVisible()
+  await expect(
+    page.getByRole('heading', {
+      name: '재난 영상을 짧게 멈춰 보고, 쉬운말과 카드로 연습해요.',
+    }),
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      '이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장 안내를 먼저 따르세요.',
+    ),
+  ).toBeVisible()
+  await expect(page.getByText('화면 공유 시작')).toHaveCount(0)
+
+  await page.getByRole('link', { name: /화재가 났을 때/ }).click()
+  await expect(page).toHaveURL(/\/scenario\/fire-grounded-flow$/)
+  await expect(
+    page.getByRole('button', { name: '영상 시작하기' }),
+  ).toBeVisible()
+})
+
+test('runs the scenario practice loop', async ({ page }) => {
+  await page.goto('/scenario/fire-grounded-flow')
+
+  await page.getByRole('button', { name: '영상 시작하기' }).click()
+  await expect(page.getByText('지금 할 일')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('지금 할 일')).toBeVisible()
+  await expect(
+    page.getByRole('listitem').filter({ hasText: '문을 닫아요' }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '문을 닫고 나가요' }).click()
+  await expect(
+    page.getByText('맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.'),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '왜요?' }).click()
+  await expect(page.getByText('왜요?').nth(1)).toBeVisible()
+
+  await page.getByRole('button', { name: '쉬기' }).click()
+  await expect(page.getByText('잠깐 쉬어도 괜찮아요.')).toBeVisible()
+})
+
+test('keeps /demo as the fire scenario compatibility route', async ({
+  page,
+}) => {
+  await page.goto('/demo')
+
+  await expect(page.getByText('화재가 났을 때').first()).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '영상 시작하기' }),
+  ).toBeVisible()
+})
+
+test('renders the teacher guide with hidden tracks and official evidence', async ({
+  page,
+}) => {
+  await page.goto('/teacher')
+
+  await expect(page.getByText('선생님/보호자 진행')).toBeVisible()
+  await expect(page.getByText('진행자 설명').first()).toBeVisible()
+  await expect(page.getByText('오해 교정').first()).toBeVisible()
+  await expect(page.getByText('공식 근거').first()).toBeVisible()
+  await expect(page.getByText('KR_FIRE_04')).toBeVisible()
+})
+
+test('keeps live screen-share analysis isolated under /live-lab', async ({
+  page,
+}) => {
   await page.route('**/api/health', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -23,40 +93,14 @@ test('renders the web live landing with beta gating', async ({ page }) => {
     })
   })
 
-  await page.goto('/')
+  await page.goto('/live-lab')
 
-  await expect(page.getByText('안심트랙 Live')).toBeVisible()
+  await expect(page.getByText('안심트랙 Live Lab')).toBeVisible()
   await expect(
-    page.getByRole('heading', {
-      name: '화면을 공유하면 위험한 장면을 4초 늦게 다시 설명합니다.',
-    }),
+    page.getByRole('heading', { name: '화면공유 AI 분석을 테스트합니다.' }),
   ).toBeVisible()
-  await expect(page.getByText('내부 QA')).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: '화면 공유 시작' }),
-  ).toBeDisabled()
-
-  await page.getByPlaceholder('코드 입력').fill('judge-demo')
-  await page.getByRole('button', { name: '저장' }).click()
-
-  await expect(page.getByText('베타 코드 연결됨')).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: '화면 공유 시작' }),
-  ).toBeEnabled()
-  await expect(
-    page.getByRole('link', { name: '샘플로 먼저 보기' }),
-  ).toHaveAttribute('href', '/demo')
-})
-
-test('runs the API-free demo route', async ({ page }) => {
-  await page.goto('/demo')
-
-  await expect(page.getByRole('button', { name: '시작하기' })).toBeVisible()
-  await page.getByRole('button', { name: '시작하기' }).click()
-
-  await expect(page.getByText('문을 닫고 밖으로 나가요.')).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: '화재가 났을 때' }),
   ).toBeVisible()
 })
 
@@ -69,105 +113,4 @@ test('keeps the operator workspace on /qa only', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: '현재 모니터 읽기 시작' }),
   ).toBeVisible()
-})
-
-test('connects mocked screen share frames to grounded live explanation', async ({
-  page,
-}) => {
-  await page.route('**/api/health', async (route) => {
-    await route.fulfill({
-      contentType: 'application/json',
-      json: {
-        betaAccessConfigured: true,
-        hasOpenAiKey: true,
-        maxFramesPerAnalysis: 3,
-        maxSessionMinutes: 10,
-        models: {
-          analysis: 'gpt-5.4-mini',
-          transcription: 'gpt-4o-mini-transcribe',
-        },
-        rateLimit: {
-          analyzePerMinute: 18,
-          transcribePerMinute: 10,
-        },
-        status: 'ready',
-        version: 'e2e',
-      },
-    })
-  })
-  await page.route('**/api/analyze-frame-window', async (route) => {
-    const body = route.request().postDataJSON() as {
-      sessionId: string
-      tEndMs: number
-      tStartMs: number
-    }
-
-    await route.fulfill({
-      contentType: 'application/json',
-      json: {
-        packet: {
-          asrText: '연기가 보이면 비상구 표지를 따라 계단으로 이동하세요.',
-          keyframes: ['web-frame://e2e/1/0'],
-          objectHints: [
-            {
-              bbox: [0.12, 0.16, 0.24, 0.2],
-              conf: 0.86,
-              label: '비상구',
-            },
-            {
-              bbox: [0.34, 0.4, 0.28, 0.24],
-              conf: 0.84,
-              label: '연기',
-            },
-          ],
-          ocrTokens: ['화재', '연기', '비상구', '계단', '대피'],
-          sessionId: body.sessionId,
-          tEndMs: body.tEndMs,
-          tStartMs: body.tStartMs,
-          uiElements: [],
-        },
-        source: 'e2e-mock',
-      },
-    })
-  })
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'mediaDevices', {
-      configurable: true,
-      value: {
-        getDisplayMedia: async () => {
-          const canvas = document.createElement('canvas')
-          canvas.width = 640
-          canvas.height = 360
-          const context = canvas.getContext('2d')!
-          let frame = 0
-
-          const drawFrame = () => {
-            frame += 1
-            context.fillStyle = frame % 2 === 0 ? '#1f2937' : '#111827'
-            context.fillRect(0, 0, canvas.width, canvas.height)
-            context.fillStyle = '#f8fafc'
-            context.font = '32px sans-serif'
-            context.fillText('화재 연기 비상구 계단', 48, 96)
-            context.fillStyle = '#f97316'
-            context.fillRect(44, 132, 180, 88)
-          }
-
-          drawFrame()
-          window.setInterval(drawFrame, 250)
-          return canvas.captureStream(30)
-        },
-      },
-    })
-  })
-
-  await page.goto('/')
-  await page.getByPlaceholder('코드 입력').fill('judge-demo')
-  await page.getByRole('button', { name: '저장' }).click()
-  await page.getByRole('button', { name: '화면 공유 시작' }).click()
-
-  await expect(page.getByText('현재 장면의 근거를 읽었습니다.')).toBeVisible({
-    timeout: 12_000,
-  })
-  await expect(page.getByText('비상구', { exact: true })).toBeVisible()
-  await expect(page.getByText('라이브 세그먼트')).toBeVisible()
 })

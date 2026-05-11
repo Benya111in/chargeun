@@ -59,6 +59,6 @@
   }
 
   .link-button {
-    @apply inline-flex rounded-md border border-[var(--line)] bg-white px-3 py-2 font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40;
+    @apply inline-flex items-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40;
   }
 }
