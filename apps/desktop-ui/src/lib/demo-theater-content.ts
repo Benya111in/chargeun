@@ -1307,64 +1307,6 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '엘리베이터 안에서는 도움을 기다려요.',
-        endMs: 185_600,
-        id: 'earthquake-full-elevator-wait',
-        label: '엘리베이터 안에서는 기다려요',
-        learnerExplanation: '도움 버튼을 누르고 기다려요.',
-        learnerPrompt: '엘리베이터 안에 있을 수 있어요.',
-        actionSteps: ['도움 버튼을 눌러요', '문에서 떨어져요', '기다려요'],
-        narration: [
-          {
-            endMs: 185_600,
-            source: 'audio',
-            startMs: 175_400,
-            text: '엘리베이터를 타고 있다면 멈췄다고 해서 서둘러 출구로 뛰어가는 것은 위험하므로 안내에 따라 안전하게 행동합니다.',
-          },
-        ],
-        teachBack: createTeachBack({
-          contrast: {
-            feedback: '괜찮아요. 문을 억지로 열려고 하지 않아요.',
-            id: 'force-door',
-            label: '문 억지로 열기',
-          },
-          correct: {
-            feedback: '맞아요. 도움 버튼을 누르고 기다려요.',
-            id: 'help-button',
-            label: '도움 버튼',
-          },
-          kind: 'signal',
-          prompt: '엘리베이터가 멈추면 무엇을 누를까요?',
-          ruleIds: ['KR_EQ_15'],
-        }),
-        packet: createPacket({
-          asrText:
-            '엘리베이터를 타고 있다면 멈췄다고 해서 서둘러 출구로 뛰어가지 말고 안내에 따라 안전하게 행동합니다.',
-          objectHints: ['엘리베이터', '출구', '도움 버튼', '대기'],
-          ocrTokens: ['엘리베이터', '안전하게 행동'],
-          sessionId: 'demo-earthquake-full-elevator-wait',
-          startMs: 175_400,
-          endMs: 185_600,
-          uiElements: ['엘리베이터 안'],
-        }),
-        rules: earthquakeRuleCatalog,
-        segmentOverrides: {
-          confidence: 0.92,
-          hazard: 'earthquake',
-          officialRuleIds: ['KR_EQ_15'],
-          phase: 'after_shaking',
-        },
-        startMs: 175_400,
-        teacherGuide: {
-          correction:
-            '엘리베이터 장면은 뛰어나가기보다 도움 버튼, 인터폰, 안내 따르기로 정리합니다.',
-          observe: '학습자가 문을 억지로 열기보다 도움을 기다리는지 봅니다.',
-          prompt: '엘리베이터가 멈추면 문을 억지로 열까요?',
-          script:
-            '엘리베이터 안에서 지진 뒤 멈췄을 때 도움을 부르고 기다리는 장면입니다.',
-        },
-      }),
-      createSegment({
         description: '다친 사람이 있으면 119에 알려요.',
         endMs: 214_400,
         id: 'earthquake-full-after-report',

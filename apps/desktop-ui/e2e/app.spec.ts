@@ -235,7 +235,7 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await expect(page.getByText('이제 눌러요')).toBeVisible()
 
   await page.getByRole('button', { name: '7번째 장면', exact: true }).click()
-  await expect(page.getByText('7 / 17')).toBeVisible()
+  await expect(page.getByText('7 / 16')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
@@ -252,8 +252,8 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   ).toHaveCount(2)
   await expect(page.getByText('넓어서 건물에서 떨어져요')).toHaveCount(2)
 
-  await page.getByRole('button', { name: '17번째 장면' }).click()
-  await expect(page.getByText('17 / 17')).toBeVisible()
+  await page.getByRole('button', { name: '16번째 장면' }).click()
+  await expect(page.getByText('16 / 16')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
