@@ -76,6 +76,10 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(page.getByText('현관문을 닫고 계단으로 나가요.')).toBeVisible()
   await expect(page.getByText('우리 집에서 불이 났어요.').first()).toBeVisible()
   await expect(page.getByText('계단으로 나가요').first()).toBeVisible()
+  await expect(page.getByText('하지 말아요')).toBeVisible()
+  await expect(page.getByText('문 열어 두지 않아요.')).toBeVisible()
+  await expect(page.getByText('답을 골라요')).toBeVisible()
+  await expect(page.locator('.question-attention')).toHaveCount(1)
   await expect(
     page.getByText(
       '우리 집 화재로 대피할 때는 연기와 화염을 차단하기 위해 반드시 현관문을 닫고 계단을 이용해 외부로 빠져나와야 합니다.',
@@ -89,6 +93,8 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(
     page.getByText('괜찮아요. 문을 닫는 장면을 다시 봐요.'),
   ).toBeVisible()
+  await expect(page.getByText('답을 골랐어요')).toBeVisible()
+  await expect(page.locator('.question-attention')).toHaveCount(0)
   await expect(page.getByText('이유', { exact: true })).toBeVisible()
   await expect(page.getByText('문을 닫으면 연기가 덜 퍼져요.')).toBeVisible()
   await expect(

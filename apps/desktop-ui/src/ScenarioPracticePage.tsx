@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
+  TriangleAlert,
   CheckCircle2,
   HelpCircle,
   PauseCircle,
@@ -306,10 +307,10 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 
         <SafetyBanner notice={segment.safetyNotice} />
 
-        <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(380px,0.52fr)]">
+        <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,0.98fr)_minmax(440px,0.58fr)]">
           <section className="flex min-w-0 flex-col gap-3">
             <section className="overflow-hidden rounded-md border border-[#dfe4da] bg-black">
-              <div className="relative h-[clamp(300px,42vh,520px)] bg-black">
+              <div className="relative h-[clamp(280px,39vh,520px)] bg-black">
                 <video
                   key={scenario.id}
                   ref={videoRef}
@@ -500,6 +501,7 @@ function PracticePanel({
   const isReviewSegment = isFinalSegment && reviewGroups.length > 0
   const canAskQuestion = !isIntroSegment && learnerActionCards.length > 0
   const canContinue = canAskQuestion ? selectedAnswer?.correct === true : true
+  const learnerDoNotText = canAskQuestion ? getLearnerDoNotText(segment) : null
 
   if (stage === 'rest') {
     return (
@@ -575,7 +577,7 @@ function PracticePanel({
           <>
             <h2 className="text-lg font-semibold">지금 할 일</h2>
             {canAskQuestion ? (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-3">
                 {learnerActionCards.map((card) => (
                   <div
                     key={`${card.order}-${card.label}`}
@@ -592,6 +594,9 @@ function PracticePanel({
                     </p>
                   </div>
                 ))}
+                {learnerDoNotText ? (
+                  <DoNotCard text={learnerDoNotText} />
+                ) : null}
               </div>
             ) : (
               <p className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4 text-xl font-semibold leading-8 text-[#596257]">
@@ -603,14 +608,33 @@ function PracticePanel({
       </div>
 
       {canAskQuestion ? (
-        <section className="mt-3 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-2">
-          <h2 className="text-lg font-semibold">{segment.checkQuestion}</h2>
+        <section
+          className={cn(
+            'mt-2 rounded-md border bg-[#f7f8f4] p-1.5 transition',
+            selectedAnswer
+              ? 'border-[#dfe4da]'
+              : 'question-attention border-emerald-500',
+          )}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">{segment.checkQuestion}</h2>
+            <span
+              className={cn(
+                'shrink-0 rounded-md px-2 py-1 text-xs font-semibold',
+                selectedAnswer
+                  ? 'bg-[#e9eee9] text-[#596257]'
+                  : 'bg-emerald-700 text-white',
+              )}
+            >
+              {selectedAnswer ? '답을 골랐어요' : '답을 골라요'}
+            </span>
+          </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {segment.answerOptions.map((option) => (
               <button
                 key={option.id}
                 className={cn(
-                  'rounded-md border px-3 py-2 text-left text-base font-semibold transition',
+                  'rounded-md border px-3 py-1.5 text-left text-base font-semibold transition',
                   selectedAnswer?.correct &&
                     selectedAnswerId !== option.id &&
                     'cursor-not-allowed opacity-55',
@@ -637,7 +661,7 @@ function PracticePanel({
             ))}
           </div>
           {selectedAnswer ? (
-            <div className="mt-3 grid gap-2">
+            <div className="mt-2 grid gap-1.5">
               <p className="flex items-center gap-2 text-sm font-semibold leading-6">
                 {selectedAnswer.correct ? (
                   <CheckCircle2 className="size-5" />
@@ -646,7 +670,7 @@ function PracticePanel({
                 )}
                 {selectedAnswer.feedback}
               </p>
-              <div className="rounded-md border border-[#dfe4da] bg-white px-3 py-1.5">
+              <div className="rounded-md border border-[#dfe4da] bg-white px-3 py-1">
                 <p className="text-sm font-semibold leading-6">
                   <span className="mr-2 text-[#596257]">이유</span>
                   {getLearnerReasonText(segment.explanation.tracks.reason)}
@@ -661,16 +685,16 @@ function PracticePanel({
         </section>
       ) : null}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-2">
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-sm font-medium text-[#151713]"
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
           onClick={onReplay}
           type="button"
         >
           <RotateCcw className="size-4" />이 장면 다시 보기
         </button>
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-sm font-medium text-[#151713]"
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
           onClick={onRest}
           type="button"
         >
@@ -686,7 +710,7 @@ function PracticePanel({
         ) : (
           <button
             className={cn(
-              'inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white',
+              'inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white',
               !canContinue && 'cursor-not-allowed opacity-50',
             )}
             disabled={!canContinue}
@@ -698,6 +722,18 @@ function PracticePanel({
         )}
       </div>
     </section>
+  )
+}
+
+function DoNotCard({ text }: { text: string }) {
+  return (
+    <div className="rounded-md border border-rose-400 bg-rose-50 px-3 py-2 text-rose-950">
+      <div className="flex items-center gap-1.5 text-xs font-semibold">
+        <TriangleAlert className="size-4 shrink-0" />
+        하지 말아요
+      </div>
+      <p className="mt-1 text-base font-semibold leading-6">{text}</p>
+    </div>
   )
 }
 
@@ -880,6 +916,50 @@ function SafetyBanner({ notice }: { notice: string }) {
       </p>
     </section>
   )
+}
+
+function getLearnerDoNotText(segment: TheaterSegment) {
+  const directWarning =
+    segment.structuredExplanation.tracks.doNot?.text ??
+    segment.explanation.doNot
+  const suppressedWarning =
+    segment.structuredExplanation.suppressedCandidates.find(
+      (candidate) => candidate.category === 'unsafe_action',
+    )?.candidate
+  const warning = directWarning ?? suppressedWarning
+
+  if (!warning) {
+    return null
+  }
+
+  return simplifyLearnerWarning(warning)
+}
+
+function simplifyLearnerWarning(warning: string) {
+  return warning
+    .replace('문을 열어 둔 채 뛰어나오지 않습니다.', '문 열어 두지 않아요.')
+    .replace('엘리베이터를 타지 않습니다.', '엘리베이터 타지 않아요.')
+    .replace(
+      '흔들리는 동안 서둘러 밖으로 뛰어나가지 않습니다.',
+      '흔들릴 때 바로 밖으로 뛰어나가지 않아요.',
+    )
+    .replace(
+      '유리창이나 무거운 가구 근처로 이동하지 않습니다.',
+      '유리창이나 무거운 가구 가까이 가지 않아요.',
+    )
+    .replace(
+      '흔들림이 끝나자마자 무작정 이동하지 않습니다.',
+      '흔들림이 멈춰도 바로 뛰어나가지 않아요.',
+    )
+    .replace('엘리베이터를 계속 사용하지 않습니다.', '엘리베이터 타지 않아요.')
+    .replace(
+      '차량으로 서둘러 이동하지 않습니다.',
+      '차를 타고 급하게 가지 않아요.',
+    )
+    .replace('직접 조작하지 않습니다.', '혼자 만지지 않아요.')
+    .replace(/하지 않습니다\./gu, '하지 않아요.')
+    .replace(/않습니다\./gu, '않아요.')
+    .replace(/금지$/u, '하지 않아요.')
 }
 
 function getLearnerReasonText(reason: string) {

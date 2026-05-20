@@ -66,4 +66,70 @@
   .link-button {
     @apply inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40;
   }
+
+  .question-attention {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(120deg, #fffdf4 0%, #ecfdf5 48%, #e0f2fe 100%);
+    background-size: 220% 220%;
+    animation: question-attention-pulse 2.4s ease-in-out infinite;
+    box-shadow:
+      0 0 0 3px rgba(16, 185, 129, 0.14),
+      0 12px 30px rgba(16, 185, 129, 0.12);
+  }
+
+  .question-attention::before {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.62) 46%,
+      transparent 72%
+    );
+    transform: translateX(-120%);
+    animation: question-attention-sweep 2.4s ease-in-out infinite;
+  }
+
+  .question-attention > * {
+    position: relative;
+  }
+}
+
+@keyframes question-attention-pulse {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    box-shadow:
+      0 0 0 3px rgba(16, 185, 129, 0.12),
+      0 12px 28px rgba(16, 185, 129, 0.1);
+  }
+
+  50% {
+    background-position: 100% 50%;
+    box-shadow:
+      0 0 0 5px rgba(16, 185, 129, 0.24),
+      0 18px 38px rgba(16, 185, 129, 0.18);
+  }
+}
+
+@keyframes question-attention-sweep {
+  0%,
+  26% {
+    transform: translateX(-120%);
+  }
+
+  64%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question-attention,
+  .question-attention::before {
+    animation: none;
+  }
 }
