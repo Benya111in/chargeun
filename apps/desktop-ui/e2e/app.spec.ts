@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 test('renders the learning home and opens a scenario', async ({ page }) => {
   await page.goto('/')
@@ -122,6 +122,33 @@ test('keeps live screen-share analysis isolated under /live-lab', async ({
   ).toBeDisabled()
 })
 
+test('runs live-lab screen share with a synthetic browser stream', async ({
+  page,
+}) => {
+  await installSyntheticScreenShare(page)
+  await mockLiveLabApis(page)
+
+  await page.goto('/live-lab')
+
+  await expect(page.getByText('분석 서버 준비됨 · gpt-5.4-mini')).toBeVisible()
+  await page.getByLabel('베타 접근 코드').fill('live')
+  await page.getByRole('button', { name: '확인' }).click()
+  await expect(page.getByText('베타 코드가 확인되었습니다.')).toBeVisible()
+
+  await page.getByRole('button', { name: '화면 공유 시작' }).click()
+  await expect(page.getByText(/화면 공유가 시작되었습니다/)).toBeVisible()
+  await expect(page.getByAltText('Shadow replay frame')).toBeVisible({
+    timeout: 8_000,
+  })
+  await expect(page.getByText('Shadow Replay')).toBeVisible()
+  await expect(page.getByText('현재 장면의 근거를 읽었습니다.')).toBeVisible({
+    timeout: 14_000,
+  })
+  await expect(
+    page.getByText('화재 대응 판단을 읽는 라이브 장면'),
+  ).toBeVisible()
+})
+
 test('gates the operator workspace on direct /qa access', async ({ page }) => {
   await page.goto('/qa')
 
@@ -150,3 +177,136 @@ test('renders a clear not-found state for unknown routes', async ({ page }) => {
     page.getByRole('heading', { name: '연습 화면을 찾지 못했어요.' }),
   ).toBeVisible()
 })
+
+async function installSyntheticScreenShare(page: Page) {
+  await page.addInitScript(() => {
+    const makeStream = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 960
+      canvas.height = 540
+      const context = canvas.getContext('2d')
+      let frame = 0
+
+      const paint = () => {
+        if (!context) {
+          return
+        }
+
+        frame += 1
+        context.fillStyle = frame % 2 === 0 ? '#201217' : '#111827'
+        context.fillRect(0, 0, canvas.width, canvas.height)
+        context.fillStyle = '#e11d48'
+        context.fillRect(94, 120, 280, 220)
+        context.fillStyle = '#f8fafc'
+        context.font = '52px sans-serif'
+        context.fillText('화재 대피 연습', 430, 190)
+        context.font = '34px sans-serif'
+        context.fillText('출입문을 닫고 계단으로 나가요', 430, 260)
+      }
+
+      paint()
+      const intervalId = window.setInterval(paint, 250)
+      const stream = canvas.captureStream(4)
+      const [videoTrack] = stream.getVideoTracks()
+
+      try {
+        Object.defineProperty(videoTrack, 'label', {
+          configurable: true,
+          value: '합성 화면공유',
+        })
+      } catch {
+        // Browser implementations differ on whether MediaStreamTrack.label is configurable.
+      }
+
+      videoTrack.addEventListener(
+        'ended',
+        () => window.clearInterval(intervalId),
+        { once: true },
+      )
+
+      return stream
+    }
+
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        ...(navigator.mediaDevices ?? {}),
+        getDisplayMedia: async () => makeStream(),
+      },
+    })
+  })
+}
+
+async function mockLiveLabApis(page: Page) {
+  await page.route('**/api/health', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      json: {
+        betaAccessConfigured: true,
+        hasOpenAiKey: true,
+        maxFramesPerAnalysis: 3,
+        maxSessionMinutes: 10,
+        models: {
+          analysis: 'gpt-5.4-mini',
+          transcription: 'gpt-4o-mini-transcribe',
+        },
+        rateLimit: {
+          analyzePerMinute: 18,
+          transcribePerMinute: 10,
+        },
+        status: 'ready',
+        version: 'e2e',
+      },
+    })
+  })
+  await page.route('**/api/verify-beta-code', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      json: { ok: true },
+    })
+  })
+  await page.route('**/api/analyze-frame-window', async (route) => {
+    const body = route.request().postDataJSON() as {
+      frames?: Array<{ imageRef: string; tsMs: number }>
+      sessionId?: string
+      tEndMs?: number
+      tStartMs?: number
+    }
+
+    await route.fulfill({
+      contentType: 'application/json',
+      json: {
+        packet: {
+          asrText: '',
+          keyframes: (body.frames ?? []).map((frame) => frame.imageRef),
+          objectHints: [
+            { bbox: [0.1, 0.18, 0.28, 0.38], conf: 0.86, label: '연기' },
+            { bbox: [0.58, 0.36, 0.18, 0.24], conf: 0.8, label: '출입문' },
+          ],
+          ocrTokens: ['화재', '출입문'],
+          sessionId: body.sessionId ?? 'synthetic-session',
+          tEndMs: body.tEndMs ?? 4_000,
+          tStartMs: body.tStartMs ?? 0,
+          uiElements: [],
+        },
+        source: 'mock-openai',
+      },
+    })
+  })
+  await page.route('**/api/transcribe-audio', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      json: {
+        durationMs: 0,
+        source: 'no-audio',
+        transcript: '',
+      },
+    })
+  })
+  await page.route('**/api/client-event', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      json: { ok: true },
+    })
+  })
+}

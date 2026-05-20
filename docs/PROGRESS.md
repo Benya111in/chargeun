@@ -1,5 +1,24 @@
 # PROGRESS
 
+## 2026-05-20
+
+### 완료
+
+- `/live-lab` 화면공유 직후 흰 화면으로 보일 수 있는 live sampler 경로를 점검하고, browser frame timestamp를 epoch 시간이 아니라 세션 시작 후 경과 시간으로 정규화했다
+- canvas draw/toDataURL 샘플링 예외가 발생해도 앱 전체 렌더링을 깨지 않도록 sampler 내부에서 1회 경고 후 해당 frame만 건너뛰게 했다
+- 실제 사용자 화면을 외부로 보내지 않는 합성 `getDisplayMedia` E2E를 추가해, beta code 확인 -> 화면공유 시작 -> Shadow replay frame 표시 -> mocked perception 분석 반영 흐름을 회귀 테스트로 고정했다
+
+### 검증
+
+- `pnpm --filter desktop-ui test`
+- `pnpm --filter desktop-ui typecheck`
+- `pnpm --filter desktop-ui test:e2e`
+
+### 다음
+
+1. 민감정보가 없는 테스트 탭으로 실제 Chrome 화면공유 + OpenAI perception 호출을 수동 rehearsal
+2. `/live-lab`이 실제 API 지연/오류 시 마지막 안정 설명을 유지하는지 장시간 확인
+
 ## 2026-05-11
 
 ### 완료

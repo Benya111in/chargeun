@@ -30,6 +30,8 @@ export function useBrowserFrameSampler(input: {
 
     let intervalId: number | null = null
     let isDisposed = false
+    let samplingWarningLogged = false
+    const sessionStartMs = performance.now()
 
     video.autoplay = true
     video.muted = true
@@ -56,14 +58,27 @@ export function useBrowserFrameSampler(input: {
 
         canvas.width = width
         canvas.height = height
-        context.drawImage(video, 0, 0, width, height)
+
+        let frameRef: string
+
+        try {
+          context.drawImage(video, 0, 0, width, height)
+          frameRef = canvas.toDataURL('image/jpeg', 0.62)
+        } catch (error) {
+          if (!samplingWarningLogged) {
+            samplingWarningLogged = true
+            console.warn('Browser frame sampling failed.', error)
+          }
+
+          return
+        }
 
         onFrame(
           createBrowserFrameSample({
-            frameRef: canvas.toDataURL('image/jpeg', 0.62),
+            frameRef,
             height,
             sessionId: session.id,
-            tsMs: Date.now(),
+            tsMs: Math.round(performance.now() - sessionStartMs),
             width,
           }),
         )

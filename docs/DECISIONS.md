@@ -1,5 +1,12 @@
 # DECISIONS
 
+## 2026-05-20
+
+### D-057 browser live frame clock은 세션 기준으로 정규화한다
+
+- 이유: 브라우저 화면공유 sample에 `Date.now()` epoch timestamp가 들어가면 Shadow buffer marker, frame window, perception window가 같은 시간축을 공유하지 못한다.
+- 영향: browser sampler는 `performance.now()` 기준 세션 경과 시간을 `tsMs`로 기록한다. canvas 샘플링 실패는 live-lab 전체 렌더링 실패가 아니라 해당 frame drop으로 처리하고, 합성 화면공유 E2E가 이 경로를 계속 검증한다.
+
 ## 2026-04-14
 
 ### D-001 macOS 단일 경로 우선
