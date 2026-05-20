@@ -2,6 +2,7 @@ import {
   segmentExplanationSchema,
   structuredLearningExplanationSchema,
   type LearningTeachBack,
+  type OfficialSourceChunk,
   type PerceptionPacket,
   type RuleRecord,
   type Segment,
@@ -11,6 +12,10 @@ import {
   type VoiceIntent,
   type VoiceReply,
 } from '@ansimtrack/shared-types'
+
+import { retrieveOfficialSources } from './official-rag'
+
+export { retrieveOfficialSources } from './official-rag'
 
 const lowConfidenceThreshold = 0.72
 const defaultRuleMatchLimit = 3
@@ -99,6 +104,7 @@ export type BuildStructuredLearningExplanationInput = {
   rules: RuleRecord[]
   segment: Segment
   sourceId?: string
+  sourceChunks?: OfficialSourceChunk[]
   teachBack?: LearningTeachBack
   teacherGuide?: {
     correctionHint?: string
@@ -225,6 +231,8 @@ export const buildStructuredLearningExplanation = (
     evidence: buildEvidenceBundle({
       packet: input.evidence,
       ruleMatches,
+      sourceChunks: input.sourceChunks,
+      segment: input.segment,
     }),
     suppressedCandidates,
     validation: {
@@ -387,6 +395,8 @@ function getLearningSegmentStatus(input: {
 function buildEvidenceBundle(input: {
   packet: PerceptionPacket
   ruleMatches: GroundedRuleMatch[]
+  segment: Segment
+  sourceChunks?: OfficialSourceChunk[]
 }): StructuredLearningExplanation['evidence'] {
   const basedOn: Array<'visual' | 'ocr' | 'asr' | 'rule'> = []
 
@@ -405,6 +415,20 @@ function buildEvidenceBundle(input: {
   if (input.ruleMatches.length > 0) {
     basedOn.push('rule')
   }
+
+  const retrieval = input.sourceChunks?.length
+    ? retrieveOfficialSources(input.sourceChunks, {
+        hazard: input.segment.hazard,
+        phase: input.segment.phase,
+        queryText: [
+          input.packet.asrText,
+          ...input.packet.ocrTokens,
+          ...input.packet.objectHints.map((hint) => hint.label),
+          ...input.packet.uiElements.map((element) => element.label),
+        ].join(' '),
+        ruleIds: input.ruleMatches.map((match) => match.rule.rule_id),
+      })
+    : { matches: [] }
 
   return {
     visualEvidence: input.packet.objectHints.map((hint) => ({
@@ -434,12 +458,32 @@ function buildEvidenceBundle(input: {
           },
         ]
       : [],
-    ruleEvidence: input.ruleMatches.map((match) => ({
-      matchedText: match.rule.action,
-      ruleId: match.rule.rule_id,
-      sourceName: match.rule.source_title,
-      title: match.rule.phase,
-    })),
+    ruleEvidence: input.ruleMatches.map((match) => {
+      const sourceMatch =
+        retrieval.matches.find((item) =>
+          item.chunk.ruleIds.includes(match.rule.rule_id),
+        ) ?? null
+      const fallbackChunk =
+        sourceMatch?.chunk ??
+        input.sourceChunks?.find(
+          (chunk) =>
+            chunk.reviewStatus === 'approved' &&
+            chunk.hazard === input.segment.hazard &&
+            chunk.ruleIds.includes(match.rule.rule_id),
+        )
+
+      return {
+        easyText: fallbackChunk?.easyKo,
+        matchedText: match.rule.action,
+        retrievalScore: sourceMatch?.score,
+        ruleId: match.rule.rule_id,
+        sourceChunkId: fallbackChunk?.chunkId,
+        sourceHeading: fallbackChunk?.heading,
+        sourceName: match.rule.source_title,
+        sourceUrl: fallbackChunk?.canonicalUrl ?? match.rule.source_url,
+        title: match.rule.phase,
+      }
+    }),
     modelInference:
       input.ruleMatches.length > 0 && basedOn.length > 0
         ? [

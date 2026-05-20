@@ -1,0 +1,58 @@
+[
+  {
+    "sourceId": "safetv-fire-apartment-2739",
+    "kind": "video",
+    "title": "[사회재난] 아파트 화재 시 이렇게 행동합시다",
+    "agency": "행정안전부",
+    "publisher": "안전한TV",
+    "canonicalUrl": "https://www.safetv.go.kr/base/video/view?idx=2739&menuLevel=2&menuNo=2&playlistManagementIdx=&searchCategory=2",
+    "licenseLabel": "공공누리 출처표시-상업적이용금지-변경금지",
+    "rightsNotes": "영상 원본은 tracked RAG 데이터에 저장하지 않고, 기관 사용과 재배포는 안전한TV 고지와 문의 절차를 따른다.",
+    "rawStoragePolicy": "local_manual_only",
+    "hazards": ["fire"],
+    "retrievedAt": "2026-05-20",
+    "updatedAt": "2025-02-19"
+  },
+  {
+    "sourceId": "safekorea-fire-actions",
+    "kind": "html",
+    "title": "국민행동요령 - 화재",
+    "agency": "행정안전부",
+    "publisher": "국민안전24/국민재난안전포털",
+    "canonicalUrl": "https://www.safekorea.go.kr/safekorea-kor/ctim/csim/fireInfo.do",
+    "originalUrl": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
+    "licenseLabel": "공공목적 활용 고지",
+    "rightsNotes": "실시간 사고 정보 영역은 제외하고 정적 행동요령만 사람이 검수한 짧은 paraphrase chunk로 저장한다.",
+    "rawStoragePolicy": "metadata_only",
+    "hazards": ["fire"],
+    "retrievedAt": "2026-05-20"
+  },
+  {
+    "sourceId": "safekorea-earthquake-actions",
+    "kind": "html",
+    "title": "국민행동요령 - 지진",
+    "agency": "행정안전부",
+    "publisher": "국민안전24/국민재난안전포털",
+    "canonicalUrl": "https://www.safekorea.go.kr/safekorea-kor/em/emergency/emergency_eq2.html",
+    "originalUrl": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "licenseLabel": "공공목적 활용 고지",
+    "rightsNotes": "행동요령은 공식 출처 링크와 함께 짧은 paraphrase chunk로만 저장한다.",
+    "rawStoragePolicy": "metadata_only",
+    "hazards": ["earthquake"],
+    "retrievedAt": "2026-05-20"
+  },
+  {
+    "sourceId": "koddi-disaster-guide-2025",
+    "kind": "guidebook",
+    "title": "장애인 재난 안전 가이드 개정판",
+    "agency": "한국장애인개발원",
+    "publisher": "한국장애인개발원",
+    "canonicalUrl": "https://www.koddi.or.kr/data/manual01_view.jsp?brdNum=7429239&brdTp=&searchParamUrl=pageSize%3D20%26amp%3BbrdType%3DMANUAL%26amp%3Bpage%3D1",
+    "licenseLabel": "기관 배포 자료",
+    "rightsNotes": "장애 유형별 지원 원칙은 짧은 쉬운말/지원자 paraphrase chunk로만 저장한다.",
+    "rawStoragePolicy": "metadata_only",
+    "hazards": ["fire", "earthquake"],
+    "retrievedAt": "2026-05-20",
+    "updatedAt": "2026-05-15"
+  }
+]

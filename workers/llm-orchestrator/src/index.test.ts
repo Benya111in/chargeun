@@ -196,6 +196,23 @@ describe('buildStructuredLearningExplanation', () => {
       learnerActionSteps: ['문을 닫아요', '문을 열어 두지 않아요'],
       rules: fireRules,
       segment,
+      sourceChunks: [
+        {
+          audience: 'learner',
+          canonicalUrl: 'https://example.test/fire',
+          chunkId: 'fire-door-stair',
+          easyKo: '문을 닫고 계단으로 가요.',
+          hazard: 'fire',
+          heading: '문 닫고 계단 대피',
+          keywords: ['현관문', '계단', '엘리베이터'],
+          paraphraseKo: '현관문을 닫고 계단으로 대피한다.',
+          phase: 'door_control',
+          reviewStatus: 'approved',
+          ruleIds: ['KR_FIRE_04', 'KR_FIRE_03'],
+          sourceId: 'safetv-fire',
+          updatedAt: '2026-05-20',
+        },
+      ],
       sourceId: 'fire-grounded-flow',
       teachBack: {
         correctOptionId: 'closed-door',
@@ -240,6 +257,12 @@ describe('buildStructuredLearningExplanation', () => {
     expect(structured.evidence.ocrEvidence.length).toBeGreaterThan(0)
     expect(structured.evidence.asrEvidence.length).toBe(1)
     expect(structured.evidence.ruleEvidence[0]?.ruleId).toBe('KR_FIRE_04')
+    expect(structured.evidence.ruleEvidence[0]?.sourceChunkId).toBe(
+      'fire-door-stair',
+    )
+    expect(structured.evidence.ruleEvidence[0]?.easyText).toBe(
+      '문을 닫고 계단으로 가요.',
+    )
     expect(
       structured.suppressedCandidates.some(
         (candidate) => candidate.candidate === '엘리베이터 타기',

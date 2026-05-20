@@ -29,6 +29,13 @@
 - `llm-orchestrator`의 structured action card 생성 단계에서 `않아요`, `피해요`, `만지지`, `무리해서` 같은 부정/금지형 행동 문장을 학습자 행동 카드에서 자동 제외하고 suppressed candidate로 보관하도록 막았다
 - 학습자 `/scenario` 화면에 `쉬운말`, `할 일`, `확인`, `헷갈림` 요약과 보존된 헷갈림 후보 패널을 추가해, 내부 용어 없이도 멀티트랙 구조와 후보 보존 결과가 보이도록 했다
 - fire stair 장면에서 `엘리베이터는 타지 않아요`가 행동 카드처럼 보이지 않고, `헷갈릴 수 있어요` 패널의 보관 후보로만 나타나도록 콘텐츠와 invariant를 정리했다
+- GPT-5.5 에이전트 6개를 영상 분절, 공식 출처, RAG 설계, 학습자 UX, 테스트 전략, 원본/라이선스 리스크 축으로 배치해 현재 demo clip과 장면 문구를 재검수했다
+- SafeTV, 국민안전24, 한국장애인개발원 자료를 `data/official_sources`의 metadata/chunk catalog로 정리하고, 원문 복사 대신 짧은 paraphrase/easyKo와 canonical URL만 저장하는 deterministic official RAG 레이어를 추가했다
+- `StructuredLearningExplanation`의 `ruleEvidence`에 `sourceChunkId`, `sourceHeading`, `easyText`, `retrievalScore`, `sourceUrl`을 붙여 교사/QA 화면에서 행동 카드별 공식 근거를 추적할 수 있게 했다
+- 장면 window를 너무 잘게 쪼개던 fire/earthquake demo를 재분절했다: 화재는 `문 닫기 + 계단 찾기`를 한 장면으로 길게 묶고, `대피가 어려울 때`를 두 번째 장면으로 두었다
+- 지진은 `흔들릴 때`와 `흔들림이 멈춘 뒤`를 한 주제의 연속 연습으로 유지하고, 학교/교실 장면과 흔들림 이후 출구/가스/전기 확인 장면의 learner-facing 설명을 다시 썼다
+- RAG 결과가 action을 새로 허가하지는 않고, 이미 grounded rule로 검증된 행동에 공식 출처 evidence를 보강하는 구조로 고정했다
+- `rules:validate`가 공식 source metadata/chunk catalog도 검증하도록 확장해, 존재하지 않는 source/rule id가 청크에 들어가면 실패하게 했다
 
 ### 검증
 
@@ -54,13 +61,22 @@
 - Browser preview check: `/scenario/fire-grounded-flow` 첫 장면과 두 번째 장면의 teach-back 선택지가 행동 카드와 충돌하지 않는지 확인
 - Browser preview check: `/`에는 화재/지진 주제만 보이고, `/scenario/fire-grounded-flow` 두 번째 장면에는 행동 카드 2개와 `엘리베이터` 보관 후보가 분리 표시됨
 - 분야별 QA 에이전트 2라운드: learner flow, live-lab fallback, cognitive accessibility, visual responsive QA, teacher/QA, contract/data integrity 재검증 완료
+- `pnpm --filter @ansimtrack/shared-types build`
+- `pnpm rules:validate`
+- `pnpm --filter @ansimtrack/shared-types test`
+- `pnpm --filter @ansimtrack/llm-orchestrator test`
+- `pnpm --filter desktop-ui test -- learning-scenarios`
+- `pnpm --filter desktop-ui typecheck`
+- `pnpm --filter desktop-ui lint`
+- `pnpm --filter desktop-ui test:e2e -- app.spec.ts`
 
 ### 다음
 
 1. 민감정보가 없는 테스트 탭으로 실제 Chrome 화면공유 + OpenAI perception 호출을 수동 rehearsal
-2. `/live-lab`이 실제 API 지연/오류 시 마지막 안정 설명을 유지하는지 장시간 확인
-3. `LearningReviewSubmission`을 실제 QA 저장 구조에 연결하고 LRS/LAS 분석을 분리
-4. structured output LLM 생성은 내부 QA 경로에서만 schema/validation/fallback을 통과시킨 뒤 실험
+2. 공식 source chunk를 더 늘려 화재/지진 외 호우·태풍·생활안전 시나리오까지 같은 RAG 계약으로 확장
+3. `/live-lab`이 실제 API 지연/오류 시 마지막 안정 설명을 유지하는지 장시간 확인
+4. `LearningReviewSubmission`을 실제 QA 저장 구조에 연결하고 LRS/LAS 분석을 분리
+5. structured output LLM 생성은 내부 QA 경로에서만 schema/validation/fallback을 통과시킨 뒤 실험
 
 ## 2026-05-11
 

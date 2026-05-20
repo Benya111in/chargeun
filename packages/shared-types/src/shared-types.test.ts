@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   captureFrameSampleSchema,
   macCaptureEventSchema,
+  officialSourceChunkSchema,
+  officialSourceRecordSchema,
   perceptionPacketSchema,
   segmentSchema,
   segmentExplanationSchema,
@@ -226,6 +228,44 @@ describe('structuredLearningExplanationSchema', () => {
     const result = structuredLearningExplanationSchema.safeParse(input)
 
     expect(result.success).toBe(false)
+  })
+})
+
+describe('official source schemas', () => {
+  it('accepts official source metadata and paraphrased chunks', () => {
+    expect(
+      officialSourceRecordSchema.safeParse({
+        agency: '행정안전부',
+        canonicalUrl: 'https://www.safetv.go.kr/base/video/view?idx=2739',
+        hazards: ['fire'],
+        kind: 'video',
+        licenseLabel: '공공누리',
+        publisher: '안전한TV',
+        rawStoragePolicy: 'local_manual_only',
+        retrievedAt: '2026-05-20',
+        rightsNotes: '원본은 추적 데이터에 저장하지 않는다.',
+        sourceId: 'safetv-fire',
+        title: '아파트 화재 시 이렇게 행동합시다',
+      }).success,
+    ).toBe(true)
+
+    expect(
+      officialSourceChunkSchema.safeParse({
+        audience: 'learner',
+        canonicalUrl: 'https://www.safetv.go.kr/base/video/view?idx=2739',
+        chunkId: 'fire-door-stair',
+        easyKo: '문을 닫고 계단으로 가요.',
+        hazard: 'fire',
+        heading: '현관문 닫고 계단 대피',
+        keywords: ['문', '계단'],
+        paraphraseKo: '대피할 수 있으면 현관문을 닫고 계단을 이용해 이동한다.',
+        phase: 'door_control',
+        reviewStatus: 'approved',
+        ruleIds: ['KR_FIRE_04'],
+        sourceId: 'safetv-fire',
+        updatedAt: '2026-05-20',
+      }).success,
+    ).toBe(true)
   })
 })
 

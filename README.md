@@ -14,6 +14,8 @@
 - 서버 API는 OpenAI key를 클라이언트에 노출하지 않고 frame perception extraction / audio transcription만 담당
 - macOS 우선 capture command, browser preview, Shadow Player demo path 구현
 - fire/earthquake grounded rule matcher, segment engine, voice fallback, evidence drawer 구현
+- SafeTV, 국민안전24, 한국장애인개발원 자료를 metadata/paraphrase chunk로 정리한 공식 근거 RAG 레이어 구현
+- `StructuredLearningExplanation v1`은 visual/OCR/ASR/rule/RAG evidence를 분리하고, 공식 규칙으로 검증된 행동 카드에만 출처 근거를 붙임
 - live capture frame window에서 local `PerceptionPacket -> Segment -> explanation` 갱신과 snapshot/session log 저장 경로 구현
 - Tauri runtime에 SQLite-backed app/session restore를 추가해 마지막 라이브 분석 요약과 runtime state를 재시작 후 복원 가능하게 정리
 - ScreenCaptureKit audio callback 기반 native preview audio 상태와 macOS TTS/STT + browser/text fallback voice runtime 구현
@@ -79,6 +81,14 @@ MAX_FRAMES_PER_ANALYSIS=3
 - `/teacher`: 교사/보호자 진행자 화면
 - `/live-lab`: 화면공유 AI 분석 실험 기능
 - `/qa`: 내부 운영자/검증 워크스페이스
+
+## 공식 근거 데이터
+
+- source metadata: `data/official_sources/official_sources.json`
+- paraphrase chunks: `data/official_sources/official_chunks.json`
+- 검증: `pnpm rules:validate`
+
+공식 자료는 원문 전체나 raw 영상을 저장소에 넣지 않고, canonical URL과 짧은 paraphrase/easyKo chunk만 tracked로 관리합니다. RAG 검색 결과는 행동을 새로 생성하지 않고, 이미 공식 rule grounding을 통과한 행동 카드의 근거를 보강하는 데만 사용합니다.
 
 ## Vercel 배포
 

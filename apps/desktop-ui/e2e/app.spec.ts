@@ -36,26 +36,27 @@ test('runs the scenario practice loop', async ({ page }) => {
   await page.goto('/scenario/fire-grounded-flow')
 
   await page.getByRole('button', { name: '영상 시작하기' }).click()
-  await expect(page.getByText('지금 할 일')).toBeVisible({ timeout: 10_000 })
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
+  })
   await expect(page.getByText('지금 할 일')).toBeVisible()
   await expect(
     page.getByRole('listitem').filter({ hasText: '문을 닫아요' }),
   ).toBeVisible()
+  await expect(page.getByText('문을 닫고 계단으로 가요.')).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
 
   await page.getByRole('button', { name: '열린 문' }).click()
-  await expect(
-    page.getByText('괜찮아요. 이 장면에서는 문을 닫는 행동을 다시 봐요.'),
-  ).toBeVisible()
+  await expect(page.getByText('괜찮아요. 닫힌 문을 다시 봐요.')).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
 
   await page.getByRole('button', { name: '닫힌 문' }).click()
   await expect(
-    page.getByText('맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.'),
+    page.getByText('맞아요. 닫힌 문은 연기가 덜 퍼지게 도와요.'),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
@@ -67,18 +68,15 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(page.getByText('이유', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '다음 장면 보기' }).click()
-  await expect(page.getByText('2 / 3')).toBeVisible()
-  await expect
-    .poll(async () =>
-      page.locator('video').evaluate((video) => video.currentTime),
-    )
-    .toBeGreaterThan(7)
-  await expect(page.getByText('화재 때는 계단을 찾아요.')).toBeVisible({
-    timeout: 10_000,
+  await expect(page.getByText('2 / 2')).toBeVisible()
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
-  await expect(page.getByText('엘리베이터는 타지 않아요')).toHaveCount(0)
+  await expect(
+    page.getByText('길이 막히면 안전한 곳에서 도움을 불러요.'),
+  ).toBeVisible()
   await expect(page.getByText('헷갈릴 수 있어요')).toBeVisible()
-  await expect(page.getByText('엘리베이터').first()).toBeVisible()
+  await expect(page.getByText('연기가 많은 길').first()).toBeVisible()
 
   await page.getByRole('button', { name: '쉬기' }).click()
   await expect(page.getByText('잠깐 쉬어도 괜찮아요.')).toBeVisible()
@@ -89,8 +87,8 @@ test('offers next practice and restart controls after the final scene', async ({
 }) => {
   await page.goto('/scenario/fire-grounded-flow')
 
-  await page.getByRole('button', { name: '3번째 장면' }).click()
-  await expect(page.getByText('3 / 3')).toBeVisible()
+  await page.getByRole('button', { name: '2번째 장면' }).click()
+  await expect(page.getByText('2 / 2')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
@@ -116,7 +114,7 @@ test('offers next practice and restart controls after the final scene', async ({
   ).toBeVisible()
 
   await page.getByRole('button', { name: '처음부터 다시 보기' }).click()
-  await expect(page.getByText('1 / 3')).toBeVisible()
+  await expect(page.getByText('1 / 2')).toBeVisible()
   await expect
     .poll(async () =>
       page.locator('video').evaluate((video) => video.currentTime),
@@ -129,14 +127,14 @@ test('continues earthquake practice from shaking to after-shaking sequence', asy
 }) => {
   await page.goto('/scenario/earthquake-protect-flow')
 
-  await page.getByRole('button', { name: '3번째 장면' }).click()
-  await expect(page.getByText('3 / 3')).toBeVisible()
+  await page.getByRole('button', { name: '2번째 장면' }).click()
+  await expect(page.getByText('2 / 2')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
 
-  await expect(page.getByText('책상이 없으면 머리를 감싸요.')).toBeVisible()
-  await page.getByRole('button', { name: '머리' }).click()
+  await expect(page.getByText('교실에서도 책상 아래로 들어가요.')).toBeVisible()
+  await page.getByRole('button', { name: '책상 아래' }).click()
   await expect(
     page.getByRole('link', { name: '다음 연습 보기' }),
   ).toHaveAttribute('href', '/scenario/earthquake-after-flow')

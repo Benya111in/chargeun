@@ -57,6 +57,21 @@
 - 이유: `흔들릴 때`와 `흔들림이 멈춘 뒤`는 서로 다른 주제가 아니라 지진 행동 순서의 앞뒤 단계다.
 - 영향: 홈에는 `지진이 났을 때` 한 카드만 보이고, 내부에 `1. 흔들릴 때`, `2. 멈춘 뒤`를 명시한다. `earthquake-protect-flow` 마지막 장면의 다음 연습은 `earthquake-after-flow`로 이어진다.
 
+### D-068 공식 자료 RAG는 행동 생성기가 아니라 근거 보강 계층이다
+
+- 이유: SafeTV, 국민안전24, 한국장애인개발원 자료는 공신력 있는 근거지만, 검색 결과만으로 학습자 행동 지시를 새로 만들면 장면 오인식과 자동화 편향 위험이 남는다.
+- 영향: `official_sources` catalog와 `retrieveOfficialSources`는 `StructuredLearningExplanation.evidence.ruleEvidence`를 보강한다. 학습자 action card는 여전히 `matchGroundedRules`와 structured validation을 통과한 경우에만 노출한다.
+
+### D-069 공식 원문/영상은 metadata와 paraphrase chunk로 관리한다
+
+- 이유: 공식 페이지와 영상은 라이선스, 갱신, 원문 저작권 리스크가 있으므로 저장소에 원문 전체나 raw mp4를 RAG 자료로 넣는 것은 부적절하다.
+- 영향: 저장소에는 source metadata, canonical URL, 짧은 paraphrase/easyKo, rule id 연결만 tracked한다. raw 영상은 local manual/cache ignored 경로로 두고, 배포 콘텐츠로 쓰려면 별도 라이선스 검토와 출처 표기가 필요하다.
+
+### D-070 학습용 장면은 너무 짧게 끊지 않는다
+
+- 이유: 2~4초 단위로 과하게 끊으면 영상 장면과 설명이 계속 어긋나고, 느린학습자에게 필요한 것은 한 판단 지점을 충분히 보고 멈추는 것이다.
+- 영향: 화재 첫 장면은 `문 닫기 + 계단 찾기`를 하나의 긴 window로 묶고, 지진은 흔들릴 때와 멈춘 뒤를 순서형 연습으로 이어 간다. 장면 분절 기준은 "한 행동 판단 지점"이며, 화면이 바뀌었다는 이유만으로 새 학습 질문을 만들지 않는다.
+
 ## 2026-04-14
 
 ### D-001 macOS 단일 경로 우선

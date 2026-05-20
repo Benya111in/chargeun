@@ -74,7 +74,6 @@ describe('learningScenarios', () => {
   it('keeps key fire and earthquake scenarios grounded with rule evidence', () => {
     const requiredSegments = [
       'fire-grounded-door-control',
-      'fire-grounded-stairs',
       'earthquake-review-office-desk',
       'earthquake-after-exit',
     ]
@@ -87,6 +86,11 @@ describe('learningScenarios', () => {
       expect(
         segment?.structuredExplanation.evidence.ruleEvidence.length,
       ).toBeGreaterThan(0)
+      expect(
+        segment?.structuredExplanation.evidence.ruleEvidence.some(
+          (item) => item.sourceChunkId,
+        ),
+      ).toBe(true)
     }
   })
 

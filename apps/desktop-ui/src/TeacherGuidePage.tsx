@@ -119,9 +119,7 @@ export default function TeacherGuidePage() {
                     {segment.explanation.tracks.report ??
                       '위험하면 119·112 또는 주변 어른에게 바로 알려요.'}
                   </GuideBlock>
-                  <OfficialEvidenceBlock
-                    ruleIds={segment.segment.officialRuleIds}
-                  />
+                  <OfficialEvidenceBlock segment={segment} />
                 </div>
 
                 <StructuredLearningBlock segment={segment} />
@@ -230,8 +228,8 @@ function StructuredList({ items, title }: { items: string[]; title: string }) {
   )
 }
 
-function OfficialEvidenceBlock({ ruleIds }: { ruleIds: string[] }) {
-  const rules = ruleIds
+function OfficialEvidenceBlock({ segment }: { segment: TheaterSegment }) {
+  const rules = segment.segment.officialRuleIds
     .map((ruleId) => liveRuleCatalog.find((rule) => rule.rule_id === ruleId))
     .filter((rule): rule is RuleRecord => Boolean(rule))
 
@@ -256,6 +254,21 @@ function OfficialEvidenceBlock({ ruleIds }: { ruleIds: string[] }) {
               <p className="mt-2 text-sm leading-6 text-[#596257]">
                 이유: {rule.why}
               </p>
+              {segment.structuredExplanation.evidence.ruleEvidence
+                .filter((item) => item.ruleId === rule.rule_id)
+                .map((item) =>
+                  item.sourceChunkId ? (
+                    <div
+                      key={item.sourceChunkId}
+                      className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm leading-6 text-emerald-950"
+                    >
+                      <p className="font-semibold">
+                        RAG 근거: {item.sourceHeading}
+                      </p>
+                      <p>{item.easyText}</p>
+                    </div>
+                  ) : null,
+                )}
               <a
                 className="mt-2 inline-flex text-sm font-semibold underline underline-offset-4"
                 href={rule.source_url}

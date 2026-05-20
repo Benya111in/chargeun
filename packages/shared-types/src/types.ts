@@ -137,6 +137,58 @@ export type LearningTrackSet = {
   }
 }
 
+export type OfficialSourceRecord = {
+  sourceId: string
+  kind: 'html' | 'pdf' | 'video' | 'video_transcript' | 'poster' | 'guidebook'
+  title: string
+  agency: string
+  publisher: string
+  canonicalUrl: string
+  originalUrl?: string
+  licenseLabel: string
+  rightsNotes: string
+  rawStoragePolicy: 'metadata_only' | 'local_manual_only' | 'cache_ignored'
+  hazards: Array<Exclude<HazardType, 'unknown'>>
+  retrievedAt: string
+  updatedAt?: string
+}
+
+export type OfficialSourceChunk = {
+  chunkId: string
+  sourceId: string
+  hazard: Exclude<HazardType, 'unknown'>
+  phase: string
+  ruleIds: string[]
+  heading: string
+  paraphraseKo: string
+  easyKo: string
+  keywords: string[]
+  canonicalUrl: string
+  sourceAnchor?: string
+  audience: 'learner' | 'teacher' | 'caregiver' | 'operator'
+  reviewStatus: 'approved' | 'needs_human_review'
+  updatedAt: string
+}
+
+export type OfficialSourceMatch = {
+  chunk: OfficialSourceChunk
+  matchedRuleIds: string[]
+  matchedKeywords: string[]
+  score: number
+}
+
+export type OfficialRetrievalRequest = {
+  hazard: HazardType
+  phase?: string
+  ruleIds?: string[]
+  queryText?: string
+  limit?: number
+}
+
+export type OfficialRetrievalResult = {
+  matches: OfficialSourceMatch[]
+}
+
 export type EvidenceBundle = {
   visualEvidence: Array<{
     frameTimeMs: number
@@ -159,6 +211,11 @@ export type EvidenceBundle = {
     title: string
     matchedText: string
     sourceName: string
+    sourceUrl?: string
+    sourceChunkId?: string
+    sourceHeading?: string
+    easyText?: string
+    retrievalScore?: number
   }>
   modelInference: Array<{
     claim: string

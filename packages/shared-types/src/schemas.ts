@@ -335,6 +335,50 @@ export const learningTrackSetSchema = z.object({
     .optional(),
 })
 
+export const officialSourceRecordSchema = z.object({
+  sourceId: z.string().min(1),
+  kind: z.enum([
+    'html',
+    'pdf',
+    'video',
+    'video_transcript',
+    'poster',
+    'guidebook',
+  ]),
+  title: z.string().min(1),
+  agency: z.string().min(1),
+  publisher: z.string().min(1),
+  canonicalUrl: z.string().url(),
+  originalUrl: z.string().url().optional(),
+  licenseLabel: z.string().min(1),
+  rightsNotes: z.string().min(1),
+  rawStoragePolicy: z.enum([
+    'metadata_only',
+    'local_manual_only',
+    'cache_ignored',
+  ]),
+  hazards: z.array(z.enum(['fire', 'earthquake'])).min(1),
+  retrievedAt: z.string().min(1),
+  updatedAt: z.string().min(1).optional(),
+})
+
+export const officialSourceChunkSchema = z.object({
+  chunkId: z.string().min(1),
+  sourceId: z.string().min(1),
+  hazard: z.enum(['fire', 'earthquake']),
+  phase: z.string().min(1),
+  ruleIds: z.array(z.string().min(1)).min(1),
+  heading: z.string().min(1),
+  paraphraseKo: z.string().min(1).max(260),
+  easyKo: z.string().min(1).max(120),
+  keywords: z.array(z.string().min(1)).min(1),
+  canonicalUrl: z.string().url(),
+  sourceAnchor: z.string().min(1).optional(),
+  audience: z.enum(['learner', 'teacher', 'caregiver', 'operator']),
+  reviewStatus: z.enum(['approved', 'needs_human_review']),
+  updatedAt: z.string().min(1),
+})
+
 export const evidenceBundleSchema = z.object({
   visualEvidence: z.array(
     z.object({
@@ -364,6 +408,11 @@ export const evidenceBundleSchema = z.object({
       title: z.string().min(1),
       matchedText: z.string().min(1),
       sourceName: z.string().min(1),
+      sourceUrl: z.string().url().optional(),
+      sourceChunkId: z.string().min(1).optional(),
+      sourceHeading: z.string().min(1).optional(),
+      easyText: z.string().min(1).optional(),
+      retrievalScore: z.number().optional(),
     }),
   ),
   modelInference: z.array(
