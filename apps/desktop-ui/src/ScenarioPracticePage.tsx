@@ -33,6 +33,12 @@ type PlaybackWindow = {
   startSec: number
 }
 
+type ScenarioReviewGroup = {
+  segmentId: string
+  steps: string[]
+  title: string
+}
+
 export default function ScenarioPracticePage() {
   const scenario = selectScenarioFromPath()
 
@@ -74,6 +80,9 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const learnerActionCards = getLearnerActionCards(segment)
   const nextPractice = getNextScenario(scenario)
   const isFinalSegment = segmentIndex === scenario.segments.length - 1
+  const reviewGroups = isFinalSegment
+    ? buildScenarioReviewGroups(scenario, segmentIndex)
+    : []
   const selectedAnswer = segment.answerOptions.find(
     (option) => option.id === selectedAnswerId,
   )
@@ -396,6 +405,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
             onToggleReason={() => setShowReason((value) => !value)}
             playbackNotice={playbackNotice}
             headingRef={explanationHeadingRef}
+            reviewGroups={reviewGroups}
             segment={segment}
             selectedAnswerId={selectedAnswerId}
             selectedAnswer={selectedAnswer}
@@ -408,8 +418,24 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
         <aside className="flex flex-col gap-4">
           <SafetyCard notice={segment.safetyNotice} />
           <section className="rounded-md border border-[#dfe4da] bg-white p-5">
-            <h2 className="text-lg font-semibold">오늘 기억할 순서</h2>
-            {learnerActionCards.length > 0 ? (
+            <h2 className="text-lg font-semibold">
+              {reviewGroups.length > 0 ? '오늘 배운 순서' : '오늘 기억할 순서'}
+            </h2>
+            {reviewGroups.length > 0 ? (
+              <ol className="mt-4 grid gap-3">
+                {reviewGroups.map((group, index) => (
+                  <li
+                    key={group.segmentId}
+                    className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-3"
+                  >
+                    <span className="text-sm font-semibold text-[#596257]">
+                      {index + 1}번
+                    </span>
+                    <p className="mt-1 text-lg font-semibold">{group.title}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : learnerActionCards.length > 0 ? (
               <ol className="mt-4 grid gap-3">
                 {learnerActionCards.map((card) => (
                   <li
@@ -453,6 +479,7 @@ function PracticePanel({
   onToggleReason,
   playbackNotice,
   headingRef,
+  reviewGroups,
   segment,
   selectedAnswer,
   selectedAnswerId,
@@ -469,6 +496,7 @@ function PracticePanel({
   onToggleReason: () => void
   playbackNotice: string
   headingRef: RefObject<HTMLHeadingElement | null>
+  reviewGroups: ScenarioReviewGroup[]
   segment: TheaterSegment
   selectedAnswer?: TheaterSegment['answerOptions'][number]
   selectedAnswerId: string | null
@@ -478,6 +506,7 @@ function PracticePanel({
 }) {
   const learnerActionCards = getLearnerActionCards(segment)
   const isIntroSegment = segment.practiceMode === 'intro'
+  const isReviewSegment = isFinalSegment && reviewGroups.length > 0
   const canAskQuestion = !isIntroSegment && learnerActionCards.length > 0
   const canContinue = canAskQuestion ? selectedAnswer?.correct === true : true
 
@@ -541,10 +570,21 @@ function PracticePanel({
         {segment.learnerExplanation}
       </h1>
 
-      <SceneNarrationList segment={segment} />
+      {isReviewSegment ? (
+        <ScenarioReviewList groups={reviewGroups} />
+      ) : (
+        <SceneNarrationList segment={segment} />
+      )}
 
       <div className="mt-6 grid gap-3">
-        {isIntroSegment ? (
+        {isReviewSegment ? (
+          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4">
+            <h2 className="text-lg font-semibold">전체 복습</h2>
+            <p className="mt-2 text-xl font-semibold leading-8 text-[#596257]">
+              오늘 배운 행동을 장면 순서대로 다시 봐요.
+            </p>
+          </section>
+        ) : isIntroSegment ? (
           <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4">
             <h2 className="text-lg font-semibold">지금 장면</h2>
             <p className="mt-2 text-xl font-semibold leading-8 text-[#596257]">
@@ -681,6 +721,45 @@ function PracticePanel({
           </button>
         )}
       </div>
+    </section>
+  )
+}
+
+function ScenarioReviewList({ groups }: { groups: ScenarioReviewGroup[] }) {
+  return (
+    <section className="mt-6 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
+      <h2 className="text-lg font-semibold">한 번 더 복습해요</h2>
+      <p className="mt-2 text-sm leading-6 text-[#596257]">
+        장면별로 기억할 행동을 순서대로 봐요.
+      </p>
+      <ol className="mt-3 grid gap-3">
+        {groups.map((group, index) => (
+          <li
+            key={group.segmentId}
+            className="rounded-md border border-[#dfe4da] bg-white px-4 py-4"
+          >
+            <p className="text-xs font-semibold text-[#596257]">
+              {index + 1}번 장면
+            </p>
+            <h3 className="mt-1 text-lg font-semibold">{group.title}</h3>
+            <ol className="mt-3 grid gap-2 sm:grid-cols-2">
+              {group.steps.map((step, stepIndex) => (
+                <li
+                  key={`${group.segmentId}-${step}`}
+                  className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-3"
+                >
+                  <span className="text-xs font-semibold text-[#596257]">
+                    {stepIndex + 1}번
+                  </span>
+                  <p className="mt-1 text-base font-semibold leading-7">
+                    {step}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
@@ -838,6 +917,20 @@ function getSegmentStartSec(segment: TheaterSegment) {
 function getActionStepLabel(order: number, total: number) {
   void total
   return `${order}번`
+}
+
+function buildScenarioReviewGroups(
+  scenario: TheaterShow,
+  currentIndex: number,
+): ScenarioReviewGroup[] {
+  return scenario.segments
+    .slice(0, currentIndex + 1)
+    .map((item) => ({
+      segmentId: item.id,
+      steps: getLearnerActionCards(item).map((card) => card.label),
+      title: item.label,
+    }))
+    .filter((group) => group.steps.length > 0)
 }
 
 function selectScenarioFromPath() {

@@ -134,6 +134,28 @@ test('offers next practice and restart controls after the final scene', async ({
       name: '무조건 나가기보다 상황에 맞게 행동해요.',
     }),
   ).toBeVisible()
+  await expect(page.getByText('한 번 더 복습해요')).toBeVisible()
+  await expect(
+    page.getByText('장면별로 기억할 행동을 순서대로 봐요.'),
+  ).toBeVisible()
+  await expect(page.getByText('전체 복습')).toBeVisible()
+  await expect(
+    page.getByText('오늘 배운 행동을 장면 순서대로 다시 봐요.'),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '문 닫고 계단으로 가요' }),
+  ).toBeVisible()
+  await expect(page.getByText('문을 닫아요').first()).toBeVisible()
+  await expect(page.getByText('계단으로 나가요').first()).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '계단으로 대피해요' }),
+  ).toBeVisible()
+  await expect(page.getByText('오늘 배운 순서')).toBeVisible()
+  await expect(
+    page.getByText(
+      '내용을 소개하는 부분이에요. 다음 장면에서 행동을 연습해요.',
+    ),
+  ).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toHaveCount(0)
