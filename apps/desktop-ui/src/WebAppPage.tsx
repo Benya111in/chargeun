@@ -29,6 +29,7 @@ import {
   summarizePacket,
 } from './lib/live-analysis'
 import { liveRuleCatalog } from './lib/rule-catalog'
+import { appHref } from './lib/routes'
 import { useWebAudioTranscription } from './lib/useWebAudioTranscription'
 import { useWebCaptureController } from './lib/useWebCaptureController'
 import { useWebPerceptionAnalysis } from './lib/useWebPerceptionAnalysis'
@@ -419,7 +420,7 @@ function WebAppPage() {
                 >
                   근거 보기
                 </ActionButton>
-                <a className="link-button" href="/">
+                <a className="link-button" href={appHref('/')}>
                   연습 홈으로 가기
                 </a>
               </div>

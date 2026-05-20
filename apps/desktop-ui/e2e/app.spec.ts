@@ -3,21 +3,27 @@ import { expect, test, type Page } from '@playwright/test'
 test('renders the learning home and opens a scenario', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByText('안심트랙 연습')).toBeVisible()
   await expect(
     page.getByRole('heading', {
-      name: '재난 영상을 짧게 멈춰 보고, 쉬운말과 카드로 연습해요.',
+      name: /재난 영상을 멈춰 보고,\s*쉬운 말과 카드로 연습해요\./,
     }),
   ).toBeVisible()
   await expect(
     page.getByText(
-      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.',
+      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.',
     ),
   ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: /학습 체험하기/ }),
+  ).toHaveAttribute('href', '#/scenario/fire-grounded-flow')
   await expect(page.getByText('화면 공유 시작')).toHaveCount(0)
   await expect(page.getByText('화면공유 AI 분석')).toHaveCount(0)
-  await expect(page.getByRole('link', { name: /화재가 났을 때/ })).toBeVisible()
-  await expect(page.getByRole('link', { name: /지진이 났을 때/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /화재가 났을 때/ })).toHaveCount(
+    0,
+  )
+  await expect(page.getByRole('link', { name: /지진이 났을 때/ })).toHaveCount(
+    0,
+  )
   await expect(
     page.getByRole('link', { name: /소리가 없어도 볼 수 있어요/ }),
   ).toHaveCount(0)
@@ -25,16 +31,20 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
     page.getByRole('link', { name: /흔들림이 멈춘 뒤/ }),
   ).toHaveCount(0)
 
-  await page.getByRole('link', { name: /화재가 났을 때/ }).click()
-  await expect(page).toHaveURL(/\/scenario\/fire-grounded-flow$/)
+  await page.getByRole('link', { name: /학습 체험하기/ }).click()
+  await expect(page).toHaveURL(/#\/scenario\/fire-grounded-flow$/)
   await expect(
     page.getByRole('button', { name: '영상 시작하기' }),
   ).toBeVisible()
 })
 
 test('runs the scenario practice loop', async ({ page }) => {
-  await page.goto('/scenario/fire-grounded-flow')
+  await page.goto('/#/scenario/fire-grounded-flow')
 
+  await expect(page.getByRole('link', { name: '안심트랙 연습' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: '다른 연습 고르기' })).toHaveCount(
+    0,
+  )
   await page.getByRole('button', { name: '영상 시작하기' }).click()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
@@ -152,7 +162,7 @@ test('runs the scenario practice loop', async ({ page }) => {
 test('offers next practice and restart controls after the final scene', async ({
   page,
 }) => {
-  await page.goto('/scenario/fire-grounded-flow')
+  await page.goto('/#/scenario/fire-grounded-flow')
 
   await page.getByRole('button', { name: '7번째 장면', exact: true }).click()
   await expect(page.getByText('7 / 7')).toBeVisible()
@@ -208,7 +218,7 @@ test('offers next practice and restart controls after the final scene', async ({
 
   await expect(
     page.getByRole('link', { name: '다음 연습으로 가기' }),
-  ).toHaveAttribute('href', '/scenario/earthquake-protect-flow')
+  ).toHaveAttribute('href', '#/scenario/earthquake-protect-flow')
   await expect(
     page.getByRole('link', {
       name: '다음 연습 지진이 났을 때 흔들릴 때, 밖으로 나갈 때, 집에 돌아온 뒤까지 이어서 연습해요',
@@ -225,7 +235,7 @@ test('offers next practice and restart controls after the final scene', async ({
 })
 
 test('runs the full earthquake practice as one sequence', async ({ page }) => {
-  await page.goto('/scenario/earthquake-protect-flow')
+  await page.goto('/#/scenario/earthquake-protect-flow')
 
   await page.getByRole('button', { name: '영상 시작하기' }).click()
   await page.locator('video').evaluate((video) => {
@@ -270,16 +280,23 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByRole('link', { name: '오늘 연습 끝내기' }),
-  ).toHaveAttribute('href', '/')
-  await expect(
-    page.getByRole('button', { name: '맞는 답을 고르면 마칠 수 있어요' }),
   ).toHaveCount(0)
+  await page.getByRole('button', { name: '연습 끝내기' }).click()
+  await expect(
+    page.getByRole('dialog', {
+      name: '끝까지 연습해 주셔서 고맙습니다.',
+    }),
+  ).toBeVisible()
+  await expect(page.getByText('설문 링크 준비 중')).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: '처음 화면으로 가기' }),
+  ).toHaveAttribute('href', '#/')
 })
 
 test('clamps video before the next segment frame is shown', async ({
   page,
 }) => {
-  await page.goto('/scenario/fire-grounded-flow')
+  await page.goto('/#/scenario/fire-grounded-flow')
 
   await page.getByRole('button', { name: '영상 시작하기' }).click()
   await page.locator('video').evaluate((video) => {
@@ -309,7 +326,7 @@ test('clamps video before the next segment frame is shown', async ({
 test('ends the final earthquake after-shaking practice without looping', async ({
   page,
 }) => {
-  await page.goto('/scenario/earthquake-after-flow')
+  await page.goto('/#/scenario/earthquake-after-flow')
 
   await page.getByRole('button', { name: '3번째 장면' }).click()
   await expect(page.getByText('3 / 3')).toBeVisible()
@@ -325,17 +342,19 @@ test('ends the final earthquake after-shaking practice without looping', async (
   ).toBeDisabled()
 
   await page.getByRole('button', { name: '어른에게 말하기' }).click()
-  await expect(
-    page.getByRole('link', { name: '오늘 연습 끝내기' }),
-  ).toHaveAttribute('href', '/')
+  await expect(page.getByRole('link', { name: '오늘 연습 끝내기' })).toHaveCount(
+    0,
+  )
+  await page.getByRole('button', { name: '연습 끝내기' }).click()
   await expect(page.getByText('연습 완료')).toBeVisible()
+  await expect(page.getByText('설문 링크 준비 중')).toBeVisible()
   await expect(page.getByText('화재가 났을 때')).toHaveCount(0)
 })
 
 test('keeps earthquake review scenario route as a compatibility alias', async ({
   page,
 }) => {
-  await page.goto('/scenario/earthquake-review-flow')
+  await page.goto('/#/scenario/earthquake-review-flow')
 
   await expect(page.getByText('지진이 났을 때').first()).toBeVisible()
   await expect(
@@ -513,8 +532,10 @@ test('keeps the operator workspace behind the internal QA flag', async ({
   await expect(page.getByText('LRS 초안').first()).toBeVisible()
 })
 
-test('renders a clear not-found state for unknown routes', async ({ page }) => {
-  await page.goto('/does-not-exist')
+test('renders a clear not-found state for unknown hash routes', async ({
+  page,
+}) => {
+  await page.goto('/#/does-not-exist')
 
   await expect(
     page.getByRole('heading', { name: '연습 화면을 찾지 못했어요.' }),

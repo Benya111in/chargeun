@@ -20,6 +20,7 @@ import {
   simplifyLearnerWarning,
 } from './lib/learner-copy'
 import { getLearnerActionCards } from './lib/learner-action-visibility'
+import { appHref, getAppRoute, publicAssetSrc } from './lib/routes'
 import { cn } from './lib/utils'
 
 type PracticeStage = 'explanation' | 'playback' | 'ready' | 'rest'
@@ -30,6 +31,7 @@ const segmentStartGuardSec = 0.02
 const scenarioAliases: Record<string, string> = {
   'earthquake-review-flow': 'earthquake-protect-flow',
 }
+const surveyFormUrl = import.meta.env.VITE_SURVEY_FORM_URL?.trim() ?? ''
 
 type PlaybackWindow = {
   freezeSec: number
@@ -59,7 +61,7 @@ export default function ScenarioPracticePage() {
           <p className="mt-3 text-sm leading-6 text-[#596257]">
             다시 홈으로 가서 연습할 장면을 골라 주세요.
           </p>
-          <a className="link-button mt-4" href="/">
+          <a className="link-button mt-4" href={appHref('/')}>
             홈으로 가기
           </a>
         </section>
@@ -84,6 +86,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const stageRef = useRef<PracticeStage>('ready')
   const boundaryMonitorRef = useRef<number | null>(null)
   const [playRequestId, setPlayRequestId] = useState(0)
+  const [showSurveyDialog, setShowSurveyDialog] = useState(false)
   const segment = scenario.segments[segmentIndex]
   const nextPractice = getNextScenario(scenario)
   const isFinalSegment = segmentIndex === scenario.segments.length - 1
@@ -298,21 +301,6 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   return (
     <main className="min-h-screen bg-[#f7f8f4] text-[#151713]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col gap-2 px-4 py-1.5 lg:px-6">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe4da] pb-2">
-          <a
-            className="inline-flex min-h-9 items-center rounded-md bg-[#151713] px-3 py-1 text-sm font-semibold text-white"
-            href="/"
-          >
-            안심트랙 연습
-          </a>
-          <a
-            className="inline-flex min-h-9 items-center rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-semibold text-[#151713]"
-            href="/"
-          >
-            다른 연습 고르기
-          </a>
-        </header>
-
         <SafetyBanner notice={segment.safetyNotice} />
 
         <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,0.98fr)_minmax(440px,0.58fr)]">
@@ -344,10 +332,13 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
                     }
                   }}
                   playsInline
-                  poster={scenario.posterSrc}
+                  poster={publicAssetSrc(scenario.posterSrc)}
                   preload="auto"
                 >
-                  <source src={scenario.videoSrc} type="video/mp4" />
+                  <source
+                    src={publicAssetSrc(scenario.videoSrc)}
+                    type="video/mp4"
+                  />
                 </video>
 
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/76 via-black/10 to-black/44" />
@@ -415,6 +406,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
             onReplay={() => playSegment(segmentIndex)}
             onRestart={() => playSegment(0)}
             onRest={rest}
+            onShowSurvey={() => setShowSurveyDialog(true)}
             reviewGroups={reviewGroups}
             segment={segment}
             selectedAnswerId={selectedAnswerId}
@@ -424,6 +416,9 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
           />
         </div>
       </div>
+      {showSurveyDialog ? (
+        <SurveyDialog onClose={() => setShowSurveyDialog(false)} />
+      ) : null}
     </main>
   )
 }
@@ -479,6 +474,7 @@ function PracticePanel({
   onReplay,
   onRestart,
   onRest,
+  onShowSurvey,
   reviewGroups,
   segment,
   selectedAnswer,
@@ -492,6 +488,7 @@ function PracticePanel({
   onReplay: () => void
   onRestart: () => void
   onRest: () => void
+  onShowSurvey: () => void
   reviewGroups: ScenarioReviewGroup[]
   segment: TheaterSegment
   selectedAnswer?: TheaterSegment['answerOptions'][number]
@@ -703,6 +700,7 @@ function PracticePanel({
             canContinue={canContinue}
             nextPractice={nextPractice}
             onRestart={onRestart}
+            onShowSurvey={onShowSurvey}
           />
         ) : (
           <button
@@ -925,25 +923,37 @@ function FinalPracticeActions({
   canContinue,
   nextPractice,
   onRestart,
+  onShowSurvey,
 }: {
   canContinue: boolean
   nextPractice: TheaterShow | null
   onRestart: () => void
+  onShowSurvey: () => void
 }) {
-  const nextHref = nextPractice ? `/scenario/${nextPractice.id}` : '/'
+  const nextHref = nextPractice
+    ? appHref(`/scenario/${nextPractice.id}`)
+    : appHref('/')
   const nextPracticeNote = nextPractice
     ? simplifyLearnerCopy(nextPractice.homeNote ?? nextPractice.note)
     : null
 
   return (
     <>
-      {canContinue ? (
+      {canContinue && nextPractice ? (
         <a
           className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
           href={nextHref}
         >
-          {nextPractice ? '다음 연습으로 가기' : '오늘 연습 끝내기'}
+          다음 연습으로 가기
         </a>
+      ) : canContinue ? (
+        <button
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
+          onClick={onShowSurvey}
+          type="button"
+        >
+          연습 끝내기
+        </button>
       ) : (
         <button
           className="inline-flex min-h-10 cursor-not-allowed items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white opacity-50"
@@ -955,30 +965,22 @@ function FinalPracticeActions({
             : '맞는 답을 고르면 마칠 수 있어요'}
         </button>
       )}
-      <a
-        aria-label={
-          nextPractice
-            ? `다음 연습 ${nextPractice.title} ${nextPracticeNote}`
-            : '처음 화면으로 가기'
-        }
-        className={cn(
-          'inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713]',
-          !canContinue && 'pointer-events-none opacity-55',
-        )}
-        href={nextHref}
-      >
-        <span className="text-xs font-semibold text-[#596257]">
-          {nextPractice ? '다음 연습' : '연습 완료'}
-        </span>
-        <span className="text-sm font-semibold">
-          {nextPractice ? nextPractice.title : '처음 화면으로 가요'}
-        </span>
-        <span className="text-xs leading-5 text-[#596257]">
-          {nextPractice
-            ? nextPracticeNote
-            : '다른 연습을 고르거나 처음부터 다시 볼 수 있어요.'}
-        </span>
-      </a>
+      {nextPractice ? (
+        <a
+          aria-label={`다음 연습 ${nextPractice.title} ${nextPracticeNote}`}
+          className={cn(
+            'inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713]',
+            !canContinue && 'pointer-events-none opacity-55',
+          )}
+          href={nextHref}
+        >
+          <span className="text-xs font-semibold text-[#596257]">다음 연습</span>
+          <span className="text-sm font-semibold">{nextPractice.title}</span>
+          <span className="text-xs leading-5 text-[#596257]">
+            {nextPracticeNote}
+          </span>
+        </a>
+      ) : null}
       <button
         className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-sm font-medium text-[#151713]"
         onClick={onRestart}
@@ -988,6 +990,67 @@ function FinalPracticeActions({
         처음부터 다시 보기
       </button>
     </>
+  )
+}
+
+function SurveyDialog({ onClose }: { onClose: () => void }) {
+  const hasSurveyLink = surveyFormUrl.length > 0
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/42 px-4 py-6">
+      <section
+        aria-labelledby="survey-dialog-title"
+        aria-modal="true"
+        className="w-full max-w-lg rounded-md border border-[#dfe4da] bg-white p-6 text-[#151713] shadow-[0_24px_80px_rgba(0,0,0,0.22)]"
+        role="dialog"
+      >
+        <p className="text-sm font-semibold text-[#596257]">연습 완료</p>
+        <h2
+          className="mt-2 text-3xl font-semibold tracking-tight"
+          id="survey-dialog-title"
+        >
+          끝까지 연습해 주셔서 고맙습니다.
+        </h2>
+        <p className="mt-4 text-lg font-semibold leading-8 text-[#596257]">
+          더 좋은 학습 화면을 만들 수 있도록 짧은 설문 조사를 부탁드립니다.
+          답변은 화면을 고치는 데 사용하겠습니다.
+        </p>
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          {hasSurveyLink ? (
+            <a
+              className="inline-flex min-h-11 items-center rounded-md border border-[#151713] bg-[#151713] px-4 py-2 text-base font-semibold text-white"
+              href={surveyFormUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              설문 조사 하러 가기
+            </a>
+          ) : (
+            <button
+              className="inline-flex min-h-11 cursor-not-allowed items-center rounded-md border border-[#dfe4da] bg-[#eef1ee] px-4 py-2 text-base font-semibold text-[#596257]"
+              disabled
+              type="button"
+            >
+              설문 링크 준비 중
+            </button>
+          )}
+          <a
+            className="inline-flex min-h-11 items-center rounded-md border border-[#dfe4da] bg-white px-4 py-2 text-base font-semibold text-[#151713]"
+            href={appHref('/')}
+          >
+            처음 화면으로 가기
+          </a>
+          <button
+            className="inline-flex min-h-11 items-center rounded-md border border-[#dfe4da] bg-white px-4 py-2 text-base font-semibold text-[#151713]"
+            onClick={onClose}
+            type="button"
+          >
+            닫기
+          </button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -1094,7 +1157,7 @@ function getReviewSituationText(segment: TheaterSegment) {
 }
 
 function selectScenarioFromPath() {
-  const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
+  const pathname = getAppRoute()
   const id =
     pathname === '/demo'
       ? defaultScenarioId

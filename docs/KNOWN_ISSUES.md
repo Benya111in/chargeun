@@ -1,6 +1,7 @@
 # KNOWN_ISSUES
 
 - 새 학습 MVP는 실제 느린학습자/보호자/교사 대상 사용성 검증 전이다. 현재는 리서치 기반 제품 방향과 구현된 학습 흐름까지만 갖췄다.
+- 공개 체험 링크 마지막 설문 모달은 구현됐지만, 실제 구글폼 URL은 아직 `VITE_SURVEY_FORM_URL`에 연결되지 않았다. 링크를 받으면 배포 빌드 환경변수로 주입해야 한다.
 - 6개 분야별 에이전트 QA와 Chromium/Playwright 재검증은 통과했지만, 실제 느린학습자 대상 이해도·불안·일반화 검증은 아직 남아 있다.
 - `StructuredLearningExplanation v1`은 deterministic adapter와 schema 검증까지 연결됐지만, 실제 LLM structured output 생성 경로는 아직 내부 QA 실험 단계로 남아 있다.
 - `LearningReviewSubmission` 타입은 추가됐지만, LRS 결과를 QA JSON/persistence에 저장하고 LAS와 분리 분석하는 화면은 아직 없다.

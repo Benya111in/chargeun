@@ -7,6 +7,7 @@ import {
   type TheaterSegment,
 } from './lib/demo-theater-content'
 import { liveRuleCatalog } from './lib/rule-catalog'
+import { appHref } from './lib/routes'
 import { cn } from './lib/utils'
 
 export default function TeacherGuidePage() {
@@ -21,13 +22,13 @@ export default function TeacherGuidePage() {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe4da] pb-4">
           <a
             className="inline-flex items-center gap-2 rounded-md bg-[#151713] px-3 py-2 text-sm font-semibold text-white"
-            href="/"
+            href={appHref('/')}
           >
             <ShieldAlert className="size-4" />
             안심트랙 연습
           </a>
           <nav className="flex flex-wrap gap-2 text-sm">
-            <a className="link-button" href="/">
+            <a className="link-button" href={appHref('/')}>
               학습자 홈
             </a>
           </nav>
@@ -93,7 +94,7 @@ export default function TeacherGuidePage() {
                   <a
                     aria-label={`장면 ${index + 1} ${segment.label} 학습자 화면 열기`}
                     className="link-button"
-                    href={`/scenario/${scenario.id}`}
+                    href={appHref(`/scenario/${scenario.id}`)}
                   >
                     장면 {index + 1} 학습자 화면 열기
                   </a>
