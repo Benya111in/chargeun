@@ -419,7 +419,6 @@ function PracticePanel({
       >
         {segment.learnerExplanation}
       </h1>
-      <LearningTrackSummary segment={segment} />
 
       <div className="mt-6 grid gap-3">
         <h2 className="text-lg font-semibold">지금 할 일</h2>
@@ -549,39 +548,6 @@ function PracticePanel({
   )
 }
 
-function LearningTrackSummary({ segment }: { segment: TheaterSegment }) {
-  const structured = segment.structuredExplanation
-  const actionCount = structured.tracks.action?.cards.length ?? 0
-  const preservedCount = getLearnerPreservedCandidates(segment).length
-
-  return (
-    <section
-      aria-label="이 장면을 나누어 보는 방법"
-      className="mt-5 hidden gap-2 sm:grid sm:grid-cols-4"
-    >
-      <TrackBadge label="쉬운말" value="지금 장면" />
-      <TrackBadge label="할 일" value={`${actionCount}개 카드`} />
-      <TrackBadge
-        label="확인"
-        value={structured.tracks.teachBack ? '질문 1개' : '어른과 확인'}
-      />
-      <TrackBadge
-        label="헷갈림"
-        value={preservedCount ? `${preservedCount}개 보관` : '없음'}
-      />
-    </section>
-  )
-}
-
-function TrackBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-3">
-      <p className="text-xs font-semibold text-[#596257]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-[#151713]">{value}</p>
-    </div>
-  )
-}
-
 function PreservedCandidatePanel({ segment }: { segment: TheaterSegment }) {
   const candidates = getLearnerPreservedCandidates(segment)
 
@@ -591,9 +557,9 @@ function PreservedCandidatePanel({ segment }: { segment: TheaterSegment }) {
 
   return (
     <section className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
-      <h2 className="text-lg font-semibold">헷갈릴 수 있어요</h2>
+      <h2 className="text-lg font-semibold">잊지 말아요</h2>
       <p className="mt-2 text-sm leading-6 text-[#596257]">
-        보일 수 있어요. 하지만 지금은 고르지 않아요.
+        이 장면에서 함께 기억할 점이에요.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {candidates.map((candidate) => (
@@ -602,10 +568,10 @@ function PreservedCandidatePanel({ segment }: { segment: TheaterSegment }) {
             className="rounded-md border border-[#dfe4da] bg-white px-4 py-3"
           >
             <p className="text-sm font-semibold text-[#151713]">
-              {getLearnerCandidateText(candidate.candidate)}
+              {getLearnerReminderText(candidate.candidate)}
             </p>
             <p className="mt-1 text-xs leading-5 text-[#596257]">
-              지금은 고르지 않아요.
+              다시 볼 때 선생님이나 보호자와 확인해요.
             </p>
           </div>
         ))}
@@ -714,25 +680,29 @@ function getLearnerPreservedCandidates(segment: TheaterSegment) {
     .slice(0, 2)
 }
 
-function getLearnerCandidateText(candidate: string) {
+function getLearnerReminderText(candidate: string) {
   if (candidate.includes('엘리베이터')) {
-    return '엘리베이터'
+    return '엘리베이터 대신 계단을 찾아요.'
   }
 
   if (candidate.includes('출입문') || candidate.includes('문을 열어')) {
-    return '문 열어 두기'
+    return '나갈 수 있으면 문을 닫아요.'
   }
 
-  if (candidate.includes('연기 흡입')) {
-    return '그냥 서서 걷기'
+  if (
+    candidate.includes('연기 흡입') ||
+    candidate.includes('연기 쪽') ||
+    candidate.includes('연기가 짙')
+  ) {
+    return '연기가 있으면 몸을 낮춰요.'
   }
 
   if (candidate.includes('밖으로 뛰') || candidate.includes('무작정 이동')) {
-    return '바로 밖으로 뛰기'
+    return '바로 뛰지 말고 먼저 몸을 보호해요.'
   }
 
   if (candidate.includes('유리창') || candidate.includes('무거운 가구')) {
-    return '유리창 가까이 가기'
+    return '유리창 가까이는 피해서 머리를 지켜요.'
   }
 
   if (
@@ -740,7 +710,7 @@ function getLearnerCandidateText(candidate: string) {
     candidate.includes('전기') ||
     candidate.includes('전깃불')
   ) {
-    return '혼자 만지기'
+    return '가스와 전기는 혼자 만지지 않아요.'
   }
 
   return candidate

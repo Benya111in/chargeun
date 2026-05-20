@@ -75,8 +75,13 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(
     page.getByText('길이 막히면 대피공간에서 도움을 불러요.'),
   ).toBeVisible()
-  await expect(page.getByText('헷갈릴 수 있어요')).toBeVisible()
-  await expect(page.getByText('연기가 많은 길').first()).toBeVisible()
+  await expect(page.getByText('잊지 말아요')).toBeVisible()
+  await expect(page.getByText('연기가 있으면 몸을 낮춰요.')).toBeVisible()
+  await expect(page.getByText('헷갈릴 수 있어요')).toHaveCount(0)
+  await expect(
+    page.getByText('보일 수 있어요. 하지만 지금은 고르지 않아요.'),
+  ).toHaveCount(0)
+  await expect(page.getByText('2개 보관')).toHaveCount(0)
 
   await page.getByRole('button', { name: '쉬기' }).click()
   await expect(page.getByText('잠깐 쉬어도 괜찮아요.')).toBeVisible()
