@@ -31,7 +31,9 @@ const segmentStartGuardSec = 0.02
 const scenarioAliases: Record<string, string> = {
   'earthquake-review-flow': 'earthquake-protect-flow',
 }
-const surveyFormUrl = import.meta.env.VITE_SURVEY_FORM_URL?.trim() ?? ''
+const defaultSurveyFormUrl = 'https://forms.gle/nzCofnS9KosQ3X566'
+const surveyFormUrl =
+  import.meta.env.VITE_SURVEY_FORM_URL?.trim() || defaultSurveyFormUrl
 
 type PlaybackWindow = {
   freezeSec: number

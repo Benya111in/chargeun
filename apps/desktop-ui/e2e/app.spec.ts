@@ -287,7 +287,9 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
       name: '끝까지 연습해 주셔서 고맙습니다.',
     }),
   ).toBeVisible()
-  await expect(page.getByText('설문 링크 준비 중')).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: '설문 조사 하러 가기' }),
+  ).toHaveAttribute('href', 'https://forms.gle/nzCofnS9KosQ3X566')
   await expect(
     page.getByRole('link', { name: '처음 화면으로 가기' }),
   ).toHaveAttribute('href', '#/')
@@ -347,7 +349,9 @@ test('ends the final earthquake after-shaking practice without looping', async (
   )
   await page.getByRole('button', { name: '연습 끝내기' }).click()
   await expect(page.getByText('연습 완료')).toBeVisible()
-  await expect(page.getByText('설문 링크 준비 중')).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: '설문 조사 하러 가기' }),
+  ).toHaveAttribute('href', 'https://forms.gle/nzCofnS9KosQ3X566')
   await expect(page.getByText('화재가 났을 때')).toHaveCount(0)
 })
 
