@@ -71,7 +71,7 @@ export default function ScenarioPracticePage() {
     )
   }
 
-  return <ScenarioPractice scenario={scenario} />
+  return <ScenarioPractice key={scenario.id} scenario={scenario} />
 }
 
 function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {

@@ -270,6 +270,31 @@ test('offers next practice and restart controls after the final scene', async ({
     .toBeLessThan(1)
 })
 
+test('starts earthquake practice from the first scene after fire practice', async ({
+  page,
+}) => {
+  await page.goto('/#/scenario/fire-grounded-flow')
+
+  await page.getByRole('button', { name: '7번째 장면', exact: true }).click()
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
+  })
+  await advanceThroughReviewCards(page)
+
+  await page.getByRole('link', { name: '다음 연습으로 가기' }).click()
+
+  await expect(page).toHaveURL(/#\/scenario\/earthquake-protect-flow$/)
+  await expect(page.getByText('1 / 16')).toBeVisible()
+  await expect(page.getByText('7 / 16')).toHaveCount(0)
+  await expect(page.getByText('지진은 갑자기 올 수 있어요.')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: '영상을 보고 멈추면 같이 연습해요.' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '영상 시작하기' }),
+  ).toBeVisible()
+})
+
 test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await page.goto('/#/scenario/earthquake-protect-flow')
 
