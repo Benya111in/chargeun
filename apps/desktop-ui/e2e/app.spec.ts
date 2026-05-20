@@ -280,7 +280,15 @@ test('clamps video before the next segment frame is shown', async ({
 
   await page.getByRole('button', { name: '영상 시작하기' }).click()
   await page.locator('video').evaluate((video) => {
+    video.pause()
     video.currentTime = 11.45
+    video.dispatchEvent(new Event('timeupdate', { bubbles: true }))
+  })
+
+  await expect(page.getByText('아파트 화재 연습을 시작해요.')).toHaveCount(0)
+
+  await page.locator('video').evaluate((video) => {
+    video.currentTime = 11.51
     video.dispatchEvent(new Event('timeupdate', { bubbles: true }))
   })
 

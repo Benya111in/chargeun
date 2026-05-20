@@ -32,8 +32,9 @@ const scenarioAliases: Record<string, string> = {
 }
 
 type PlaybackWindow = {
-  clampSec: number
+  freezeSec: number
   index: number
+  pauseAtSec: number
   requestId: number
   segmentId: string
   startSec: number
@@ -109,12 +110,12 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
       return false
     }
 
-    if (video.currentTime < playbackWindow.clampSec) {
+    if (video.currentTime < playbackWindow.pauseAtSec) {
       return false
     }
 
     video.pause()
-    video.currentTime = playbackWindow.clampSec
+    video.currentTime = playbackWindow.freezeSec
     autoPauseSegmentRef.current = playbackWindow.segmentId
     pendingPlaybackIndexRef.current = null
     playbackWindowRef.current = null
@@ -1047,14 +1048,15 @@ function buildPlaybackWindow({
   const startSec = getSegmentStartSec(segment)
   const hasExplicitPause = segment.pauseMs !== undefined
   const rawEndSec = (segment.pauseMs ?? segment.endMs) / 1000
-  const clampSec = Math.max(
+  const freezeSec = Math.max(
     startSec,
     rawEndSec - (hasExplicitPause ? 0 : framePrecisionSec),
   )
 
   return {
-    clampSec,
+    freezeSec,
     index,
+    pauseAtSec: rawEndSec,
     requestId,
     segmentId: segment.id,
     startSec,
