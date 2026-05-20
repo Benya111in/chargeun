@@ -769,27 +769,63 @@ function SceneNarrationList({ segment }: { segment: TheaterSegment }) {
 
   return (
     <section className="mt-6 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
-      <h2 className="text-lg font-semibold">순서대로 따라해요</h2>
-      <p className="mt-2 text-sm leading-6 text-[#596257]">
-        짧은 문장만 보고 따라해요.
-      </p>
+      <h2 className="text-lg font-semibold">순서대로 읽어봐요</h2>
       <ol className="mt-3 grid gap-2">
         {steps.map((step, index) => (
-          <li
-            key={`${index}-${step}`}
-            className="rounded-md border border-[#dfe4da] bg-white px-4 py-3"
-          >
-            <p className="text-xs font-semibold text-[#596257]">
-              {index + 1}번
-            </p>
-            <p className="mt-1 text-base font-semibold leading-7 text-[#151713]">
-              {step}
-            </p>
+          <li key={`${index}-${step.kind}-${step.text}`}>
+            <LearnerSequenceCard index={index} step={step} />
           </li>
         ))}
       </ol>
     </section>
   )
+}
+
+function LearnerSequenceCard({
+  index,
+  step,
+}: {
+  index: number
+  step: TheaterSegment['learnerSequence'][number]
+}) {
+  const tone = getLearnerSequenceTone(step.kind)
+
+  return (
+    <div className={cn('rounded-md border px-4 py-3', tone.cardClassName)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-[#596257]">
+          {index + 1}번
+        </span>
+        <span
+          className={cn(
+            'rounded-md px-2 py-1 text-xs font-semibold',
+            tone.badgeClassName,
+          )}
+        >
+          {step.kind === 'situation' ? '상황' : '해야 할 일'}
+        </span>
+      </div>
+      <p className="mt-2 text-base font-semibold leading-7 text-[#151713]">
+        {step.text}
+      </p>
+    </div>
+  )
+}
+
+function getLearnerSequenceTone(
+  kind: TheaterSegment['learnerSequence'][number]['kind'],
+) {
+  if (kind === 'situation') {
+    return {
+      badgeClassName: 'bg-sky-100 text-sky-900',
+      cardClassName: 'border-sky-200 bg-sky-50',
+    }
+  }
+
+  return {
+    badgeClassName: 'bg-emerald-100 text-emerald-900',
+    cardClassName: 'border-emerald-200 bg-emerald-50',
+  }
 }
 
 function FinalPracticeActions({

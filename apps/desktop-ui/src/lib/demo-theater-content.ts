@@ -33,7 +33,7 @@ export type TheaterSegment = {
   label: string
   learnerExplanation: string
   learnerPrompt: string
-  learnerSequence: string[]
+  learnerSequence: LearnerSequenceStep[]
   narration: TimedNarrationCue[]
   packet: PerceptionPacket
   practiceMode: SegmentPracticeMode
@@ -54,6 +54,13 @@ export type TheaterSegment = {
 }
 
 export type SegmentPracticeMode = 'intro' | 'action'
+
+export type LearnerSequenceStepKind = 'action' | 'situation'
+
+export type LearnerSequenceStep = {
+  kind: LearnerSequenceStepKind
+  text: string
+}
 
 export type TimedNarrationCue = {
   endMs: number
@@ -88,7 +95,7 @@ type SegmentSeed = {
   label: string
   learnerExplanation?: string
   learnerPrompt?: string
-  learnerSequence?: string[]
+  learnerSequence?: Array<string | LearnerSequenceStep>
   narration?: TimedNarrationCue[]
   packet: PerceptionPacket
   practiceMode?: SegmentPracticeMode
@@ -1887,14 +1894,48 @@ function buildLearnerSequence({
 }) {
   const fallbackSteps =
     practiceMode === 'intro'
-      ? [learnerPrompt, learnerExplanation, '다음 장면에서 행동을 연습해요.']
-      : [learnerPrompt, ...actionSteps]
+      ? [
+          { kind: 'situation' as const, text: learnerPrompt },
+          { kind: 'situation' as const, text: learnerExplanation },
+          {
+            kind: 'situation' as const,
+            text: '다음 장면에서 행동을 연습해요.',
+          },
+        ]
+      : [
+          { kind: 'situation' as const, text: learnerPrompt },
+          ...actionSteps.map((step) => ({
+            kind: 'action' as const,
+            text: step,
+          })),
+        ]
 
   const normalized = (seed.learnerSequence ?? fallbackSteps)
-    .map((step) => step.trim())
-    .filter(Boolean)
+    .map((step, index) =>
+      typeof step === 'string'
+        ? {
+            kind:
+              practiceMode === 'action' && index > 0
+                ? ('action' as const)
+                : ('situation' as const),
+            text: step.trim(),
+          }
+        : { kind: step.kind, text: step.text.trim() },
+    )
+    .filter((step) => step.text)
 
-  return Array.from(new Set(normalized))
+  const seen = new Set<string>()
+
+  return normalized.filter((step) => {
+    const key = `${step.kind}:${step.text}`
+
+    if (seen.has(key)) {
+      return false
+    }
+
+    seen.add(key)
+    return true
+  })
 }
 
 function createTeachBack(input: {

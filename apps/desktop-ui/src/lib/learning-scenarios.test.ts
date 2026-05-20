@@ -19,8 +19,9 @@ describe('learningScenarios', () => {
         expect(segment.learnerSequence.length).toBeGreaterThan(0)
         expect(segment.learnerSequence.length).toBeLessThanOrEqual(4)
         for (const learnerStep of segment.learnerSequence) {
-          expect(learnerStep.length).toBeLessThanOrEqual(35)
-          expect(learnerStep).not.toMatch(
+          expect(learnerStep.text.length).toBeLessThanOrEqual(35)
+          expect(learnerStep.kind).toMatch(/^(action|situation)$/)
+          expect(learnerStep.text).not.toMatch(
             /차단|화염|반드시|이용해|외부로 빠져나와야|발생했습니다|사상자/,
           )
         }
@@ -43,6 +44,10 @@ describe('learningScenarios', () => {
           expect(segment.checkQuestion).toBe('')
           expect(segment.answerOptions).toHaveLength(0)
         } else {
+          expect(segment.learnerSequence[0]?.kind).toBe('situation')
+          expect(
+            segment.learnerSequence.slice(1).map((step) => step.kind),
+          ).toEqual(segment.actionSteps.map(() => 'action'))
           expect(segment.actionSteps.length).toBeGreaterThanOrEqual(1)
           expect(segment.actionSteps.length).toBeLessThanOrEqual(3)
           expect(
