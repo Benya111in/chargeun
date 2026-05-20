@@ -197,6 +197,31 @@ describe('buildStructuredLearningExplanation', () => {
       rules: fireRules,
       segment,
       sourceId: 'fire-grounded-flow',
+      teachBack: {
+        correctOptionId: 'closed-door',
+        options: [
+          {
+            evidenceRefs: ['rule:KR_FIRE_04'],
+            feedback: '맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.',
+            id: 'closed-door',
+            kind: 'state',
+            label: '닫힌 문',
+            officialRuleIds: ['KR_FIRE_04'],
+            role: 'correct',
+          },
+          {
+            evidenceRefs: ['contrast:open-door'],
+            feedback: '괜찮아요. 이 장면에서는 문을 닫는 행동을 다시 봐요.',
+            id: 'open-door',
+            kind: 'state',
+            label: '열린 문',
+            role: 'contrast',
+          },
+        ],
+        prompt: '나갈 때 문은 어떤 모습이어야 할까요?',
+        reviewPrompt:
+          '헷갈리면 이 장면을 다시 보고, 선생님이나 보호자와 같이 골라요.',
+      },
     })
 
     expect(structured.version).toBe('slowlearner_multitrack_v1')
@@ -208,6 +233,10 @@ describe('buildStructuredLearningExplanation', () => {
       '문을 닫아요',
       '문을 열어 두지 않아요',
     ])
+    expect(structured.tracks.teachBack?.correctOptionId).toBe('closed-door')
+    expect(structured.tracks.teachBack?.options[0]?.officialRuleIds).toContain(
+      'KR_FIRE_04',
+    )
     expect(structured.evidence.visualEvidence.length).toBeGreaterThan(0)
     expect(structured.evidence.ocrEvidence.length).toBeGreaterThan(0)
     expect(structured.evidence.asrEvidence.length).toBe(1)

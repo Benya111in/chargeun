@@ -32,6 +32,11 @@
 - 이유: `엘리베이터는 타지 않아요`, `바로 뛰지 않아요` 같은 do-not 문장은 안전 행동이라서 확인 질문의 오답으로 보이면 정답이 두 개처럼 읽힌다.
 - 영향: 학습자 확인 질문의 오답은 `잘 모르겠어요`처럼 정답을 노출하는 고정 선택지가 아니라, 현재 장면과 관련 있지만 정답 행동 카드와 충돌하지 않는 대상/장소/상태로 둔다. do-not 행동은 행동 카드나 교사 설명에는 남길 수 있지만 quiz answer option으로는 쓰지 않는다.
 
+### D-063 Teach-back 선택지는 구조적 계약을 통과해야 한다
+
+- 이유: `answerOptions`를 자유 텍스트로 두면 LLM 또는 사람이 다시 정답 같은 오답, 고정 `잘 모르겠어요`, 행동 지시형 오답을 만들 수 있다.
+- 영향: `StructuredLearningExplanation v1`에 `tracks.teachBack`을 추가하고, validated segment는 teach-back을 반드시 포함해야 한다. 선택지는 `correct | contrast` role, `object | person | place | signal | state` kind, `correctOptionId`, 공식 rule id를 가진다. schema는 정답 1개, 동일 kind, `잘 모르겠어요` 금지, 행동 지시형 label 금지, 행동 카드 label 중복 금지, 정답 option과 행동 카드의 rule id 연결을 강제한다. UI는 검증된 structured teach-back에서만 질문과 선택지를 파생한다.
+
 ## 2026-04-14
 
 ### D-001 macOS 단일 경로 우선

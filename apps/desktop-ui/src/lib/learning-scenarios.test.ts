@@ -22,6 +22,10 @@ describe('learningScenarios', () => {
           getLearnerActionCards(segment).map((card) => card.label),
         ).toEqual(segment.actionSteps)
         expect(segment.checkQuestion).toBeTruthy()
+        expect(segment.teachBack).toEqual(
+          segment.structuredExplanation.tracks.teachBack,
+        )
+        expect(segment.checkQuestion).toBe(segment.teachBack?.prompt)
         expect(segment.answerOptions.length).toBeGreaterThanOrEqual(2)
         expect(
           segment.answerOptions.some((option) => option.correct),
@@ -32,6 +36,9 @@ describe('learningScenarios', () => {
         const optionLabels = segment.answerOptions.map((option) => option.label)
         expect(new Set(optionLabels).size).toBe(optionLabels.length)
         expect(optionLabels).not.toContain('잘 모르겠어요')
+        expect(segment.answerOptions.find((option) => option.correct)?.id).toBe(
+          segment.teachBack?.correctOptionId,
+        )
 
         const learnerActionLabels = getLearnerActionCards(segment).map(
           (card) => card.label,

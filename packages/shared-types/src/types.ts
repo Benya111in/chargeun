@@ -83,6 +83,32 @@ export type LearningActionCard = {
   officialRuleIds: string[]
 }
 
+export type LearningTeachBackOptionRole = 'correct' | 'contrast'
+
+export type LearningTeachBackOptionKind =
+  | 'object'
+  | 'person'
+  | 'place'
+  | 'signal'
+  | 'state'
+
+export type LearningTeachBackOption = {
+  id: string
+  label: string
+  role: LearningTeachBackOptionRole
+  kind: LearningTeachBackOptionKind
+  feedback: string
+  officialRuleIds?: string[]
+  evidenceRefs: string[]
+}
+
+export type LearningTeachBack = {
+  prompt: string
+  correctOptionId: string
+  options: LearningTeachBackOption[]
+  reviewPrompt: string
+}
+
 export type LearningTrackSet = {
   easy: {
     text: string
@@ -91,6 +117,7 @@ export type LearningTrackSet = {
   action?: {
     cards: LearningActionCard[]
   }
+  teachBack?: LearningTeachBack
   reason: {
     text: string
     officialRuleIds: string[]

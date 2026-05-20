@@ -152,6 +152,51 @@ describe('structuredLearningExplanationSchema', () => {
     expect(result.success).toBe(false)
   })
 
+  it('rejects validated segments without teach-back checks', () => {
+    const input = validStructuredExplanation() as any
+    delete input.tracks.teachBack
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects fixed unsure teach-back options', () => {
+    const input = validStructuredExplanation()
+    input.tracks.teachBack.options[1]!.label = '잘 모르겠어요'
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects teach-back options that look like action guidance', () => {
+    const input = validStructuredExplanation()
+    input.tracks.teachBack.options[1]!.label = '문을 열어 두어요'
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects teach-back labels that duplicate learner action cards', () => {
+    const input = validStructuredExplanation()
+    input.tracks.teachBack.options[0]!.label = '문을 닫아요'
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects correct teach-back options that do not share action rule ids', () => {
+    const input = validStructuredExplanation()
+    input.tracks.teachBack.options[0]!.officialRuleIds = ['KR_FIRE_03']
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
   it('rejects validated segments without grounded action cards', () => {
     const input = validStructuredExplanation() as any
     delete input.tracks.action
@@ -212,6 +257,31 @@ function validStructuredExplanation() {
             officialRuleIds: ['KR_FIRE_04'],
           },
         ],
+      },
+      teachBack: {
+        correctOptionId: 'closed-door',
+        options: [
+          {
+            evidenceRefs: ['rule:KR_FIRE_04'],
+            feedback: '맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.',
+            id: 'closed-door',
+            kind: 'state',
+            label: '닫힌 문',
+            officialRuleIds: ['KR_FIRE_04'],
+            role: 'correct',
+          },
+          {
+            evidenceRefs: ['contrast:open-door'],
+            feedback: '괜찮아요. 이 장면에서는 문을 닫는 행동을 다시 봐요.',
+            id: 'open-door',
+            kind: 'state',
+            label: '열린 문',
+            role: 'contrast',
+          },
+        ],
+        prompt: '나갈 때 문은 어떤 모습이어야 할까요?',
+        reviewPrompt:
+          '헷갈리면 이 장면을 다시 보고, 선생님이나 보호자와 같이 골라요.',
       },
       reason: {
         text: '문을 닫으면 연기가 천천히 퍼져요.',

@@ -172,6 +172,133 @@ export const learningActionCardSchema = z.object({
   officialRuleIds: z.array(z.string().min(1)).min(1),
 })
 
+export const learningTeachBackOptionRoleSchema = z.enum(['correct', 'contrast'])
+
+export const learningTeachBackOptionKindSchema = z.enum([
+  'object',
+  'person',
+  'place',
+  'signal',
+  'state',
+])
+
+const teachBackGuidanceLikePattern =
+  /(하세요|해요|가요|봐요|말해요|않아요|피해요|두어요|잡아요|기다려요|확인해요|요)$/
+
+export const learningTeachBackOptionSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1).max(24),
+    role: learningTeachBackOptionRoleSchema,
+    kind: learningTeachBackOptionKindSchema,
+    feedback: z.string().min(1).max(120),
+    officialRuleIds: z.array(z.string().min(1)).optional(),
+    evidenceRefs: z.array(z.string().min(1)),
+  })
+  .superRefine((value, ctx) => {
+    if (value.label === '잘 모르겠어요') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'teach-back options cannot use a fixed unsure answer',
+        path: ['label'],
+      })
+    }
+
+    if (teachBackGuidanceLikePattern.test(value.label)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'teach-back option labels must be objects, places, people, signals, or states, not action guidance',
+        path: ['label'],
+      })
+    }
+
+    if (value.role === 'correct' && !value.officialRuleIds?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'correct teach-back options require official rule ids',
+        path: ['officialRuleIds'],
+      })
+    }
+
+    if (value.role === 'contrast' && value.officialRuleIds?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'contrast teach-back options cannot be grounded as official actions',
+        path: ['officialRuleIds'],
+      })
+    }
+  })
+
+export const learningTeachBackSchema = z
+  .object({
+    prompt: z.string().min(1).max(80),
+    correctOptionId: z.string().min(1),
+    options: z.array(learningTeachBackOptionSchema).min(2).max(3),
+    reviewPrompt: z.string().min(1).max(120),
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.options.map((option) => option.id))
+    const labels = new Set(value.options.map((option) => option.label))
+    const kinds = new Set(value.options.map((option) => option.kind))
+    const correctOptions = value.options.filter(
+      (option) => option.role === 'correct',
+    )
+
+    if (ids.size !== value.options.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'teach-back option ids must be unique',
+        path: ['options'],
+      })
+    }
+
+    if (labels.size !== value.options.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'teach-back option labels must be unique',
+        path: ['options'],
+      })
+    }
+
+    if (kinds.size !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'teach-back options in one question must use the same semantic kind',
+        path: ['options'],
+      })
+    }
+
+    if (correctOptions.length !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'teach-back questions require exactly one correct option',
+        path: ['options'],
+      })
+    }
+
+    if (!ids.has(value.correctOptionId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'correctOptionId must reference an existing option',
+        path: ['correctOptionId'],
+      })
+    }
+
+    if (
+      correctOptions.length === 1 &&
+      correctOptions[0]?.id !== value.correctOptionId
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'correctOptionId must reference the correct option',
+        path: ['correctOptionId'],
+      })
+    }
+  })
+
 export const learningTrackSetSchema = z.object({
   easy: z.object({
     text: z.string().min(1).max(140),
@@ -182,6 +309,7 @@ export const learningTrackSetSchema = z.object({
       cards: z.array(learningActionCardSchema).min(1).max(3),
     })
     .optional(),
+  teachBack: learningTeachBackSchema.optional(),
   reason: z.object({
     text: z.string().min(1).max(180),
     officialRuleIds: z.array(z.string().min(1)),
@@ -276,6 +404,7 @@ export const structuredLearningExplanationSchema = z
   })
   .superRefine((value, ctx) => {
     const hasActionCards = Boolean(value.tracks.action?.cards.length)
+    const hasTeachBack = Boolean(value.tracks.teachBack)
 
     if (value.segment.status === 'validated' && !hasActionCards) {
       ctx.addIssue({
@@ -283,6 +412,14 @@ export const structuredLearningExplanationSchema = z
         message:
           'validated learning segments must include grounded action cards',
         path: ['tracks', 'action'],
+      })
+    }
+
+    if (value.segment.status === 'validated' && !hasTeachBack) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'validated learning segments must include teach-back checks',
+        path: ['tracks', 'teachBack'],
       })
     }
 
@@ -295,6 +432,18 @@ export const structuredLearningExplanationSchema = z
         message:
           'review or blocked learning segments cannot expose action cards',
         path: ['tracks', 'action'],
+      })
+    }
+
+    if (
+      ['needs_review', 'blocked'].includes(value.segment.status) &&
+      hasTeachBack
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'review or blocked learning segments cannot expose teach-back checks',
+        path: ['tracks', 'teachBack'],
       })
     }
 
@@ -316,6 +465,39 @@ export const structuredLearningExplanationSchema = z
           'validated segments must be learner safe without required review',
         path: ['validation'],
       })
+    }
+
+    if (hasActionCards && value.tracks.teachBack) {
+      const actionLabels = new Set(
+        value.tracks.action?.cards.map((card) => card.label) ?? [],
+      )
+      const actionRuleIds = new Set(
+        value.tracks.action?.cards.flatMap((card) => card.officialRuleIds) ??
+          [],
+      )
+
+      for (const [index, option] of value.tracks.teachBack.options.entries()) {
+        if (actionLabels.has(option.label)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              'teach-back option labels cannot duplicate learner action cards',
+            path: ['tracks', 'teachBack', 'options', index, 'label'],
+          })
+        }
+
+        if (
+          option.role === 'correct' &&
+          !option.officialRuleIds?.some((ruleId) => actionRuleIds.has(ruleId))
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              'correct teach-back option must share an official rule id with an action card',
+            path: ['tracks', 'teachBack', 'options', index, 'officialRuleIds'],
+          })
+        }
+      }
     }
   })
 

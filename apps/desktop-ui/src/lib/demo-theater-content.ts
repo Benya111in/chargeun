@@ -7,6 +7,8 @@ import {
   type GroundedRuleMatch,
 } from '@ansimtrack/llm-orchestrator'
 import type {
+  LearningTeachBack,
+  LearningTeachBackOptionKind,
   PerceptionPacket,
   RuleRecord,
   Segment,
@@ -18,12 +20,7 @@ import { earthquakeRuleCatalog, fireRuleCatalog } from './rule-catalog'
 
 export type TheaterSegment = {
   actionSteps: string[]
-  answerOptions: Array<{
-    correct: boolean
-    feedback: string
-    id: string
-    label: string
-  }>
+  answerOptions: PracticeAnswerOption[]
   checkQuestion: string
   description: string
   endMs: number
@@ -46,6 +43,11 @@ export type TheaterSegment = {
     prompt: string
     script: string
   }
+  teachBack: LearningTeachBack | null
+}
+
+export type PracticeAnswerOption = LearningTeachBack['options'][number] & {
+  correct: boolean
 }
 
 export type TheaterShow = {
@@ -60,8 +62,6 @@ export type TheaterShow = {
 
 type SegmentSeed = {
   actionSteps?: string[]
-  answerOptions?: TheaterSegment['answerOptions']
-  checkQuestion?: string
   description: string
   endMs: number
   id: string
@@ -72,6 +72,7 @@ type SegmentSeed = {
   rules: RuleRecord[]
   segmentOverrides?: Partial<Segment>
   startMs: number
+  teachBack: LearningTeachBack
   teacherGuide?: TheaterSegment['teacherGuide']
 }
 
@@ -93,21 +94,21 @@ export const learningScenarios: TheaterShow[] = [
         learnerExplanation: '나갈 때는 문을 닫아요.',
         learnerPrompt: '불이 났어요. 연기가 퍼질 수 있어요.',
         actionSteps: ['문을 닫아요', '문을 열어 두지 않아요'],
-        checkQuestion: '나갈 때 문은 어떤 모습이어야 할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.',
-            id: 'close-door',
-            label: '닫힌 문',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 문을 닫는 행동을 다시 봐요.',
             id: 'leave-door-open',
             label: '열린 문',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.',
+            id: 'close-door',
+            label: '닫힌 문',
+          },
+          kind: 'state',
+          prompt: '나갈 때 문은 어떤 모습이어야 할까요?',
+          ruleIds: ['KR_FIRE_04'],
+        }),
         packet: createPacket({
           asrText: '우리 집 화재 시 현관문을 닫고 계단으로 대피합니다.',
           objectHints: ['출입문', '현관문', '연기', '복도', '계단 방향'],
@@ -146,21 +147,21 @@ export const learningScenarios: TheaterShow[] = [
           '계단으로 가요',
           '엘리베이터는 타지 않아요',
         ],
-        checkQuestion: '어디로 가야 할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 화재 때는 계단으로 이동해요.',
-            id: 'stairs',
-            label: '계단',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 계단을 찾는 것을 다시 봐요.',
             id: 'elevator',
             label: '엘리베이터',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 화재 때는 계단으로 이동해요.',
+            id: 'stairs',
+            label: '계단',
+          },
+          kind: 'place',
+          prompt: '어디로 가야 할까요?',
+          ruleIds: ['KR_FIRE_03'],
+        }),
         packet: createPacket({
           asrText: '계단을 이용해 낮은 자세로 안전한 곳으로 이동합니다.',
           objectHints: ['계단으로 대피 가능함', '복도', '출구가 보임'],
@@ -198,22 +199,22 @@ export const learningScenarios: TheaterShow[] = [
           '안전한 곳으로 가요',
           '어른이나 119에 알려요',
         ],
-        checkQuestion: '밖으로 나가기 어려우면 어떻게 할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 무리하지 말고 안전한 곳에서 도움을 불러요.',
-            id: 'refuge',
-            label: '안전한 곳으로 가요',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback:
               '괜찮아요. 이 장면에서는 안전한 곳을 찾는 것을 다시 봐요.',
             id: 'force-exit',
             label: '연기가 많은 길',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 무리하지 말고 안전한 곳에서 도움을 불러요.',
+            id: 'refuge',
+            label: '안전한 곳',
+          },
+          kind: 'place',
+          prompt: '밖으로 나가기 어려우면 어디가 좋을까요?',
+          ruleIds: ['KR_FIRE_05'],
+        }),
         packet: createPacket({
           asrText:
             '대피가 어렵다면 집 안 대피공간이나 피난 수단으로 이동합니다.',
@@ -263,22 +264,22 @@ export const learningScenarios: TheaterShow[] = [
           '머리를 보호해요',
           '흔들림이 멈출 때까지 기다려요',
         ],
-        checkQuestion: '흔들릴 때 먼저 어디로 갈까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 흔들릴 때는 머리를 보호해요.',
-            id: 'under-desk',
-            label: '책상 아래',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback:
               '괜찮아요. 이 장면에서는 책상 아래로 가는 것을 다시 봐요.',
             id: 'run-out',
             label: '창문 옆',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 흔들릴 때는 머리를 보호해요.',
+            id: 'under-desk',
+            label: '책상 아래',
+          },
+          kind: 'place',
+          prompt: '흔들릴 때 먼저 어디로 갈까요?',
+          ruleIds: ['KR_EQ_03'],
+        }),
         packet: createPacket({
           asrText:
             '지진으로 흔들릴 때는 책상이나 탁자 아래로 들어가 머리를 보호합니다.',
@@ -317,22 +318,22 @@ export const learningScenarios: TheaterShow[] = [
           '책상 다리를 잡아요',
           '선생님 말을 들어요',
         ],
-        checkQuestion: '학교에서 흔들리면 무엇을 할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 교실에서는 책상 아래에서 선생님 안내를 들어요.',
-            id: 'school-desk',
-            label: '책상 아래로 가요',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback:
               '괜찮아요. 이 장면에서는 책상 아래로 가는 것을 다시 봐요.',
             id: 'run-hall',
             label: '복도',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 교실에서는 책상 아래에서 선생님 안내를 들어요.',
+            id: 'school-desk',
+            label: '책상 아래',
+          },
+          kind: 'place',
+          prompt: '학교에서 흔들리면 어디로 갈까요?',
+          ruleIds: ['KR_EQ_03'],
+        }),
         packet: createPacket({
           asrText:
             '지진으로 흔들릴 때 학교에서도 책상이나 탁자 아래로 피해서 머리를 보호합니다.',
@@ -373,21 +374,21 @@ export const learningScenarios: TheaterShow[] = [
           '가방이나 방석으로 머리를 감싸요',
           '흔들림이 멈추길 기다려요',
         ],
-        checkQuestion: '책상이 없으면 무엇을 보호할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 머리를 보호하는 것이 먼저예요.',
-            id: 'protect-head',
-            label: '머리',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 머리 보호를 다시 봐요.',
             id: 'protect-bag',
             label: '가방',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 머리를 보호하는 것이 먼저예요.',
+            id: 'protect-head',
+            label: '머리',
+          },
+          kind: 'object',
+          prompt: '책상이 없으면 무엇을 보호할까요?',
+          ruleIds: ['KR_EQ_04'],
+        }),
         packet: createPacket({
           asrText:
             '지진으로 흔들릴 때 탁자가 없으면 방석이나 가방으로 머리를 보호하고 낮게 자세를 유지합니다.',
@@ -432,21 +433,21 @@ export const learningScenarios: TheaterShow[] = [
         learnerExplanation: '소리가 없어도 문과 계단을 볼 수 있어요.',
         learnerPrompt: '소리가 없어도 장면을 보고 연습해요.',
         actionSteps: ['문을 닫아요', '계단 방향을 봐요'],
-        checkQuestion: '소리가 없어도 먼저 무엇을 볼까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 문과 계단 방향을 보고 연습할 수 있어요.',
-            id: 'visual-exit',
-            label: '문과 계단 방향',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 화면 단서를 다시 봐요.',
             id: 'wait-audio',
             label: '배경 색',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 문과 계단 방향을 보고 연습할 수 있어요.',
+            id: 'visual-exit',
+            label: '문과 계단 방향',
+          },
+          kind: 'signal',
+          prompt: '소리가 없어도 먼저 무엇을 볼까요?',
+          ruleIds: ['KR_FIRE_04'],
+        }),
         packet: createPacket({
           asrText: '',
           objectHints: ['출입문', '복도', '계단 방향'],
@@ -484,21 +485,21 @@ export const learningScenarios: TheaterShow[] = [
           '계단을 찾아요',
           '엘리베이터는 피해요',
         ],
-        checkQuestion: '화면에서 어떤 표시를 찾을까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 비상구와 계단 표시를 찾아요.',
-            id: 'exit-sign',
-            label: '비상구 표시',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 비상구 표시를 다시 봐요.',
             id: 'elevator-sign',
             label: '엘리베이터 표시',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 비상구와 계단 표시를 찾아요.',
+            id: 'exit-sign',
+            label: '비상구 표시',
+          },
+          kind: 'signal',
+          prompt: '화면에서 어떤 표시를 찾을까요?',
+          ruleIds: ['KR_FIRE_03'],
+        }),
         packet: createPacket({
           asrText: '',
           objectHints: ['계단으로 대피 가능함', '출구가 보임', '복도'],
@@ -535,21 +536,21 @@ export const learningScenarios: TheaterShow[] = [
           '안전한 곳을 찾아요',
           '도움을 요청해요',
         ],
-        checkQuestion: '길이 막히면 무엇을 할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 무리하지 않고 안전한 곳에서 도움을 불러요.',
-            id: 'visual-refuge',
-            label: '안전한 곳을 찾아요',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 안전한 곳 찾기를 다시 봐요.',
             id: 'visual-force',
             label: '막힌 길',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 무리하지 않고 안전한 곳에서 도움을 불러요.',
+            id: 'visual-refuge',
+            label: '안전한 곳',
+          },
+          kind: 'place',
+          prompt: '길이 막히면 어디를 찾을까요?',
+          ruleIds: ['KR_FIRE_05'],
+        }),
         packet: createPacket({
           asrText: '',
           objectHints: ['대피가 어려움', '대피공간', '실내 대기'],
@@ -598,21 +599,21 @@ export const learningScenarios: TheaterShow[] = [
           '문을 열어 출구를 확인해요',
           '주변 어른과 함께 움직여요',
         ],
-        checkQuestion: '흔들림이 멈춘 뒤 무엇을 확인할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 출구와 주변 안내를 확인해요.',
-            id: 'check-exit',
-            label: '나갈 길',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 나갈 길 확인을 다시 봐요.',
             id: 'run-fast',
             label: '창문 밖 풍경',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 출구와 주변 안내를 확인해요.',
+            id: 'check-exit',
+            label: '나갈 길',
+          },
+          kind: 'object',
+          prompt: '흔들림이 멈춘 뒤 무엇을 확인할까요?',
+          ruleIds: ['KR_EQ_05'],
+        }),
         packet: createPacket({
           asrText: '흔들림이 멈추면 문을 열어 출구를 확보합니다.',
           objectHints: ['출입문', '출구 확보', '실내 이동'],
@@ -650,21 +651,21 @@ export const learningScenarios: TheaterShow[] = [
           '전기 스위치를 함부로 만지지 않아요',
           '어른에게 말해요',
         ],
-        checkQuestion: '가스 냄새가 나면 누구에게 말할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 어른에게 말하고 안전한 곳으로 가요.',
-            id: 'tell-adult',
-            label: '어른에게 말해요',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 어른에게 말하기를 다시 봐요.',
             id: 'touch-gas',
             label: '나 혼자',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 어른에게 말하고 안전한 곳으로 가요.',
+            id: 'tell-adult',
+            label: '어른',
+          },
+          kind: 'person',
+          prompt: '가스 냄새가 나면 누구에게 말할까요?',
+          ruleIds: ['KR_EQ_05'],
+        }),
         packet: createPacket({
           asrText: '가스와 전깃불을 확인하고 위험이 있으면 바로 차단합니다.',
           objectHints: ['가스 밸브', '전기 차단기', '주방'],
@@ -702,21 +703,21 @@ export const learningScenarios: TheaterShow[] = [
           '불이나 가스 냄새를 알려요',
           '119 또는 주변 어른에게 도움을 요청해요',
         ],
-        checkQuestion: '크게 위험하면 어디에 도움을 요청할까요?',
-        answerOptions: [
-          {
-            correct: true,
-            feedback: '맞아요. 119나 주변 어른에게 바로 알려요.',
-            id: 'call-help',
-            label: '119와 주변 어른',
-          },
-          {
-            correct: false,
+        teachBack: createTeachBack({
+          contrast: {
             feedback: '괜찮아요. 이 장면에서는 도움 요청을 다시 봐요.',
             id: 'hide-alone',
             label: '나 혼자',
           },
-        ],
+          correct: {
+            feedback: '맞아요. 119나 주변 어른에게 바로 알려요.',
+            id: 'call-help',
+            label: '119와 주변 어른',
+          },
+          kind: 'person',
+          prompt: '크게 위험하면 어디에 도움을 요청할까요?',
+          ruleIds: ['KR_EQ_12'],
+        }),
         packet: createPacket({
           asrText:
             '흔들림이 멈춘 뒤 가족과 부상자를 확인하고 가스 냄새나 화재가 있으면 119에 알립니다.',
@@ -785,13 +786,13 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
       '오답이 나오면 장면을 다시 보고 공식 행동요령을 한 문장으로 반복합니다.',
     observe:
       '학습자가 첫 행동을 고르고, 다시 보기와 다음 장면을 사용할 수 있는지 확인합니다.',
-    prompt: seed.checkQuestion ?? '먼저 무엇을 할까요?',
+    prompt: seed.teachBack.prompt,
     script:
       safetyView.explanation.tracks.caregiver ??
       '장면을 짧게 멈추고 쉬운말과 행동 카드를 함께 확인합니다.',
   }
   const structuredExplanation = buildStructuredLearningExplanation({
-    decisionPoint: seed.checkQuestion ?? '먼저 무엇을 할까요?',
+    decisionPoint: seed.teachBack.prompt,
     evidence: seed.packet,
     explanation: safetyView.explanation,
     learnerActionSteps: seed.actionSteps,
@@ -799,26 +800,21 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     rules: seed.rules,
     segment,
     sourceId: seed.packet.sessionId,
+    teachBack: seed.teachBack,
     teacherGuide: {
       correctionHint: teacherGuide.correction,
       script: teacherGuide.script,
     },
   })
+  const teachBack = structuredExplanation.tracks.teachBack ?? null
 
   return {
     actionSteps: seed.actionSteps ?? [
       safetyView.explanation.tracks.action ??
         safetyView.explanation.tracks.easy,
     ],
-    answerOptions: seed.answerOptions ?? [
-      {
-        correct: true,
-        feedback: '맞아요. 이 장면을 다시 한 번 보며 기억해요.',
-        id: `${seed.id}-correct`,
-        label: safetyView.explanation.tracks.action ?? seed.description,
-      },
-    ],
-    checkQuestion: seed.checkQuestion ?? '먼저 무엇을 할까요?',
+    answerOptions: teachBack ? toPracticeAnswerOptions(teachBack) : [],
+    checkQuestion: teachBack?.prompt ?? '먼저 무엇을 할까요?',
     description: seed.description,
     endMs: seed.endMs,
     explanation: safetyView.explanation,
@@ -834,8 +830,60 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     segment,
     startMs: seed.startMs,
     structuredExplanation,
+    teachBack,
     teacherGuide,
   }
+}
+
+function createTeachBack(input: {
+  contrast: {
+    feedback: string
+    id: string
+    label: string
+  }
+  correct: {
+    feedback: string
+    id: string
+    label: string
+  }
+  kind: LearningTeachBackOptionKind
+  prompt: string
+  ruleIds: string[]
+}): LearningTeachBack {
+  return {
+    correctOptionId: input.correct.id,
+    options: [
+      {
+        evidenceRefs: input.ruleIds.map((ruleId) => `rule:${ruleId}`),
+        feedback: input.correct.feedback,
+        id: input.correct.id,
+        kind: input.kind,
+        label: input.correct.label,
+        officialRuleIds: input.ruleIds,
+        role: 'correct',
+      },
+      {
+        evidenceRefs: [`contrast:${input.contrast.id}`],
+        feedback: input.contrast.feedback,
+        id: input.contrast.id,
+        kind: input.kind,
+        label: input.contrast.label,
+        role: 'contrast',
+      },
+    ],
+    prompt: input.prompt,
+    reviewPrompt:
+      '헷갈리면 이 장면을 다시 보고, 선생님이나 보호자와 같이 골라요.',
+  }
+}
+
+function toPracticeAnswerOptions(
+  teachBack: LearningTeachBack,
+): PracticeAnswerOption[] {
+  return teachBack.options.map((option) => ({
+    ...option,
+    correct: option.id === teachBack.correctOptionId,
+  }))
 }
 
 function createPacket(input: {

@@ -22,6 +22,8 @@
 - 피해야 할 행동은 학습자 행동 카드나 교사 설명에서는 `엘리베이터는 타지 않아요`, `바로 뛰지 않아요`, `가스 밸브는 만지지 않아요`처럼 do-not 문장으로 풀어 쓰고, `왜요?` 버튼은 `이유 보기`로 명확히 했다
 - 확인 질문에서 do-not 문장이 오답처럼 보이며 정답이 두 개처럼 읽히던 문제를 고쳐, 오답 선택지를 현재 장면과 관련된 대비 대상/장소/상태로 다시 설계했다
 - `learningScenarios` 테스트에 “정답은 정확히 1개, `잘 모르겠어요` 고정 선택지 금지, 오답은 행동 카드/do-not/명령형 문장과 중복 금지” invariant를 추가해 같은 콘텐츠 회귀를 막았다
+- `StructuredLearningExplanation v1`에 `tracks.teachBack` 계약을 추가해 validated segment가 정답 1개, semantic kind 일치, 공식 rule id 연결, 행동 카드와 선택지 분리, 고정/명령형 오답 금지를 통과해야만 학습자 질문을 노출하도록 바꿨다
+- `/scenario`는 더 이상 seed의 자유 텍스트 answer option을 직접 신뢰하지 않고, schema를 통과한 `structuredExplanation.tracks.teachBack`에서 질문과 선택지를 파생한다
 
 ### 검증
 
@@ -35,6 +37,8 @@
 - `pnpm --filter desktop-ui lint`
 - `pnpm lint`
 - `pnpm --filter desktop-ui test:e2e`
+- `pnpm --filter @ansimtrack/shared-types test`
+- `pnpm --filter @ansimtrack/llm-orchestrator test`
 - Browser preview check: `/teacher` structured panel and `/qa?internal=qa` LRS panel render with no console errors
 - Browser preview check: `/scenario/fire-grounded-flow` 첫 장면과 두 번째 장면의 teach-back 선택지가 행동 카드와 충돌하지 않는지 확인
 - 분야별 QA 에이전트 2라운드: learner flow, live-lab fallback, cognitive accessibility, visual responsive QA, teacher/QA, contract/data integrity 재검증 완료

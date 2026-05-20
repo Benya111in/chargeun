@@ -1,6 +1,7 @@
 import {
   segmentExplanationSchema,
   structuredLearningExplanationSchema,
+  type LearningTeachBack,
   type PerceptionPacket,
   type RuleRecord,
   type Segment,
@@ -98,6 +99,7 @@ export type BuildStructuredLearningExplanationInput = {
   rules: RuleRecord[]
   segment: Segment
   sourceId?: string
+  teachBack?: LearningTeachBack
   teacherGuide?: {
     correctionHint?: string
     script?: string
@@ -168,6 +170,11 @@ export const buildStructuredLearningExplanation = (
             action: {
               cards: actionCards,
             },
+          }
+        : {}),
+      ...(actionCards && input.teachBack
+        ? {
+            teachBack: input.teachBack,
           }
         : {}),
       reason: {
