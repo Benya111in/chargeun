@@ -71,8 +71,8 @@ export default function TeacherGuidePage() {
             <div className="rounded-md border border-amber-300 bg-amber-50 p-5 text-amber-950">
               <p className="text-sm font-semibold">진행 원칙</p>
               <p className="mt-2 text-xl font-semibold leading-8">
-                이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장
-                안내를 먼저 따르세요.
+                이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른,
+                현장 안내를 먼저 따르세요.
               </p>
             </div>
 
@@ -270,7 +270,7 @@ function OfficialEvidenceBlock({ segment }: { segment: TheaterSegment }) {
                   ) : null,
                 )}
               <a
-                className="mt-2 inline-flex text-sm font-semibold underline underline-offset-4"
+                className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4"
                 href={rule.source_url}
                 rel="noreferrer"
                 target="_blank"

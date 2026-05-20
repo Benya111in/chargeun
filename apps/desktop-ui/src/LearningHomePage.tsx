@@ -10,7 +10,7 @@ import { homeLearningScenarios } from './lib/demo-theater-content'
 import { cn } from './lib/utils'
 
 const safetyNotice =
-  '이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장 안내를 먼저 따르세요.'
+  '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
 
 export default function LearningHomePage() {
   return (
@@ -18,7 +18,7 @@ export default function LearningHomePage() {
       <div className="mx-auto flex min-h-screen w-full max-w-[1180px] flex-col px-4 py-5 md:px-6 lg:py-7">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe4da] pb-4">
           <a
-            className="inline-flex items-center gap-2 rounded-md bg-[#151713] px-3 py-2 text-sm font-semibold text-white"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[#151713] px-3 py-2 text-sm font-semibold text-white"
             href="/"
           >
             <ShieldAlert className="size-4" />
@@ -73,6 +73,7 @@ export default function LearningHomePage() {
             {homeLearningScenarios.map((scenario) => (
               <a
                 key={scenario.id}
+                aria-label={`${scenario.homeTitle ?? scenario.title} 연습 시작`}
                 className="group rounded-md border border-[#dfe4da] bg-white p-5 shadow-[0_14px_36px_rgba(21,23,19,0.05)] transition hover:border-[#151713]/30"
                 href={`/scenario/${scenario.id}`}
               >

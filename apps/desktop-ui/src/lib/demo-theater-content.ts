@@ -85,7 +85,7 @@ type SegmentSeed = {
 }
 
 const defaultSafetyNotice =
-  '이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장 안내를 먼저 따르세요.'
+  '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
 
 export const learningScenarios: TheaterShow[] = [
   {
@@ -100,7 +100,7 @@ export const learningScenarios: TheaterShow[] = [
         id: 'fire-grounded-door-control',
         label: '문 닫고 계단으로 가요',
         learnerExplanation: '문을 닫고 계단으로 가요.',
-        learnerPrompt: '문 밖으로 나가요. 연기가 퍼질 수 있어요.',
+        learnerPrompt: '나갈 수 있으면 문을 닫고 계단을 찾아요.',
         actionSteps: ['문을 닫아요', '계단 쪽을 봐요'],
         teachBack: createTeachBack({
           contrast: {
@@ -109,12 +109,12 @@ export const learningScenarios: TheaterShow[] = [
             label: '열린 문',
           },
           correct: {
-            feedback: '맞아요. 닫힌 문은 연기가 덜 퍼지게 도와요.',
+            feedback: '맞아요. 문을 닫으면 연기가 덜 퍼져요.',
             id: 'close-door',
             label: '닫힌 문',
           },
           kind: 'state',
-          prompt: '나간 뒤 문은 어떤 모습일까요?',
+          prompt: '나갈 때 문은 어떻게 할까요?',
           ruleIds: ['KR_FIRE_04', 'KR_FIRE_03'],
         }),
         packet: createPacket({
@@ -152,14 +152,14 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '못 나가면 안전한 곳으로 가요.',
+        description: '못 나가면 대피공간으로 가요.',
         endMs: 28_028,
         id: 'fire-grounded-refuge',
-        label: '안전한 곳으로 가요',
-        learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
+        label: '대피공간으로 가요',
+        learnerExplanation: '길이 막히면 대피공간에서 도움을 불러요.',
         learnerPrompt: '연기가 많아서 나가기 어려워요.',
         actionSteps: [
-          '안전한 곳으로 가요',
+          '대피공간으로 가요',
           '문을 닫아요',
           '119나 어른에게 알려요',
         ],
@@ -171,12 +171,12 @@ export const learningScenarios: TheaterShow[] = [
             label: '연기가 많은 길',
           },
           correct: {
-            feedback: '맞아요. 안전한 곳에서 도움을 불러요.',
+            feedback: '맞아요. 대피공간에서 도움을 불러요.',
             id: 'refuge',
-            label: '안전한 곳',
+            label: '대피공간',
           },
           kind: 'place',
-          prompt: '밖으로 나가기 어려우면 어디가 좋을까요?',
+          prompt: '밖으로 나가기 어려우면 어디로 갈까요?',
           ruleIds: ['KR_FIRE_05'],
         }),
         packet: createPacket({
@@ -274,7 +274,7 @@ export const learningScenarios: TheaterShow[] = [
         id: 'earthquake-review-school-desk',
         label: '학교에서도 책상 아래로 가요',
         learnerExplanation: '교실에서도 책상 아래로 들어가요.',
-        learnerPrompt: '교실이 흔들려요. 선생님 말도 들어요.',
+        learnerPrompt: '교실이 흔들려요. 선생님 안내를 들어요.',
         actionSteps: [
           '책상 아래로 들어가요',
           '책상 다리를 잡아요',
@@ -346,9 +346,9 @@ export const learningScenarios: TheaterShow[] = [
         actionSteps: ['문을 닫아요', '계단 방향을 봐요'],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 이 장면에서는 화면 단서를 다시 봐요.',
+            feedback: '괜찮아요. 문과 계단을 다시 봐요.',
             id: 'wait-audio',
-            label: '배경 색',
+            label: '색깔만 보기',
           },
           correct: {
             feedback: '맞아요. 문과 계단 방향을 보고 연습할 수 있어요.',
@@ -356,7 +356,7 @@ export const learningScenarios: TheaterShow[] = [
             label: '문과 계단 방향',
           },
           kind: 'signal',
-          prompt: '소리가 없어도 먼저 무엇을 볼까요?',
+          prompt: '소리가 없어도 무엇을 먼저 볼까요?',
           ruleIds: ['KR_FIRE_04'],
         }),
         packet: createPacket({
@@ -396,7 +396,7 @@ export const learningScenarios: TheaterShow[] = [
           contrast: {
             feedback: '괜찮아요. 이 장면에서는 비상구 표시를 다시 봐요.',
             id: 'elevator-sign',
-            label: '엘리베이터 표시',
+            label: '엘리베이터 버튼',
           },
           correct: {
             feedback: '맞아요. 비상구와 계단 표시를 찾아요.',
@@ -404,7 +404,7 @@ export const learningScenarios: TheaterShow[] = [
             label: '비상구 표시',
           },
           kind: 'signal',
-          prompt: '화면에서 어떤 표시를 찾을까요?',
+          prompt: '대피하려면 어떤 표시를 찾을까요?',
           ruleIds: ['KR_FIRE_03'],
         }),
         packet: createPacket({
@@ -432,13 +432,13 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '못 나가면 다른 대피공간으로 가요.',
+        description: '못 나가면 대피공간으로 가요.',
         endMs: 24_023,
         id: 'fire-visual-refuge',
-        label: '안전한 곳으로 가요',
-        learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
-        learnerPrompt: '길이 막혔을 때 다른 안전한 곳을 찾아요.',
-        actionSteps: ['안전한 곳을 찾아요', '도움을 요청해요'],
+        label: '대피공간으로 가요',
+        learnerExplanation: '길이 막히면 대피공간에서 도움을 불러요.',
+        learnerPrompt: '길이 막혔을 때 대피공간을 찾아요.',
+        actionSteps: ['대피공간을 찾아요', '도움을 요청해요'],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 이 장면에서는 안전한 곳 찾기를 다시 봐요.',
@@ -446,9 +446,9 @@ export const learningScenarios: TheaterShow[] = [
             label: '막힌 길',
           },
           correct: {
-            feedback: '맞아요. 무리하지 않고 안전한 곳에서 도움을 불러요.',
+            feedback: '맞아요. 무리하지 않고 대피공간에서 도움을 불러요.',
             id: 'visual-refuge',
-            label: '안전한 곳',
+            label: '대피공간',
           },
           kind: 'place',
           prompt: '길이 막히면 어디를 찾을까요?',
@@ -492,26 +492,26 @@ export const learningScenarios: TheaterShow[] = [
     showOnHome: false,
     segments: [
       createSegment({
-        description: '문과 주변 물건을 천천히 확인해요.',
+        description: '나갈 길에 물건이 있는지 봐요.',
         endMs: 7_200,
         id: 'earthquake-after-exit',
-        label: '문을 열어요',
+        label: '나갈 길을 봐요',
         learnerExplanation: '나갈 길을 먼저 봐요.',
         learnerPrompt: '흔들림이 멈췄어요. 천천히 확인해요.',
         actionSteps: ['천천히 일어나요', '나갈 길을 봐요', '어른과 움직여요'],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 이 장면에서는 나갈 길 확인을 다시 봐요.',
+            feedback: '괜찮아요. 나갈 길을 다시 봐요.',
             id: 'run-fast',
-            label: '창문 밖 풍경',
+            label: '좋아하는 물건',
           },
           correct: {
-            feedback: '맞아요. 출구와 주변 안내를 확인해요.',
+            feedback: '맞아요. 나갈 길과 주변을 확인해요.',
             id: 'check-exit',
             label: '나갈 길',
           },
           kind: 'object',
-          prompt: '흔들림이 멈춘 뒤 무엇을 확인할까요?',
+          prompt: '흔들림이 멈춘 뒤 무엇을 먼저 볼까요?',
           ruleIds: ['KR_EQ_05'],
         }),
         packet: createPacket({
@@ -550,22 +550,23 @@ export const learningScenarios: TheaterShow[] = [
         actionSteps: ['냄새 나는 곳에서 멀어져요', '어른에게 말해요'],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 이 장면에서는 어른에게 말하기를 다시 봐요.',
+            feedback:
+              '괜찮아요. 혼자 만지지 말고 어른에게 말하는 장면을 다시 봐요.',
             id: 'touch-gas',
-            label: '나 혼자',
+            label: '혼자 만지기',
           },
           correct: {
             feedback: '맞아요. 어른에게 말하고 안전한 곳으로 가요.',
             id: 'tell-adult',
-            label: '어른',
+            label: '어른에게 말하기',
           },
           kind: 'person',
-          prompt: '가스 냄새가 나면 누구에게 말할까요?',
+          prompt: '가스 냄새가 나면 어떻게 할까요?',
           ruleIds: ['KR_EQ_05'],
         }),
         packet: createPacket({
           asrText:
-            '가스 냄새가 나거나 가스 새는 소리가 들리면 창문을 열고 우선 대피합니다.',
+            '가스 냄새가 나거나 가스 새는 소리가 들리면 직접 만지지 말고 어른에게 알린 뒤 안전한 곳으로 이동합니다.',
           objectHints: ['가스 밸브', '주방', '창문', '대피'],
           ocrTokens: ['가스', '냄새', '대피'],
           sessionId: 'demo-earthquake-after-gas',
@@ -595,21 +596,22 @@ export const learningScenarios: TheaterShow[] = [
         id: 'earthquake-after-report',
         label: '전기 이상을 알려요',
         learnerExplanation: '전기 이상은 어른에게 말해요.',
-        learnerPrompt: '불이 꺼지거나 전기가 이상해요.',
-        actionSteps: ['스위치에서 떨어져요', '어른에게 말해요'],
+        learnerPrompt: '전등이 꺼지거나 전기가 이상해요.',
+        actionSteps: ['전기 스위치에서 떨어져요', '어른에게 말해요'],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 어른에게 말하기를 다시 봐요.',
+            feedback:
+              '괜찮아요. 혼자 만지지 말고 어른에게 말하는 장면을 다시 봐요.',
             id: 'hide-alone',
-            label: '나 혼자',
+            label: '혼자 만지기',
           },
           correct: {
             feedback: '맞아요. 전기 이상은 어른에게 알려요.',
             id: 'call-help',
-            label: '어른',
+            label: '어른에게 말하기',
           },
           kind: 'person',
-          prompt: '전기가 이상하면 누구에게 말할까요?',
+          prompt: '전기가 이상하면 어떻게 할까요?',
           ruleIds: ['KR_EQ_05'],
         }),
         packet: createPacket({

@@ -301,7 +301,7 @@ function WebAppPage() {
       sendClientEvent({
         eventType: 'screen-share-start-failed',
         message: result.notice,
-        route: '/',
+        route: '/live-lab',
       })
     }
   }

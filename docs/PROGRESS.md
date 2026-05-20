@@ -36,6 +36,13 @@
 - 지진은 `흔들릴 때`와 `흔들림이 멈춘 뒤`를 한 주제의 연속 연습으로 유지하고, 학교/교실 장면과 흔들림 이후 출구/가스/전기 확인 장면의 learner-facing 설명을 다시 썼다
 - RAG 결과가 action을 새로 허가하지는 않고, 이미 grounded rule로 검증된 행동에 공식 출처 evidence를 보강하는 구조로 고정했다
 - `rules:validate`가 공식 source metadata/chunk catalog도 검증하도록 확장해, 존재하지 않는 source/rule id가 청크에 들어가면 실패하게 했다
+- 6개 QA 에이전트를 재배치해 learner flow, 한국어 자연스러움/안전 문구, teacher/QA/RAG, live-lab fallback, 접근성/모바일, 계약/회귀 검증을 다시 수행했다
+- QA 지적을 반영해 지진 후 `KR_EQ_05` 문구를 학습자가 가스/전기를 직접 끄는 표현에서 `직접 만지지 말고 어른이나 현장 안내에 알림`으로 바꿨다
+- 마지막 지진 후 연습이 화재로 순환하지 않도록 바꾸고, 코스 마지막에는 `오늘 연습 끝내기`, `처음 화면으로 가요`, `처음부터 다시 보기`만 제공한다
+- 학습자 화면의 보존 후보가 긴 공식 금지문으로 보이지 않도록 `바로 밖으로 뛰기`, `유리창 가까이 가기`, `혼자 만지기` 같은 짧은 대비 후보로 변환했다
+- 모바일 설명 상태에서는 멀티트랙 요약 배지를 숨겨 행동 카드가 더 빨리 보이도록 했고, 자동 정지 후 설명 heading으로 포커스가 이동하게 했다
+- live-lab 화면공유 실패 telemetry의 route를 `/`가 아니라 `/live-lab`로 기록하도록 수정했다
+- `ruleEvidence`는 후보 rule 전체가 아니라 현재 segment의 공식 action rule만 표시하게 해, 교사 화면에서 핵심 근거와 억제 후보가 섞이지 않도록 정리했다
 
 ### 검증
 
@@ -69,6 +76,10 @@
 - `pnpm --filter desktop-ui typecheck`
 - `pnpm --filter desktop-ui lint`
 - `pnpm --filter desktop-ui test:e2e -- app.spec.ts`
+- `CI=1 pnpm --filter desktop-ui test:e2e -- app.spec.ts`
+- Browser preview check: `/scenario/earthquake-after-flow` 마지막 장면이 화재로 순환하지 않고 course complete 상태로 끝남
+- Browser preview check: `/teacher` 지진 후 공식 근거에 `가스와 전깃불을 끄고`가 더 이상 노출되지 않음
+- Mobile Playwright audit: 390px에서 수평 overflow 없음, 설명 heading 포커스 이동, 모바일 멀티트랙 요약 숨김, 긴 금지문 미노출 확인
 
 ### 다음
 

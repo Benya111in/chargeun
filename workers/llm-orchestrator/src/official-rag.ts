@@ -75,7 +75,9 @@ function scoreChunk(input: {
   score += matchedKeywords.length * 1.2
 
   if (input.chunk.audience === 'learner') {
-    score += 0.6
+    score += 2.4
+  } else if (input.chunk.audience === 'caregiver') {
+    score -= 0.4
   }
 
   return {

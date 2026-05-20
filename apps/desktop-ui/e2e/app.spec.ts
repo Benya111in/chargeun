@@ -11,7 +11,7 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByText(
-      '이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장 안내를 먼저 따르세요.',
+      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.',
     ),
   ).toBeVisible()
   await expect(page.getByText('화면 공유 시작')).toHaveCount(0)
@@ -56,7 +56,7 @@ test('runs the scenario practice loop', async ({ page }) => {
 
   await page.getByRole('button', { name: '닫힌 문' }).click()
   await expect(
-    page.getByText('맞아요. 닫힌 문은 연기가 덜 퍼지게 도와요.'),
+    page.getByText('맞아요. 문을 닫으면 연기가 덜 퍼져요.'),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
@@ -73,7 +73,7 @@ test('runs the scenario practice loop', async ({ page }) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
   await expect(
-    page.getByText('길이 막히면 안전한 곳에서 도움을 불러요.'),
+    page.getByText('길이 막히면 대피공간에서 도움을 불러요.'),
   ).toBeVisible()
   await expect(page.getByText('헷갈릴 수 있어요')).toBeVisible()
   await expect(page.getByText('연기가 많은 길').first()).toBeVisible()
@@ -94,18 +94,18 @@ test('offers next practice and restart controls after the final scene', async ({
   })
 
   await expect(
-    page.getByText('길이 막히면 안전한 곳에서 도움을 불러요.'),
+    page.getByText('길이 막히면 대피공간에서 도움을 불러요.'),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toHaveCount(0)
   await expect(
-    page.getByRole('button', { name: '답을 고르면 다음 연습 보기' }),
+    page.getByRole('button', { name: '맞는 답을 고르면 다음 연습으로 가요' }),
   ).toBeDisabled()
 
-  await page.getByRole('button', { name: '안전한 곳' }).click()
+  await page.getByRole('button', { name: '대피공간' }).click()
   await expect(
-    page.getByRole('link', { name: '다음 연습 보기' }),
+    page.getByRole('link', { name: '다음 연습으로 가기' }),
   ).toHaveAttribute('href', '/scenario/earthquake-protect-flow')
   await expect(
     page.getByRole('link', {
@@ -136,13 +136,37 @@ test('continues earthquake practice from shaking to after-shaking sequence', asy
   await expect(page.getByText('교실에서도 책상 아래로 들어가요.')).toBeVisible()
   await page.getByRole('button', { name: '책상 아래' }).click()
   await expect(
-    page.getByRole('link', { name: '다음 연습 보기' }),
+    page.getByRole('link', { name: '다음 연습으로 가기' }),
   ).toHaveAttribute('href', '/scenario/earthquake-after-flow')
   await expect(
     page.getByRole('link', {
       name: '다음 연습 지진이 났을 때: 멈춘 뒤 2단계: 흔들림이 멈춘 뒤 어른과 함께 확인해요',
     }),
   ).toBeVisible()
+})
+
+test('ends the final earthquake after-shaking practice without looping', async ({
+  page,
+}) => {
+  await page.goto('/scenario/earthquake-after-flow')
+
+  await page.getByRole('button', { name: '3번째 장면' }).click()
+  await expect(page.getByText('3 / 3')).toBeVisible()
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
+  })
+
+  await expect(page.getByText('전기 이상은 어른에게 말해요.')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '맞는 답을 고르면 마칠 수 있어요' }),
+  ).toBeDisabled()
+
+  await page.getByRole('button', { name: '어른에게 말하기' }).click()
+  await expect(
+    page.getByRole('link', { name: '오늘 연습 끝내기' }),
+  ).toHaveAttribute('href', '/')
+  await expect(page.getByText('연습 완료')).toBeVisible()
+  await expect(page.getByText('화재가 났을 때')).toHaveCount(0)
 })
 
 test('keeps earthquake review scenario route as a compatibility alias', async ({
@@ -158,7 +182,7 @@ test('keeps earthquake review scenario route as a compatibility alias', async ({
   ).toBeVisible()
   await expect(
     page.getByText(
-      '이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장 안내를 먼저 따르세요.',
+      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.',
     ),
   ).toBeVisible()
 })
@@ -255,8 +279,10 @@ test('runs live-lab screen share with a synthetic browser stream', async ({
 })
 
 test('rejects empty live-lab screen share streams', async ({ page }) => {
+  const clientEvents: Array<{ eventType?: string; route?: string }> = []
+
   await installEmptyScreenShare(page)
-  await mockLiveLabApis(page)
+  await mockLiveLabApis(page, clientEvents)
 
   await page.goto('/live-lab')
   await page.getByLabel('베타 접근 코드').fill('live')
@@ -276,6 +302,12 @@ test('rejects empty live-lab screen share streams', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: '화면 공유 중지' }),
   ).toBeDisabled()
+  expect(clientEvents).toContainEqual(
+    expect.objectContaining({
+      eventType: 'screen-share-start-failed',
+      route: '/live-lab',
+    }),
+  )
 })
 
 test('disables live-lab start when browser screen share is unsupported', async ({
@@ -408,7 +440,10 @@ async function installUnsupportedScreenShare(page: Page) {
   })
 }
 
-async function mockLiveLabApis(page: Page) {
+async function mockLiveLabApis(
+  page: Page,
+  clientEvents: Array<{ eventType?: string; route?: string }> = [],
+) {
   await page.route('**/api/health', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -475,6 +510,7 @@ async function mockLiveLabApis(page: Page) {
     })
   })
   await page.route('**/api/client-event', async (route) => {
+    clientEvents.push(route.request().postDataJSON() as { route?: string })
     await route.fulfill({
       contentType: 'application/json',
       json: { ok: true },

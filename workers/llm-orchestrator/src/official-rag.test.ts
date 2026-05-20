@@ -72,4 +72,49 @@ describe('retrieveOfficialSources', () => {
       }).matches,
     ).toEqual([])
   })
+
+  it('prefers learner chunks over caregiver chunks when both match', () => {
+    const result = retrieveOfficialSources(
+      [
+        {
+          audience: 'learner',
+          canonicalUrl: 'https://example.test/fire-actions',
+          chunkId: 'fire-stair-learner',
+          easyKo: '계단으로 가요.',
+          hazard: 'fire',
+          heading: '화재 계단 대피',
+          keywords: ['계단'],
+          paraphraseKo: '화재 때는 계단으로 대피한다.',
+          phase: 'stair_evacuation',
+          reviewStatus: 'approved',
+          ruleIds: ['KR_FIRE_03'],
+          sourceId: 'safekorea-fire',
+          updatedAt: '2026-05-20',
+        },
+        {
+          audience: 'caregiver',
+          canonicalUrl: 'https://example.test/guide',
+          chunkId: 'fire-stair-caregiver',
+          easyKo: '계단과 출구를 짧게 반복해서 알려요.',
+          hazard: 'fire',
+          heading: '지원자 안내',
+          keywords: ['계단', '출구', '반복'],
+          paraphraseKo: '지원자는 계단과 출구를 반복 안내한다.',
+          phase: 'stair_evacuation',
+          reviewStatus: 'approved',
+          ruleIds: ['KR_FIRE_03'],
+          sourceId: 'koddi-guide',
+          updatedAt: '2026-05-20',
+        },
+      ],
+      {
+        hazard: 'fire',
+        phase: 'stair_evacuation',
+        queryText: '계단 출구',
+        ruleIds: ['KR_FIRE_03'],
+      },
+    )
+
+    expect(result.matches[0]?.chunk.chunkId).toBe('fire-stair-learner')
+  })
 })

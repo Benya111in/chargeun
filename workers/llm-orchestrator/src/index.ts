@@ -398,6 +398,10 @@ function buildEvidenceBundle(input: {
   segment: Segment
   sourceChunks?: OfficialSourceChunk[]
 }): StructuredLearningExplanation['evidence'] {
+  const evidenceRuleMatches = selectRuleEvidenceMatches({
+    ruleMatches: input.ruleMatches,
+    segment: input.segment,
+  })
   const basedOn: Array<'visual' | 'ocr' | 'asr' | 'rule'> = []
 
   if (input.packet.objectHints.length > 0) {
@@ -412,7 +416,7 @@ function buildEvidenceBundle(input: {
     basedOn.push('asr')
   }
 
-  if (input.ruleMatches.length > 0) {
+  if (evidenceRuleMatches.length > 0) {
     basedOn.push('rule')
   }
 
@@ -426,7 +430,7 @@ function buildEvidenceBundle(input: {
           ...input.packet.objectHints.map((hint) => hint.label),
           ...input.packet.uiElements.map((element) => element.label),
         ].join(' '),
-        ruleIds: input.ruleMatches.map((match) => match.rule.rule_id),
+        ruleIds: evidenceRuleMatches.map((match) => match.rule.rule_id),
       })
     : { matches: [] }
 
@@ -458,7 +462,7 @@ function buildEvidenceBundle(input: {
           },
         ]
       : [],
-    ruleEvidence: input.ruleMatches.map((match) => {
+    ruleEvidence: evidenceRuleMatches.map((match) => {
       const sourceMatch =
         retrieval.matches.find((item) =>
           item.chunk.ruleIds.includes(match.rule.rule_id),
@@ -485,15 +489,30 @@ function buildEvidenceBundle(input: {
       }
     }),
     modelInference:
-      input.ruleMatches.length > 0 && basedOn.length > 0
+      evidenceRuleMatches.length > 0 && basedOn.length > 0
         ? [
             {
               basedOn,
-              claim: `현재 세그먼트는 ${input.ruleMatches[0].rule.rule_id} 공식 규칙과 연결됩니다.`,
+              claim: `현재 세그먼트는 ${evidenceRuleMatches[0].rule.rule_id} 공식 규칙과 연결됩니다.`,
             },
           ]
         : [],
   }
+}
+
+function selectRuleEvidenceMatches(input: {
+  ruleMatches: GroundedRuleMatch[]
+  segment: Pick<Segment, 'officialRuleIds'>
+}) {
+  const segmentRuleIds = new Set(input.segment.officialRuleIds)
+
+  if (segmentRuleIds.size === 0) {
+    return input.ruleMatches
+  }
+
+  return input.ruleMatches.filter((match) =>
+    segmentRuleIds.has(match.rule.rule_id),
+  )
 }
 
 function buildDecisionPoint(
@@ -580,8 +599,12 @@ function toLearnerActionLabel(action: string) {
     return '대피공간으로 가요'
   }
 
-  if (action.includes('가스') || action.includes('전깃불')) {
-    return '가스와 전기를 확인해요'
+  if (
+    action.includes('가스') ||
+    action.includes('전기') ||
+    action.includes('전깃불')
+  ) {
+    return '어른에게 알려요'
   }
 
   return (

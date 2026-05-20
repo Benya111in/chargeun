@@ -596,9 +596,9 @@ function buildLrsChecklist(fixture: {
       status: 'pending',
     },
     {
-      detail: 'visual/OCR/ASR/rule evidence 분리 확인',
+      detail: 'visual/OCR/ASR/rule/RAG 근거와 억제 후보 분리 확인',
       id: 'evidence-split',
-      label: '근거 출처 분리',
+      label: '근거 출처와 억제 후보 분리',
       status: 'pending',
     },
     {
