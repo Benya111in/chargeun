@@ -37,24 +37,22 @@ test('runs the scenario practice loop', async ({ page }) => {
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
 
-  await page.getByRole('button', { name: '엘리베이터는 타지 않아요' }).click()
+  await page.getByRole('button', { name: '열린 문' }).click()
   await expect(
-    page.getByText('괜찮아요. 엘리베이터보다 계단과 출구를 찾아요.'),
+    page.getByText('괜찮아요. 이 장면에서는 문을 닫는 행동을 다시 봐요.'),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
 
-  await page.getByRole('button', { name: '문을 닫고 나가요' }).click()
+  await page.getByRole('button', { name: '닫힌 문' }).click()
   await expect(
     page.getByText('맞아요. 나갈 때 문을 닫으면 연기가 천천히 퍼져요.'),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeEnabled()
-  await expect(
-    page.getByRole('button', { name: '엘리베이터는 타지 않아요' }),
-  ).toBeDisabled()
+  await expect(page.getByRole('button', { name: '열린 문' })).toBeDisabled()
 
   await page.getByRole('button', { name: '이유 보기' }).click()
   await expect(page.getByRole('button', { name: '이유 닫기' })).toBeVisible()

@@ -452,12 +452,16 @@ function PracticePanel({
           </div>
           {selectedAnswer ? (
             <p className="mt-3 flex items-center gap-2 text-lg font-semibold leading-8">
-              <CheckCircle2 className="size-5" />
+              {selectedAnswer.correct ? (
+                <CheckCircle2 className="size-5" />
+              ) : (
+                <HelpCircle className="size-5" />
+              )}
               {selectedAnswer.feedback}
             </p>
           ) : (
             <p className="mt-3 text-sm font-semibold leading-6 text-[#596257]">
-              하나를 골라 보면 다음 장면으로 갈 수 있어요.
+              헷갈리면 다시 볼 수 있어요. 맞는 답을 고르면 다음 장면으로 가요.
             </p>
           )}
         </section>

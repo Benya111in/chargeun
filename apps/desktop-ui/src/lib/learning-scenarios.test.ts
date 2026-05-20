@@ -26,6 +26,25 @@ describe('learningScenarios', () => {
         expect(
           segment.answerOptions.some((option) => option.correct),
         ).toBeTruthy()
+        expect(
+          segment.answerOptions.filter((option) => option.correct),
+        ).toHaveLength(1)
+        const optionLabels = segment.answerOptions.map((option) => option.label)
+        expect(new Set(optionLabels).size).toBe(optionLabels.length)
+        expect(optionLabels).not.toContain('잘 모르겠어요')
+
+        const learnerActionLabels = getLearnerActionCards(segment).map(
+          (card) => card.label,
+        )
+        for (const option of segment.answerOptions.filter(
+          (item) => !item.correct,
+        )) {
+          expect(learnerActionLabels).not.toContain(option.label)
+          expect(option.label).not.toMatch(
+            /않아요|피해요|해요$|가요$|봐요$|두어요$/,
+          )
+          expect(option.feedback).toContain('다시 봐요')
+        }
         expect(segment.teacherGuide.script).toBeTruthy()
         expect(segment.teacherGuide.correction).toBeTruthy()
         expect(segment.teacherGuide.observe).toBeTruthy()
