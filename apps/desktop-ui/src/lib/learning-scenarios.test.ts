@@ -17,6 +17,8 @@ describe('learningScenarios', () => {
         expect(segment.learnerExplanation.length).toBeLessThanOrEqual(35)
         expect(segment.learnerPrompt).toBeTruthy()
         expect(segment.narration.length).toBeGreaterThan(0)
+        expect(segment.narration[0]?.startMs).toBe(segment.startMs)
+        expect(segment.narration.at(-1)?.endMs).toBe(segment.endMs)
         for (const cue of segment.narration) {
           expect(cue.startMs).toBeGreaterThanOrEqual(segment.startMs)
           expect(cue.endMs).toBeLessThanOrEqual(segment.endMs)
@@ -109,6 +111,68 @@ describe('learningScenarios', () => {
         ),
       ).toBe(true)
     }
+  })
+
+  it('keeps core spoken and onscreen education points in narration coverage', () => {
+    const narrationText = (scenarioId: string) =>
+      learningScenarios
+        .find((scenario) => scenario.id === scenarioId)!
+        .segments.flatMap((segment) => segment.narration)
+        .map((cue) => cue.text)
+        .join(' ')
+
+    expect(narrationText('fire-grounded-flow')).toEqual(
+      expect.stringContaining('매년 약 2,800건'),
+    )
+    expect(narrationText('fire-grounded-flow')).toEqual(
+      expect.stringContaining('현관문을 닫고 계단'),
+    )
+    expect(narrationText('fire-grounded-flow')).toEqual(
+      expect.stringContaining('엘리베이터는 이용하면 안 됩니다'),
+    )
+    expect(narrationText('fire-grounded-flow')).toEqual(
+      expect.stringContaining('대피공간'),
+    )
+    expect(narrationText('fire-grounded-flow')).toEqual(
+      expect.stringContaining('젖은 수건'),
+    )
+    expect(narrationText('fire-grounded-flow')).toEqual(
+      expect.stringContaining('안내 방송'),
+    )
+    expect(narrationText('fire-grounded-flow')).toEqual(
+      expect.stringContaining('무조건 대피보다 상황별'),
+    )
+
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('1, 2분'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('탁자 다리'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('방석'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('가스 중간 밸브'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('안전디딤돌'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('차량을 이용하지 않고'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('선생님의 안내'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('라디오 및 공공기관'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('수도꼭지나 화장실'),
+    )
+    expect(narrationText('earthquake-protect-flow')).toEqual(
+      expect.stringContaining('여진이 발생할 수 있으므로'),
+    )
   })
 
   it('hides learner action cards when structured status requires review', () => {

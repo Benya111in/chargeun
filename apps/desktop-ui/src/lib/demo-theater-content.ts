@@ -109,13 +109,19 @@ export const learningScenarios: TheaterShow[] = [
     segments: [
       createSegment({
         description: '아파트 화재 연습을 시작해요.',
-        endMs: 10_200,
+        endMs: 11_500,
         id: 'fire-full-alert',
         label: '화재 연습을 시작해요',
         learnerExplanation: '아파트 화재 연습을 시작해요.',
         learnerPrompt: '먼저 숫자와 제목을 보고 있어요.',
         actionSteps: [],
         narration: [
+          {
+            endMs: 11_500,
+            source: 'audio',
+            startMs: 0,
+            text: '매년 약 2,800건이 발생하는 아파트 화재. 사상자의 약 40%는 대피 중 발생했습니다. 아파트에 화재가 발생했을 때 다음과 같이 행동합시다.',
+          },
           {
             endMs: 3_000,
             source: 'onscreen',
@@ -129,7 +135,7 @@ export const learningScenarios: TheaterShow[] = [
             text: '아파트 화재 사상자의 39.1%는 대피 중 발생합니다.',
           },
           {
-            endMs: 10_200,
+            endMs: 11_500,
             source: 'onscreen',
             startMs: 7_400,
             text: '아파트 화재 시 이렇게 행동합시다.',
@@ -158,7 +164,7 @@ export const learningScenarios: TheaterShow[] = [
           ocrTokens: ['아파트 화재', '2,800여 건', '39.1%', '행동요령'],
           sessionId: 'demo-fire-full-alert',
           startMs: 0,
-          endMs: 10_200,
+          endMs: 11_500,
           uiElements: ['아파트 화재 시 이렇게 행동합시다'],
         }),
         rules: fireRuleCatalog,
@@ -181,12 +187,26 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '문을 닫고 계단을 찾아요.',
-        endMs: 18_000,
+        endMs: 22_500,
         id: 'fire-full-door-control',
-        label: '문 닫고 계단을 봐요',
-        learnerExplanation: '나갈 수 있으면 현관문을 닫아요.',
-        learnerPrompt: '가족이 집 밖으로 나가고 있어요.',
+        label: '문 닫고 계단으로 가요',
+        learnerExplanation: '현관문을 닫고 계단으로 나가요.',
+        learnerPrompt: '우리 집에서 불이 나 대피하고 있어요.',
         actionSteps: ['문을 닫아요', '계단 쪽을 봐요'],
+        narration: [
+          {
+            endMs: 22_500,
+            source: 'audio',
+            startMs: 11_500,
+            text: '우리 집 화재로 대피할 때는 연기와 화염을 차단하기 위해 반드시 현관문을 닫고 계단을 이용해 외부로 빠져나와야 합니다.',
+          },
+          {
+            endMs: 22_500,
+            source: 'onscreen',
+            startMs: 11_500,
+            text: '우리 집 화재 시 현관문 닫고 계단으로 대피',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 문을 닫는 장면을 다시 봐요.',
@@ -214,8 +234,8 @@ export const learningScenarios: TheaterShow[] = [
           ],
           ocrTokens: ['현관문', '계단', '비상구', '대피'],
           sessionId: 'demo-fire-full-door-control',
-          startMs: 10_200,
-          endMs: 18_000,
+          startMs: 11_500,
+          endMs: 22_500,
           uiElements: ['우리 집 화재 시', '계단으로 대피'],
         }),
         rules: fireRuleCatalog,
@@ -225,7 +245,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_FIRE_04', 'KR_FIRE_03'],
           phase: 'door_control',
         },
-        startMs: 10_200,
+        startMs: 11_500,
         teacherGuide: {
           correction:
             '엘리베이터나 다시 집 안으로 들어가는 선택은 피하도록 짧게 바로잡습니다.',
@@ -237,12 +257,26 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '엘리베이터 말고 계단으로 가요.',
-        endMs: 24_600,
+        endMs: 27_500,
         id: 'fire-full-stairs',
         label: '계단으로 대피해요',
         learnerExplanation: '불이 났을 때 엘리베이터는 타지 않아요.',
         learnerPrompt: '계단과 엘리베이터가 보여요.',
         actionSteps: ['계단을 찾아요', '천천히 내려가요'],
+        narration: [
+          {
+            endMs: 27_500,
+            source: 'audio',
+            startMs: 22_500,
+            text: '이때 엘리베이터는 이용하면 안 됩니다.',
+          },
+          {
+            endMs: 27_500,
+            source: 'onscreen',
+            startMs: 22_500,
+            text: '대피 시 엘리베이터는 절대 이용 금지',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 불이 났을 때 엘리베이터는 위험해요.',
@@ -264,8 +298,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['계단으로 대피 가능함', '엘리베이터', '복도', '비상구'],
           ocrTokens: ['엘리베이터 이용 금지', '계단', '대피'],
           sessionId: 'demo-fire-full-stairs',
-          startMs: 18_000,
-          endMs: 24_600,
+          startMs: 22_500,
+          endMs: 27_500,
           uiElements: ['엘리베이터 이용 금지'],
         }),
         rules: fireRuleCatalog,
@@ -275,7 +309,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_FIRE_03'],
           phase: 'stair_evacuation',
         },
-        startMs: 18_000,
+        startMs: 22_500,
         teacherGuide: {
           correction: '엘리베이터 대신 계단을 선택하도록 짧게 반복합니다.',
           observe: '계단과 엘리베이터 선택을 구분하는지 봅니다.',
@@ -285,7 +319,7 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '못 나가면 대피공간으로 가요.',
-        endMs: 34_600,
+        endMs: 35_500,
         id: 'fire-full-refuge',
         label: '대피공간으로 가요',
         learnerExplanation: '길이 막히면 대피공간에서 도움을 불러요.',
@@ -294,6 +328,20 @@ export const learningScenarios: TheaterShow[] = [
           '대피공간으로 가요',
           '문을 닫아요',
           '119나 어른에게 알려요',
+        ],
+        narration: [
+          {
+            endMs: 30_000,
+            source: 'onscreen',
+            startMs: 27_500,
+            text: '대피가 어렵다면 집 안 대피공간으로 이동',
+          },
+          {
+            endMs: 35_500,
+            source: 'audio',
+            startMs: 30_000,
+            text: '연기나 화염으로 대피가 어렵다면 집 안의 대피공간에서 자신의 위치를 알리고 구조를 기다립니다.',
+          },
         ],
         teachBack: createTeachBack({
           contrast: {
@@ -317,8 +365,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['대피가 어려움', '대피공간', '현관 쪽이 막힘'],
           ocrTokens: ['대피가 어렵다면', '집 안 대피공간'],
           sessionId: 'demo-fire-full-refuge',
-          startMs: 24_600,
-          endMs: 34_600,
+          startMs: 27_500,
+          endMs: 35_500,
           uiElements: ['대피가 어렵다면'],
         }),
         rules: fireRuleCatalog,
@@ -328,7 +376,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_FIRE_05'],
           phase: 'refuge_space',
         },
-        startMs: 24_600,
+        startMs: 27_500,
         teacherGuide: {
           correction:
             '“무조건 나가기”가 아니라 상황에 따라 대피공간과 도움 요청이 필요함을 설명합니다.',
@@ -340,12 +388,26 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '연기가 들어오면 문틈을 막아요.',
-        endMs: 43_800,
+        endMs: 43_500,
         id: 'fire-full-seal-room',
         label: '문틈을 막고 알려요',
         learnerExplanation: '연기가 들어오면 문틈을 막고 구조를 요청해요.',
         learnerPrompt: '방 안에서 기다려야 할 수 있어요.',
         actionSteps: ['문을 닫아요', '문틈을 막아요', '119에 알려요'],
+        narration: [
+          {
+            endMs: 43_500,
+            source: 'audio',
+            startMs: 35_500,
+            text: '대피공간이 없다면 방문을 닫고 젖은 수건 등으로 틈새를 차단한 뒤 구조를 요청합니다.',
+          },
+          {
+            endMs: 43_500,
+            source: 'onscreen',
+            startMs: 35_500,
+            text: '방문 틈새 차단 후 구조 요청',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 창문만 열기보다 문틈을 막는 장면을 봐요.',
@@ -367,8 +429,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['젖은 수건', '문틈', '방 안 대기', '연기 유입'],
           ocrTokens: ['방문 틈새 차단', '구조 요청'],
           sessionId: 'demo-fire-full-seal-room',
-          startMs: 34_600,
-          endMs: 43_800,
+          startMs: 35_500,
+          endMs: 43_500,
           uiElements: ['방문 틈새 차단 후 구조 요청'],
         }),
         rules: fireRuleCatalog,
@@ -378,7 +440,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_FIRE_06'],
           phase: 'seal_room',
         },
-        startMs: 34_600,
+        startMs: 35_500,
         teacherGuide: {
           correction:
             '방 안에 머무를 때는 연기 유입을 줄이고 위치를 알리는 행동으로 연결합니다.',
@@ -389,56 +451,144 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '밖으로 나온 뒤 다시 들어가지 않아요.',
-        endMs: 60_000,
+        description: '다른 집 불이면 안내를 들어요.',
+        endMs: 53_000,
         id: 'fire-full-after-evacuation',
-        label: '안전한 곳에서 확인해요',
-        learnerExplanation: '밖으로 나오면 다시 들어가지 않고 기다려요.',
-        learnerPrompt: '마지막으로 기억할 순서예요.',
-        actionSteps: ['안전한 곳에 모여요', '사람을 확인해요', '119에 말해요'],
+        label: '집 안에서 안내를 들어요',
+        learnerExplanation: '연기가 안 들어오면 집 안에서 안내를 들어요.',
+        learnerPrompt: '다른 집에 불이 났지만 우리 집은 괜찮아 보여요.',
+        actionSteps: [
+          '창문을 닫아요',
+          '집 안에서 기다려요',
+          '안내 방송을 들어요',
+        ],
+        narration: [
+          {
+            endMs: 53_000,
+            source: 'audio',
+            startMs: 43_500,
+            text: '다른 집에 불이 났지만 화염이나 연기가 우리 집으로 들어오지 않는다면 창문은 닫고 집 안에서 안내 방송에 따라 행동합니다.',
+          },
+          {
+            endMs: 53_000,
+            source: 'onscreen',
+            startMs: 43_500,
+            text: '다른 집 화재 시 직접적인 영향이 없다면 창문을 닫고 집 안에서 대기하며 화재 상황 주시',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 물건을 찾으러 다시 들어가면 위험해요.',
-            id: 'go-back',
-            label: '다시 들어가기',
+            feedback: '괜찮아요. 바로 복도나 계단으로 나가지 않아요.',
+            id: 'go-hallway',
+            label: '복도로 나가기',
           },
           correct: {
-            feedback: '맞아요. 안전한 곳에서 사람을 확인해요.',
-            id: 'meet-safe',
-            label: '안전한 곳',
+            feedback: '맞아요. 창문을 닫고 안내 방송을 들어요.',
+            id: 'listen-inside',
+            label: '안내 방송 듣기',
           },
-          kind: 'place',
-          prompt: '밖으로 나온 뒤 어디에 있을까요?',
-          ruleIds: ['KR_FIRE_10'],
+          kind: 'signal',
+          prompt: '연기가 들어오지 않으면 무엇을 할까요?',
+          ruleIds: ['KR_FIRE_11'],
         }),
         packet: createPacket({
           asrText:
-            '건물 밖 대피가 끝나면 안전한 집결지에 모여 인원을 확인하고 필요하면 119에 알립니다.',
+            '다른 집에 불이 났지만 화염이나 연기가 우리 집으로 들어오지 않는다면 창문은 닫고 집 안에서 안내 방송에 따라 행동합니다.',
           objectHints: [
-            '건물 밖 대피 완료',
-            '안전한 집결지 도착',
-            '인원 확인 단계',
+            '다른 집 화재',
+            '연기 유입 없음',
+            '창문 닫기',
+            '집 안 대기',
+            '안내 방송',
           ],
-          ocrTokens: ['생활별 대피 요령', '기억하세요'],
+          ocrTokens: ['다른 집 화재', '창문 닫기', '집 안 대기', '안내 방송'],
           sessionId: 'demo-fire-full-after-evacuation',
-          startMs: 43_800,
-          endMs: 60_000,
-          uiElements: ['생활별 대피 요령을 기억하세요'],
+          startMs: 43_500,
+          endMs: 53_000,
+          uiElements: ['다른 집 화재 시', '집 안에서 대기'],
         }),
         rules: fireRuleCatalog,
         segmentOverrides: {
           confidence: 0.9,
           hazard: 'fire',
-          officialRuleIds: ['KR_FIRE_10'],
-          phase: 'post_evacuation',
+          officialRuleIds: ['KR_FIRE_11'],
+          phase: 'apartment_monitoring',
         },
-        startMs: 43_800,
+        startMs: 43_500,
         teacherGuide: {
           correction:
-            '대피 후에는 다시 들어가지 않고 안전한 곳에서 사람과 위치를 확인한다고 말합니다.',
-          observe: '재진입하지 않기와 119 알리기를 기억하는지 봅니다.',
-          prompt: '빠진 사람이 있으면 누구에게 알려야 할까요?',
-          script: '마지막 장면에서 대피 후 행동과 재진입 금지를 확인합니다.',
+            '무조건 대피가 아니라, 연기와 불길이 들어오지 않는 상황에서는 창문을 닫고 안내를 따른다고 정리합니다.',
+          observe:
+            '학습자가 “다른 집 화재”와 “우리 집에 연기 유입 없음” 조건을 구분하는지 봅니다.',
+          prompt: '우리 집에 연기가 들어오지 않으면 바로 계단으로 나갈까요?',
+          script:
+            '다른 세대 화재에서 직접 영향이 없을 때는 실내 대기와 안내 방송 확인을 연습합니다.',
+        },
+      }),
+      createSegment({
+        description: '상황별 행동을 다시 기억해요.',
+        endMs: 60_000,
+        id: 'fire-full-summary',
+        label: '마지막 정리',
+        learnerExplanation: '무조건 나가기보다 상황에 맞게 행동해요.',
+        learnerPrompt: '마지막으로 전체 행동을 다시 말해요.',
+        actionSteps: [],
+        narration: [
+          {
+            endMs: 59_000,
+            source: 'audio',
+            startMs: 53_000,
+            text: '아파트 화재. 무조건 대피보다 상황별 올바른 대처가 중요합니다.',
+          },
+          {
+            endMs: 60_000,
+            source: 'onscreen',
+            startMs: 53_000,
+            text: '아파트 화재, 상황별 대피 요령을 꼭 기억하세요.',
+          },
+        ],
+        practiceMode: 'intro',
+        teachBack: createTeachBack({
+          contrast: {
+            feedback: '괜찮아요. 이 장면은 마지막 정리예요.',
+            id: 'new-action',
+            label: '새 행동 고르기',
+          },
+          correct: {
+            feedback: '맞아요. 오늘 배운 행동을 다시 기억하는 장면이에요.',
+            id: 'review',
+            label: '다시 기억하기',
+          },
+          kind: 'signal',
+          prompt: '마지막 장면은 무엇을 할까요?',
+          ruleIds: ['KR_FIRE_11'],
+        }),
+        packet: createPacket({
+          asrText:
+            '아파트 화재. 무조건 대피보다 상황별 올바른 대처가 중요합니다. 아파트 화재, 상황별 대피 요령을 꼭 기억하세요.',
+          objectHints: ['아파트 화재 정리', '상황별 대피 요령', '마무리 화면'],
+          ocrTokens: ['상황별 대피 요령', '기억하세요'],
+          sessionId: 'demo-fire-full-summary',
+          startMs: 53_000,
+          endMs: 60_000,
+          uiElements: ['상황별 대피 요령을 꼭 기억하세요'],
+        }),
+        rules: fireRuleCatalog,
+        segmentOverrides: {
+          confidence: 0.9,
+          hazard: 'fire',
+          officialRuleIds: ['KR_FIRE_11'],
+          phase: 'apartment_monitoring',
+        },
+        startMs: 53_000,
+        teacherGuide: {
+          correction:
+            '정리 장면에서는 새 행동을 추가하지 않고 오늘 배운 조건별 행동을 다시 떠올리게 합니다.',
+          observe:
+            '학습자가 “무조건 대피”가 아니라 상황별 행동이라는 핵심을 말할 수 있는지 봅니다.',
+          prompt: '오늘 영상은 왜 무조건 나가라고만 하지 않았을까요?',
+          script:
+            '마지막 문장은 아파트 화재에서 상황별 대피 요령을 기억하라는 정리입니다.',
         },
       }),
     ],
@@ -456,7 +606,7 @@ export const learningScenarios: TheaterShow[] = [
     segments: [
       createSegment({
         description: '지진은 갑자기 올 수 있어요.',
-        endMs: 42_400,
+        endMs: 35_760,
         id: 'earthquake-full-opening',
         label: '지진 연습을 시작해요',
         learnerExplanation: '지진 행동요령을 소개해요.',
@@ -464,22 +614,28 @@ export const learningScenarios: TheaterShow[] = [
         actionSteps: [],
         narration: [
           {
-            endMs: 17_560,
-            source: 'caption',
+            endMs: 9_080,
+            source: 'audio',
             startMs: 0,
-            text: '언제 어디서 얼마나 강하게 발생할지 모르는 재난, 지진. 우리나라도 더 이상 지진의 안전지대가 아니고, 지진은 사전 예보가 불가능한 재난입니다.',
+            text: '언제 어디서 얼마나 강하게 발생할지 모르는 재난, 지진.',
           },
           {
-            endMs: 28_960,
-            source: 'caption',
-            startMs: 17_560,
-            text: '따라서 평상시 지진 대처 요령을 숙지하고 올바르게 대응하는 것이 중요합니다.',
+            endMs: 18_040,
+            source: 'audio',
+            startMs: 9_080,
+            text: '우리나라도 더 이상 지진의 안전지대가 아니고 특히 지진은 사전 예보가 불가능한 재난입니다.',
           },
           {
-            endMs: 42_400,
-            source: 'caption',
-            startMs: 37_200,
-            text: '지진 행동요령을 알아봅니다.',
+            endMs: 27_120,
+            source: 'audio',
+            startMs: 18_040,
+            text: '따라서 평상시 지진 대처 요령을 숙지하고 만약 지진이 발생하면 올바르게 대응하는 것이 무엇보다 중요합니다.',
+          },
+          {
+            endMs: 35_760,
+            source: 'audio',
+            startMs: 27_120,
+            text: '지진의 위협으로부터 나와 내 가족의 안전을 지킬 수 있는 안전수칙, 지금부터 알아봅니다.',
           },
         ],
         practiceMode: 'intro',
@@ -505,7 +661,7 @@ export const learningScenarios: TheaterShow[] = [
           ocrTokens: ['지진', '대처 요령', '평상시', '행동요령'],
           sessionId: 'demo-earthquake-full-opening',
           startMs: 0,
-          endMs: 42_400,
+          endMs: 35_760,
           uiElements: ['지진 발생 시 행동요령'],
         }),
         rules: earthquakeRuleCatalog,
@@ -528,12 +684,38 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '흔들릴 때 머리를 보호해요.',
-        endMs: 57_700,
+        endMs: 66_200,
         id: 'earthquake-full-table-protect',
         label: '탁자 아래로 들어가요',
         learnerExplanation: '흔들리면 탁자 아래에서 머리를 지켜요.',
         learnerPrompt: '집 안이 흔들려요. 물건이 떨어질 수 있어요.',
         actionSteps: ['몸을 낮춰요', '탁자 아래로 가요', '머리를 보호해요'],
+        narration: [
+          {
+            endMs: 48_000,
+            source: 'audio',
+            startMs: 35_760,
+            text: '지진으로 크게 흔들리는 시간은 길어야 1, 2분 정도입니다.',
+          },
+          {
+            endMs: 54_880,
+            source: 'audio',
+            startMs: 48_000,
+            text: '중심이 낮고 튼튼한 탁자 아래로 들어가 탁자 다리를 꼭 잡고 몸을 보호합니다.',
+          },
+          {
+            endMs: 60_680,
+            source: 'audio',
+            startMs: 54_880,
+            text: '탁자 아래와 같은 피할 곳이 없을 때는 방석 등으로 머리를 보호합니다.',
+          },
+          {
+            endMs: 66_200,
+            source: 'audio',
+            startMs: 60_680,
+            text: '유리 파편이 날아올 우려가 있을 경우 물건을 등지고 돌아섭니다.',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback:
@@ -556,8 +738,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['탁자', '머리 보호 자세', '실내 흔들림'],
           ocrTokens: ['탁자 아래', '머리 보호', '몸 보호'],
           sessionId: 'demo-earthquake-full-table-protect',
-          startMs: 42_600,
-          endMs: 57_700,
+          startMs: 35_760,
+          endMs: 66_200,
           uiElements: ['튼튼한 탁자 아래로 피하기'],
         }),
         rules: earthquakeRuleCatalog,
@@ -567,7 +749,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_03'],
           phase: 'during_shaking',
         },
-        startMs: 42_600,
+        startMs: 35_760,
         teacherGuide: {
           correction: '뛰어나가기보다 머리 보호와 기다리기를 먼저 말해 줍니다.',
           observe:
@@ -578,13 +760,21 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '가스와 전기는 어른에게 말해요.',
-        endMs: 73_000,
+        endMs: 74_920,
         id: 'earthquake-full-gas-electric',
         label: '가스와 전기를 알려요',
         learnerExplanation:
           '가스 냄새나 전기 이상은 혼자 만지지 말고 어른에게 말해요.',
         learnerPrompt: '흔들림이 멈춘 뒤 부엌과 전기를 확인해요.',
         actionSteps: ['냄새 나는 곳에서 멀어져요', '어른에게 말해요'],
+        narration: [
+          {
+            endMs: 74_920,
+            source: 'audio',
+            startMs: 66_200,
+            text: '흔들림이 멈춘 후에는 당황하지 말고 화재에 대비해 가스 중간 밸브를 잠그고 전기 차단기를 내립니다.',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 가스와 전기는 혼자 만지지 않아요.',
@@ -606,8 +796,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['가스 밸브', '전기 차단기', '부엌', '가스 냄새'],
           ocrTokens: ['가스', '전기', '차단기'],
           sessionId: 'demo-earthquake-full-gas-electric',
-          startMs: 57_700,
-          endMs: 73_000,
+          startMs: 66_200,
+          endMs: 74_920,
           uiElements: ['가스 중간 밸브', '전기 차단기'],
         }),
         rules: earthquakeRuleCatalog,
@@ -617,7 +807,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_05'],
           phase: 'after_shaking',
         },
-        startMs: 57_700,
+        startMs: 66_200,
         teacherGuide: {
           correction:
             '영상은 성인 조작 장면을 포함하지만, 학습자에게는 “어른에게 말하기”로 바꿔 줍니다.',
@@ -630,12 +820,20 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '엘리베이터 말고 계단을 이용해요.',
-        endMs: 80_400,
+        endMs: 81_520,
         id: 'earthquake-full-stairs',
         label: '계단으로 나가요',
         learnerExplanation: '밖으로 나갈 때는 엘리베이터 말고 계단으로 가요.',
         learnerPrompt: '밖으로 나가야 할 수 있어요.',
         actionSteps: ['계단을 찾아요', '천천히 내려가요'],
+        narration: [
+          {
+            endMs: 81_520,
+            source: 'audio',
+            startMs: 74_920,
+            text: '밖으로 나갈 때는 엘리베이터를 타지 말고 계단을 이용해 건물 밖으로 대피합니다.',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 지진 때 엘리베이터는 멈출 수 있어요.',
@@ -657,8 +855,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['계단', '엘리베이터', '건물 밖 대피'],
           ocrTokens: ['엘리베이터 금지', '계단 이용'],
           sessionId: 'demo-earthquake-full-stairs',
-          startMs: 73_000,
-          endMs: 80_400,
+          startMs: 74_920,
+          endMs: 81_520,
           uiElements: ['엘리베이터를 타지 말고 계단 이용'],
         }),
         rules: earthquakeRuleCatalog,
@@ -668,7 +866,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_07'],
           phase: 'after_shaking',
         },
-        startMs: 73_000,
+        startMs: 74_920,
         teacherGuide: {
           correction:
             '엘리베이터를 선택하면 “멈출 수 있어서 계단”이라고 짧게 바꿔 말합니다.',
@@ -679,12 +877,26 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '밖에서는 머리를 보호하고 넓은 곳으로 가요.',
-        endMs: 102_000,
+        endMs: 102_640,
         id: 'earthquake-full-outside-head',
         label: '밖에서 머리를 지켜요',
         learnerExplanation: '밖에서는 머리를 가리고 건물에서 멀어져요.',
         learnerPrompt: '밖에도 유리와 간판이 떨어질 수 있어요.',
         actionSteps: ['머리를 가려요', '건물에서 멀어져요', '넓은 곳으로 가요'],
+        narration: [
+          {
+            endMs: 89_840,
+            source: 'audio',
+            startMs: 81_520,
+            text: '떨어지는 유리, 간판, 기와 등에 주의하며 소지품으로 몸을 보호하면서 침착하게 대피합니다.',
+          },
+          {
+            endMs: 102_640,
+            source: 'audio',
+            startMs: 89_840,
+            text: '밖으로 나오면 담장, 유리창 등이 파손돼 다칠 수 있으니 가방이나 손으로 머리를 보호하면서 건물과 담장에서 최대한 멀리 떨어진 곳으로 대피합니다.',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 건물 벽 가까이는 위험할 수 있어요.',
@@ -706,8 +918,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['건물 밖', '유리창', '간판', '머리 보호', '넓은 공간'],
           ocrTokens: ['머리 보호', '넓은 공간'],
           sessionId: 'demo-earthquake-full-outside-head',
-          startMs: 80_600,
-          endMs: 102_000,
+          startMs: 81_520,
+          endMs: 102_640,
           uiElements: ['건물에서 멀리 떨어진 곳'],
         }),
         rules: earthquakeRuleCatalog,
@@ -717,7 +929,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_08', 'KR_EQ_09'],
           phase: 'evacuation_route',
         },
-        startMs: 80_600,
+        startMs: 81_520,
         teacherGuide: {
           correction:
             '밖이라고 바로 안전한 것은 아니며, 머리 보호와 넓은 공간 이동을 강조합니다.',
@@ -728,62 +940,97 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '공식 안내를 확인해요.',
+        description: '대피소나 넓은 곳으로 가요.',
         endMs: 130_400,
         id: 'earthquake-full-official-info',
-        label: '안내를 확인해요',
-        learnerExplanation: '넓은 곳에 도착하면 공공 안내를 들어요.',
-        learnerPrompt: '대피한 뒤에도 안내를 확인해야 해요.',
-        actionSteps: ['넓은 곳에 있어요', '라디오나 안내를 들어요'],
+        label: '넓은 곳을 찾아요',
+        learnerExplanation: '대피소가 안 보이면 넓은 곳으로 가요.',
+        learnerPrompt: '밖으로 나온 뒤 어디로 갈지 확인해요.',
+        actionSteps: ['대피소를 확인해요', '넓은 곳으로 가요'],
+        narration: [
+          {
+            endMs: 108_960,
+            source: 'audio',
+            startMs: 102_640,
+            text: '지진 대피소는 스마트폰 앱 안전디딤돌에서 확인할 수 있습니다.',
+          },
+          {
+            endMs: 114_320,
+            source: 'audio',
+            startMs: 108_960,
+            text: '하지만 지진이 발생했을 때 지진 대피소를 확인할 수 없는 상황이라면',
+          },
+          {
+            endMs: 121_240,
+            source: 'audio',
+            startMs: 114_320,
+            text: '주변의 넓은 공원이나 운동장으로 차량을 이용하지 않고 신속히 이동합니다.',
+          },
+          {
+            endMs: 130_400,
+            source: 'audio',
+            startMs: 121_240,
+            text: '가까운 공원이나 넓은 공간마저 없다면 최근에 지은 튼튼한 건물 안으로 들어가 우선 몸을 보호합니다.',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 소문보다 공식 안내를 확인해요.',
-            id: 'rumor',
-            label: '소문만 듣기',
+            feedback: '괜찮아요. 차를 타고 서두르지 않아요.',
+            id: 'use-car',
+            label: '차 타고 가기',
           },
           correct: {
-            feedback: '맞아요. 공공 안내를 확인해요.',
-            id: 'official',
-            label: '공공 안내',
+            feedback: '맞아요. 가까운 넓은 곳으로 이동해요.',
+            id: 'open-space',
+            label: '넓은 곳',
           },
-          kind: 'signal',
-          prompt: '대피한 뒤 무엇을 확인할까요?',
-          ruleIds: ['KR_EQ_12'],
+          kind: 'place',
+          prompt: '대피소를 모르면 어디로 갈까요?',
+          ruleIds: ['KR_EQ_09'],
         }),
         packet: createPacket({
           asrText:
-            '지진 대피 후에는 라디오나 공공기관 안내 방송에서 제공하는 정보에 따라 행동합니다.',
-          objectHints: ['라디오', '공공 안내', '대피소', '넓은 공간'],
-          ocrTokens: ['안전디딤돌', '공공기관 안내'],
+            '지진 대피소는 스마트폰 앱 안전디딤돌에서 확인할 수 있습니다. 확인할 수 없다면 주변의 넓은 공원이나 운동장으로 차량을 이용하지 않고 이동합니다.',
+          objectHints: ['안전디딤돌', '지진 대피소', '공원', '운동장'],
+          ocrTokens: ['안전디딤돌', '대피소', '넓은 공간', '차량 이용 금지'],
           sessionId: 'demo-earthquake-full-official-info',
-          startMs: 102_000,
+          startMs: 102_640,
           endMs: 130_400,
-          uiElements: ['라디오나 공공기관 안내 방송'],
+          uiElements: ['지진 대피소', '넓은 공원이나 운동장'],
         }),
         rules: earthquakeRuleCatalog,
         segmentOverrides: {
           confidence: 0.9,
           hazard: 'earthquake',
-          officialRuleIds: ['KR_EQ_12'],
-          phase: 'post_quake_report',
+          officialRuleIds: ['KR_EQ_09'],
+          phase: 'open_space',
         },
-        startMs: 102_000,
+        startMs: 102_640,
         teacherGuide: {
           correction:
-            '대피 뒤에는 임의 판단보다 공공 안내를 듣는다고 반복합니다.',
-          observe: '공식 안내와 소문을 구분하는지 봅니다.',
-          prompt: '휴대전화가 안 될 때는 어떤 안내를 들을 수 있을까요?',
-          script: '대피 후 정보 확인을 공식 안내로 제한하는 연습입니다.',
+            '앱 확인이 안 되면 차량이 아니라 가까운 넓은 공간으로 이동한다고 정리합니다.',
+          observe: '대피소 확인과 넓은 공간 이동을 구분하는지 봅니다.',
+          prompt: '대피소 앱을 볼 수 없으면 어디로 갈까요?',
+          script:
+            '대피소 앱, 공원·운동장, 차량 이용 금지를 함께 다루는 장면입니다.',
         },
       }),
       createSegment({
         description: '학교와 사무실에서도 책상 아래로 가요.',
-        endMs: 159_500,
+        endMs: 145_600,
         id: 'earthquake-full-school-desk',
-        label: '학교에서도 머리를 보호해요',
-        learnerExplanation: '학교와 사무실에서도 책상 아래에서 머리를 지켜요.',
+        label: '사무실에서도 머리를 보호해요',
+        learnerExplanation: '사무실에서도 책상 아래에서 머리를 지켜요.',
         learnerPrompt: '장소가 바뀌어도 먼저 머리를 보호해요.',
         actionSteps: ['책상 아래로 들어가요', '책상 다리를 잡아요', '기다려요'],
+        narration: [
+          {
+            endMs: 145_600,
+            source: 'audio',
+            startMs: 130_400,
+            text: '사무실은 컴퓨터 본체, 모니터 등 무거운 물건들이 많아 다칠 위험이 크므로 즉시 책상 아래로 들어가 몸을 웅크리고 책상 다리를 꼭 잡고 몸을 보호합니다.',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 복도로 뛰기보다 먼저 책상 아래로 가요.',
@@ -801,12 +1048,12 @@ export const learningScenarios: TheaterShow[] = [
         }),
         packet: createPacket({
           asrText:
-            '사무실과 학교에서 지진을 맞닥뜨리면 즉시 책상 아래로 들어가 몸을 웅크리고 책상 다리를 잡습니다.',
-          objectHints: ['사무실', '학교', '책상', '학생', '머리 보호 자세'],
-          ocrTokens: ['책상 아래', '몸 보호', '선생님 안내'],
+            '사무실은 컴퓨터 본체, 모니터 등 무거운 물건들이 많아 다칠 위험이 크므로 즉시 책상 아래로 들어가 몸을 웅크리고 책상 다리를 꼭 잡고 몸을 보호합니다.',
+          objectHints: ['사무실', '책상', '모니터', '머리 보호 자세'],
+          ocrTokens: ['책상 아래', '몸 보호', '책상 다리'],
           sessionId: 'demo-earthquake-full-school-desk',
-          startMs: 130_600,
-          endMs: 159_500,
+          startMs: 130_400,
+          endMs: 145_600,
           uiElements: ['장소별 행동요령'],
         }),
         rules: earthquakeRuleCatalog,
@@ -816,19 +1063,20 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_03'],
           phase: 'during_shaking',
         },
-        startMs: 130_600,
+        startMs: 130_400,
         teacherGuide: {
           correction:
             '장소가 달라도 “흔들릴 때는 머리 보호”가 먼저라는 원리를 연결합니다.',
           observe:
-            '가정/사무실/교실처럼 장소가 바뀌어도 같은 행동을 고르는지 봅니다.',
-          prompt: '학교에서는 누구의 안내를 들어야 할까요?',
-          script: '교실과 사무실 장면을 통해 행동 일반화를 연습합니다.',
+            '가정과 사무실처럼 장소가 바뀌어도 머리 보호를 고르는지 봅니다.',
+          prompt: '사무실에서 무엇이 떨어질 수 있을까요?',
+          script:
+            '사무실 장면에서 무거운 물건과 책상 아래 머리 보호를 연결합니다.',
         },
       }),
       createSegment({
         description: '선생님 안내에 따라 움직여요.',
-        endMs: 176_700,
+        endMs: 175_600,
         id: 'earthquake-full-school-evacuation',
         label: '선생님을 따라가요',
         learnerExplanation: '흔들림이 멈추면 선생님 안내에 따라 움직여요.',
@@ -837,6 +1085,26 @@ export const learningScenarios: TheaterShow[] = [
           '선생님 말을 들어요',
           '머리를 보호해요',
           '질서 있게 가요',
+        ],
+        narration: [
+          {
+            endMs: 162_440,
+            source: 'audio',
+            startMs: 145_600,
+            text: '흔들림이 멈추면 선생님의 안내에 따라 질서를 지키면서 운동장으로 대피합니다.',
+          },
+          {
+            endMs: 168_760,
+            source: 'audio',
+            startMs: 162_440,
+            text: '복도에서는 창문 유리가 깨질 우려가 크므로 창문과 떨어져 이동합니다.',
+          },
+          {
+            endMs: 175_600,
+            source: 'audio',
+            startMs: 168_760,
+            text: '운동장이 건물과 너무 가까이 있다면 주변의 넓은 공원을 찾아서 대피합니다.',
+          },
         ],
         teachBack: createTeachBack({
           contrast: {
@@ -859,8 +1127,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['교실', '복도', '선생님 안내', '창문 유리'],
           ocrTokens: ['선생님 안내', '질서', '창문 주의'],
           sessionId: 'demo-earthquake-full-school-evacuation',
-          startMs: 159_500,
-          endMs: 176_700,
+          startMs: 145_600,
+          endMs: 175_600,
           uiElements: ['선생님 안내에 따라 대피'],
         }),
         rules: earthquakeRuleCatalog,
@@ -870,7 +1138,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_08'],
           phase: 'evacuation_route',
         },
-        startMs: 159_500,
+        startMs: 145_600,
         teacherGuide: {
           correction:
             '학생 단독 판단이 아니라 교사 안내와 질서 있는 이동으로 바꿔 말합니다.',
@@ -881,12 +1149,32 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '멈춘 뒤 부상자와 안내를 확인해요.',
-        endMs: 218_000,
+        endMs: 214_400,
         id: 'earthquake-full-after-report',
         label: '멈춘 뒤 확인해요',
         learnerExplanation: '흔들림이 멈추면 다친 사람과 안내를 확인해요.',
         learnerPrompt: '멈췄다고 바로 뛰면 위험할 수 있어요.',
         actionSteps: ['다친 사람을 봐요', '119에 알려요', '공식 안내를 들어요'],
+        narration: [
+          {
+            endMs: 192_920,
+            source: 'audio',
+            startMs: 175_600,
+            text: '엘리베이터를 타고 있다면 멈췄다고 해서 서둘러 출구로 뛰어가는 것은 위험하므로 안내에 따라 안전하게 행동합니다.',
+          },
+          {
+            endMs: 202_160,
+            source: 'audio',
+            startMs: 192_920,
+            text: '흔들림이 멈춘 후 주변에 부상자가 있으면 119에 먼저 신고하고 이웃과 서로 협력해 응급 처치합니다.',
+          },
+          {
+            endMs: 214_400,
+            source: 'audio',
+            startMs: 202_160,
+            text: '지진이 발생하면 통신기기 사용이 폭주해 일시적인 장애가 발생할 수 있으니 당황하지 말고 라디오 및 공공기관이 제공하는 정보에 따라 행동합니다.',
+          },
+        ],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 바로 뛰지 말고 먼저 확인해요.',
@@ -913,8 +1201,8 @@ export const learningScenarios: TheaterShow[] = [
           ],
           ocrTokens: ['119', '공공 안내', '흔들림이 멈춘 후'],
           sessionId: 'demo-earthquake-full-after-report',
-          startMs: 176_900,
-          endMs: 218_000,
+          startMs: 175_600,
+          endMs: 214_400,
           uiElements: ['흔들림이 멈춘 후'],
         }),
         rules: earthquakeRuleCatalog,
@@ -924,7 +1212,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_12'],
           phase: 'post_quake_report',
         },
-        startMs: 176_900,
+        startMs: 175_600,
         teacherGuide: {
           correction:
             '“끝났다”가 아니라 부상자, 119, 공식 안내 확인으로 이어지게 돕습니다.',
@@ -935,7 +1223,7 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '문과 가스를 조심해서 확인해요.',
-        endMs: 258_500,
+        endMs: 251_880,
         id: 'earthquake-full-door-gas',
         label: '문과 가스를 확인해요',
         learnerExplanation: '문을 열 때 조심하고, 가스 냄새는 어른에게 말해요.',
@@ -944,6 +1232,38 @@ export const learningScenarios: TheaterShow[] = [
           '문 주변을 봐요',
           '가스 냄새를 말해요',
           '안전한 곳으로 가요',
+        ],
+        narration: [
+          {
+            endMs: 223_240,
+            source: 'audio',
+            startMs: 214_400,
+            text: '가정이나 사무실로 돌아간 후에는 피해 상태를 확인하고 안전이 의심되면 전문가의 확인을 받도록 합니다.',
+          },
+          {
+            endMs: 230_840,
+            source: 'audio',
+            startMs: 223_240,
+            text: '옷장이나 보관함 등의 내용물이 쏟아져 내려 부상을 입을 수도 있으므로 문을 열 때 주의합니다.',
+          },
+          {
+            endMs: 235_400,
+            source: 'audio',
+            startMs: 230_840,
+            text: '가스, 전기, 수도관 등의 확인도 필수입니다.',
+          },
+          {
+            endMs: 243_920,
+            source: 'audio',
+            startMs: 235_400,
+            text: '가스 냄새가 나거나 가스 새는 소리가 들릴 경우에는 밸브를 잠근 후 창문을 열고 우선 대피합니다.',
+          },
+          {
+            endMs: 251_880,
+            source: 'audio',
+            startMs: 243_920,
+            text: '대피 후에는 지역 도시가스, 한국가스안전공사 등 가스 관련 기관에 조치 후 사용합니다.',
+          },
         ],
         teachBack: createTeachBack({
           contrast: {
@@ -966,8 +1286,8 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['문 주변 물건', '가스 냄새', '가스 밸브', '부엌'],
           ocrTokens: ['문을 열 때 주의', '가스 냄새', '가스 확인'],
           sessionId: 'demo-earthquake-full-door-gas',
-          startMs: 218_000,
-          endMs: 258_500,
+          startMs: 214_400,
+          endMs: 251_880,
           uiElements: ['가스 냄새가 나면'],
         }),
         rules: earthquakeRuleCatalog,
@@ -977,7 +1297,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_05'],
           phase: 'after_shaking',
         },
-        startMs: 218_000,
+        startMs: 214_400,
         teacherGuide: {
           correction:
             '성인이 밸브를 만지는 장면은 학습자에게 “어른에게 말하기”로 바꿔 설명합니다.',
@@ -989,7 +1309,7 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '전기 이상과 물 사용도 어른과 확인해요.',
-        endMs: 307_300,
+        endMs: 307_440,
         id: 'earthquake-full-electric-final',
         label: '마지막으로 확인해요',
         learnerExplanation:
@@ -999,6 +1319,50 @@ export const learningScenarios: TheaterShow[] = [
           '전기에서 떨어져요',
           '어른에게 말해요',
           '안내를 기다려요',
+        ],
+        narration: [
+          {
+            endMs: 259_960,
+            source: 'audio',
+            startMs: 251_880,
+            text: '전기에 이상이 발견됐을 때는 원인이 파악될 때까지 엘리베이터 사용을 금지합니다.',
+          },
+          {
+            endMs: 267_960,
+            source: 'audio',
+            startMs: 259_960,
+            text: '정전이 되었다면 손전등을 사용하고 차단기를 내린 후 전선의 이상 유무를 확인합니다.',
+          },
+          {
+            endMs: 278_840,
+            source: 'audio',
+            startMs: 267_960,
+            text: '수도관에 피해가 있다면 밸브를 잠그고 하수관의 피해 여부를 확인하기 전까지 수도꼭지나 화장실 등 물을 사용하지 않습니다.',
+          },
+          {
+            endMs: 285_640,
+            source: 'audio',
+            startMs: 278_840,
+            text: '피해가 확인되었다면 살고 있는 곳의 시군구청에 신고합니다.',
+          },
+          {
+            endMs: 295_640,
+            source: 'audio',
+            startMs: 285_640,
+            text: '끝으로 여진이 발생할 수 있으므로 지역 방송 등이 제공하는 정보를 주시하며 만일의 사태에 대비합니다.',
+          },
+          {
+            endMs: 301_140,
+            source: 'audio',
+            startMs: 295_640,
+            text: '사전 대비와 훈련만이 예측 불가의 재난을 예방할 최선의 방법입니다.',
+          },
+          {
+            endMs: 307_440,
+            source: 'audio',
+            startMs: 301_140,
+            text: '지진으로부터 모두 안전하도록 다 같이 관심을 갖고 노력해야겠습니다.',
+          },
         ],
         teachBack: createTeachBack({
           contrast: {
@@ -1027,8 +1391,8 @@ export const learningScenarios: TheaterShow[] = [
           ],
           ocrTokens: ['전기 이상', '수도관', '여진', '지역 방송'],
           sessionId: 'demo-earthquake-full-electric-final',
-          startMs: 258_500,
-          endMs: 307_300,
+          startMs: 251_880,
+          endMs: 307_440,
           uiElements: ['사전 대비와 훈련'],
         }),
         rules: earthquakeRuleCatalog,
@@ -1038,7 +1402,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_05', 'KR_EQ_12'],
           phase: 'after_shaking',
         },
-        startMs: 258_500,
+        startMs: 251_880,
         teacherGuide: {
           correction:
             '전기와 수도 장면도 학습자에게는 직접 조작보다 어른에게 알리기로 제한합니다.',
