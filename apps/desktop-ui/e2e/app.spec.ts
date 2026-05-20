@@ -213,28 +213,25 @@ test('offers next practice and restart controls after the final scene', async ({
 test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await page.goto('/scenario/earthquake-protect-flow')
 
-  await page.getByRole('button', { name: '11번째 장면' }).click()
-  await expect(page.getByText('11 / 11')).toBeVisible()
+  await page.getByRole('button', { name: '9번째 장면' }).click()
+  await expect(page.getByText('9 / 9')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
 
+  await expect(page.getByText('또 흔들리면 다시 연습해요.')).toBeVisible()
   await expect(
-    page.getByText('전기가 고장 난 것 같으면 어른에게 말하고 방송을 기다려요.'),
+    page.getByRole('heading', { name: '한 장씩 복습해요' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('link', { name: '다음 연습으로 가기' }),
-  ).toHaveCount(0)
+    page.getByRole('heading', { name: '탁자 아래로 들어가요' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: '오늘 연습 끝내기' }),
+  ).toHaveAttribute('href', '/')
   await expect(
     page.getByRole('button', { name: '맞는 답을 고르면 마칠 수 있어요' }),
-  ).toBeDisabled()
-
-  await page.getByRole('button', { name: '어른에게 말하기' }).click()
-  await expect(
-    page.getByRole('link', {
-      name: '오늘 연습 끝내기',
-    }),
-  ).toHaveAttribute('href', '/')
+  ).toHaveCount(0)
 })
 
 test('clamps video before the next segment frame is shown', async ({
