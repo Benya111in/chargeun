@@ -162,6 +162,8 @@ test('offers next practice and restart controls after the final scene', async ({
   await expect(
     page.getByRole('heading', { name: '문 닫고 계단으로 가요' }),
   ).toBeVisible()
+  await expect(page.getByText('그때 무슨 일이었나요')).toBeVisible()
+  await expect(page.getByText('우리 집에서 불이 났어요.')).toBeVisible()
   await expect(page.getByText('문을 닫아요').first()).toBeVisible()
   await expect(page.getByText('계단으로 나가요').first()).toBeVisible()
   await expect(page.getByText('문 열어 두지 않아요.')).toBeVisible()
@@ -174,6 +176,7 @@ test('offers next practice and restart controls after the final scene', async ({
   await expect(
     page.getByRole('heading', { name: '계단으로 나가요' }),
   ).toBeVisible()
+  await expect(page.getByText('계단과 엘리베이터가 보여요.')).toBeVisible()
   await expect(page.getByText('엘리베이터 타지 않아요.')).toBeVisible()
   await expect(page.getByText('오늘 배운 순서')).toHaveCount(0)
   await expect(page.getByText('어른용 안내')).toHaveCount(0)
