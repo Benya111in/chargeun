@@ -231,7 +231,6 @@ describe('buildStructuredLearningExplanation', () => {
     )
     expect(structured.tracks.action?.cards.map((card) => card.label)).toEqual([
       '문을 닫아요',
-      '문을 열어 두지 않아요',
     ])
     expect(structured.tracks.teachBack?.correctOptionId).toBe('closed-door')
     expect(structured.tracks.teachBack?.options[0]?.officialRuleIds).toContain(
@@ -244,6 +243,11 @@ describe('buildStructuredLearningExplanation', () => {
     expect(
       structured.suppressedCandidates.some(
         (candidate) => candidate.candidate === '엘리베이터 타기',
+      ),
+    ).toBe(true)
+    expect(
+      structured.suppressedCandidates.some(
+        (candidate) => candidate.candidate === '문을 열어 두지 않아요',
       ),
     ).toBe(true)
   })

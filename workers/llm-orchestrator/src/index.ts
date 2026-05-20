@@ -144,6 +144,15 @@ export const buildStructuredLearningExplanation = (
       : undefined
   const hasGroundedAction = Boolean(actionCards?.length)
   const requiresHumanReview = status !== 'validated'
+  const suppressedCandidates = dedupeSuppressedCandidates([
+    ...buildSuppressedCandidates({
+      actionRuleIds: groundedRules.map((rule) => rule.rule_id),
+      evidence: input.evidence,
+      ruleMatches,
+      segment: input.segment,
+    }),
+    ...buildSuppressedLearnerActionSteps(input.learnerActionSteps ?? []),
+  ])
   const structured: StructuredLearningExplanation = {
     version: 'slowlearner_multitrack_v1',
     segment: {
@@ -217,12 +226,7 @@ export const buildStructuredLearningExplanation = (
       packet: input.evidence,
       ruleMatches,
     }),
-    suppressedCandidates: buildSuppressedCandidates({
-      actionRuleIds: groundedRules.map((rule) => rule.rule_id),
-      evidence: input.evidence,
-      ruleMatches,
-      segment: input.segment,
-    }),
+    suppressedCandidates,
     validation: {
       hasGroundedAction,
       learnerSafe: status === 'validated',
@@ -468,14 +472,15 @@ function buildActionCards(input: {
   const labels = (input.learnerActionSteps ?? [])
     .map((step) => step.trim())
     .filter(Boolean)
+    .filter((step) => !shouldSuppressLearnerActionStep(step))
     .slice(0, 3)
+  const ruleIds = input.rules.map((rule) => rule.rule_id)
 
   if (labels.length > 0) {
     return labels.map((label, index) => ({
       label: limitText(label, 40),
       officialRuleIds: [
-        input.rules[Math.min(index, input.rules.length - 1)]?.rule_id ??
-          input.rules[0]!.rule_id,
+        ruleIds[Math.min(index, ruleIds.length - 1)] ?? ruleIds[0]!,
       ],
       order: index + 1,
     }))
@@ -486,6 +491,28 @@ function buildActionCards(input: {
     officialRuleIds: [rule.rule_id],
     order: index + 1,
   }))
+}
+
+function buildSuppressedLearnerActionSteps(
+  learnerActionSteps: string[],
+): SuppressedCandidate[] {
+  return learnerActionSteps
+    .map((step) => step.trim())
+    .filter(Boolean)
+    .filter(shouldSuppressLearnerActionStep)
+    .map((step) => ({
+      candidate: step,
+      category: 'not_for_learner' as const,
+      evidenceRefs: [],
+      reason:
+        '학습자 행동 카드는 해야 할 행동만 보여 주고, 금지 행동은 헷갈림 후보로 보관합니다.',
+    }))
+}
+
+function shouldSuppressLearnerActionStep(step: string) {
+  return /않아요|않습니다|말아요|말고|피해요|금지|하지|만지지|무리해서/u.test(
+    step,
+  )
 }
 
 function toLearnerActionLabel(action: string) {

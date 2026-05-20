@@ -52,10 +52,14 @@ export type PracticeAnswerOption = LearningTeachBack['options'][number] & {
 
 export type TheaterShow = {
   accentClassName: string
+  homeNote?: string
+  homeTitle?: string
   id: string
   note: string
   posterSrc: string
+  practiceSequence?: boolean
   segments: TheaterSegment[]
+  showOnHome?: boolean
   title: string
   videoSrc: string
 }
@@ -93,7 +97,7 @@ export const learningScenarios: TheaterShow[] = [
         label: '문을 닫고 나가요',
         learnerExplanation: '나갈 때는 문을 닫아요.',
         learnerPrompt: '불이 났어요. 연기가 퍼질 수 있어요.',
-        actionSteps: ['문을 닫아요', '문을 열어 두지 않아요'],
+        actionSteps: ['문을 닫아요'],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 이 장면에서는 문을 닫는 행동을 다시 봐요.',
@@ -142,11 +146,7 @@ export const learningScenarios: TheaterShow[] = [
         label: '계단으로 가요',
         learnerExplanation: '화재 때는 계단을 찾아요.',
         learnerPrompt: '나갈 수 있으면 계단을 찾아요.',
-        actionSteps: [
-          '비상구를 봐요',
-          '계단으로 가요',
-          '엘리베이터는 타지 않아요',
-        ],
+        actionSteps: ['비상구를 봐요', '계단으로 가요'],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 이 장면에서는 계단을 찾는 것을 다시 봐요.',
@@ -194,11 +194,7 @@ export const learningScenarios: TheaterShow[] = [
         label: '안전한 곳으로 가요',
         learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
         learnerPrompt: '문 밖으로 나가기 어려울 수 있어요.',
-        actionSteps: [
-          '억지로 나가지 않아요',
-          '안전한 곳으로 가요',
-          '어른이나 119에 알려요',
-        ],
+        actionSteps: ['안전한 곳으로 가요', '어른이나 119에 알려요'],
         teachBack: createTeachBack({
           contrast: {
             feedback:
@@ -249,7 +245,9 @@ export const learningScenarios: TheaterShow[] = [
   {
     accentClassName: 'bg-sky-400',
     id: 'earthquake-protect-flow',
-    note: '흔들릴 때 책상 아래에서 머리를 보호해요',
+    homeNote: '먼저 흔들릴 때 머리를 보호하고, 다음 연습에서 멈춘 뒤 확인해요',
+    homeTitle: '지진이 났을 때',
+    note: '1단계: 흔들릴 때 책상 아래에서 머리를 보호해요',
     posterSrc: '/demo/earthquake-review-02.jpg',
     segments: [
       createSegment({
@@ -416,14 +414,16 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
     ],
-    title: '지진이 흔들릴 때',
+    title: '지진이 났을 때: 흔들릴 때',
     videoSrc: '/demo-video/earthquake-desk-001.mp4',
   },
   {
     accentClassName: 'bg-orange-400',
     id: 'fire-visual-flow',
-    note: '소리가 없어도 표지와 행동을 보고 연습해요',
+    note: '소리 없이 표지와 행동을 보는 보조 연습이에요',
     posterSrc: '/demo/fire-visual-02.jpg',
+    practiceSequence: false,
+    showOnHome: false,
     segments: [
       createSegment({
         description: '소리가 없어도 문을 닫고 나가요.',
@@ -480,11 +480,7 @@ export const learningScenarios: TheaterShow[] = [
         label: '계단으로 가요',
         learnerExplanation: '비상구 표지를 보고 계단을 찾아요.',
         learnerPrompt: '표지와 움직임을 보고 계단을 찾아요.',
-        actionSteps: [
-          '비상구 표지를 봐요',
-          '계단을 찾아요',
-          '엘리베이터는 피해요',
-        ],
+        actionSteps: ['비상구 표지를 봐요', '계단을 찾아요'],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 이 장면에서는 비상구 표시를 다시 봐요.',
@@ -531,11 +527,7 @@ export const learningScenarios: TheaterShow[] = [
         label: '안전한 곳으로 가요',
         learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
         learnerPrompt: '길이 막혔을 때 다른 안전한 곳을 찾아요.',
-        actionSteps: [
-          '무리해서 지나가지 않아요',
-          '안전한 곳을 찾아요',
-          '도움을 요청해요',
-        ],
+        actionSteps: ['안전한 곳을 찾아요', '도움을 요청해요'],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 이 장면에서는 안전한 곳 찾기를 다시 봐요.',
@@ -578,14 +570,15 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
     ],
-    title: '소리가 없어도 볼 수 있어요',
+    title: '보조 연습: 소리 없이 보기',
     videoSrc: '/demo-video/fire-stair-no-audio-001.mp4',
   },
   {
     accentClassName: 'bg-teal-400',
     id: 'earthquake-after-flow',
-    note: '흔들림이 멈춘 뒤 어른과 함께 확인해요',
+    note: '2단계: 흔들림이 멈춘 뒤 어른과 함께 확인해요',
     posterSrc: '/demo/earthquake-after-02.jpg',
+    showOnHome: false,
     segments: [
       createSegment({
         description: '문을 열어 나갈 길을 만들어요.',
@@ -646,11 +639,7 @@ export const learningScenarios: TheaterShow[] = [
         label: '가스와 전기를 살펴요',
         learnerExplanation: '가스 냄새가 나면 어른에게 말해요.',
         learnerPrompt: '다친 곳과 위험한 냄새를 확인해요.',
-        actionSteps: [
-          '가스 냄새를 맡으면 멀리 가요',
-          '전기 스위치를 함부로 만지지 않아요',
-          '어른에게 말해요',
-        ],
+        actionSteps: ['가스 냄새를 맡으면 멀리 가요', '어른에게 말해요'],
         teachBack: createTeachBack({
           contrast: {
             feedback: '괜찮아요. 이 장면에서는 어른에게 말하기를 다시 봐요.',
@@ -745,10 +734,18 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
     ],
-    title: '흔들림이 멈춘 뒤',
+    title: '지진이 났을 때: 멈춘 뒤',
     videoSrc: '/demo-video/earthquake-after-shaking-001.mp4',
   },
 ]
+
+export const homeLearningScenarios = learningScenarios.filter(
+  (scenario) => scenario.showOnHome !== false,
+)
+
+export const practiceSequenceScenarios = learningScenarios.filter(
+  (scenario) => scenario.practiceSequence !== false,
+)
 
 export const theaterShows = learningScenarios
 

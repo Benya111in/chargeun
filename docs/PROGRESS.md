@@ -25,6 +25,10 @@
 - `StructuredLearningExplanation v1`에 `tracks.teachBack` 계약을 추가해 validated segment가 정답 1개, semantic kind 일치, 공식 rule id 연결, 행동 카드와 선택지 분리, 고정/명령형 오답 금지를 통과해야만 학습자 질문을 노출하도록 바꿨다
 - `/scenario`는 더 이상 seed의 자유 텍스트 answer option을 직접 신뢰하지 않고, schema를 통과한 `structuredExplanation.tracks.teachBack`에서 질문과 선택지를 파생한다
 - 마지막 장면에서는 `다음 장면 보기`가 첫 장면으로 순환하지 않도록 막고, 정답 선택 후 `다음 연습 보기`, 다음 연습 제목/설명 링크, `처음부터 다시 보기`를 제공하도록 바꿨다
+- 홈의 연습 카드를 재난 주제 중심으로 정리해 `소리 없이 보기` 보조 연습은 기본 홈에서 숨기고, 지진은 `지진이 났을 때` 한 주제 안에서 `흔들릴 때 -> 멈춘 뒤` 연속 연습으로 연결했다
+- `llm-orchestrator`의 structured action card 생성 단계에서 `않아요`, `피해요`, `만지지`, `무리해서` 같은 부정/금지형 행동 문장을 학습자 행동 카드에서 자동 제외하고 suppressed candidate로 보관하도록 막았다
+- 학습자 `/scenario` 화면에 `쉬운말`, `할 일`, `확인`, `헷갈림` 요약과 보존된 헷갈림 후보 패널을 추가해, 내부 용어 없이도 멀티트랙 구조와 후보 보존 결과가 보이도록 했다
+- fire stair 장면에서 `엘리베이터는 타지 않아요`가 행동 카드처럼 보이지 않고, `헷갈릴 수 있어요` 패널의 보관 후보로만 나타나도록 콘텐츠와 invariant를 정리했다
 
 ### 검증
 
@@ -41,8 +45,14 @@
 - `pnpm --filter @ansimtrack/shared-types test`
 - `pnpm --filter @ansimtrack/llm-orchestrator test`
 - `pnpm --filter desktop-ui test:e2e -- app.spec.ts`
+- `pnpm --filter desktop-ui test -- learning-scenarios`
+- `pnpm --filter desktop-ui typecheck`
+- `pnpm --filter desktop-ui lint`
+- `pnpm exec prettier --check` on changed implementation/docs files
+- `pnpm --filter desktop-ui test:e2e -- app.spec.ts`
 - Browser preview check: `/teacher` structured panel and `/qa?internal=qa` LRS panel render with no console errors
 - Browser preview check: `/scenario/fire-grounded-flow` 첫 장면과 두 번째 장면의 teach-back 선택지가 행동 카드와 충돌하지 않는지 확인
+- Browser preview check: `/`에는 화재/지진 주제만 보이고, `/scenario/fire-grounded-flow` 두 번째 장면에는 행동 카드 2개와 `엘리베이터` 보관 후보가 분리 표시됨
 - 분야별 QA 에이전트 2라운드: learner flow, live-lab fallback, cognitive accessibility, visual responsive QA, teacher/QA, contract/data integrity 재검증 완료
 
 ### 다음

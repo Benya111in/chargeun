@@ -9,6 +9,7 @@ import {
 
 import {
   learningScenarios,
+  practiceSequenceScenarios,
   type TheaterSegment,
   type TheaterShow,
 } from './lib/demo-theater-content'
@@ -398,6 +399,7 @@ function PracticePanel({
       <h1 className="mt-3 text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1.08] tracking-tight">
         {segment.learnerExplanation}
       </h1>
+      <LearningTrackSummary segment={segment} />
 
       <div className="mt-6 grid gap-3">
         <h2 className="text-lg font-semibold">지금 할 일</h2>
@@ -484,6 +486,8 @@ function PracticePanel({
         </div>
       ) : null}
 
+      <PreservedCandidatePanel segment={segment} />
+
       <div className="mt-6 flex flex-wrap gap-2">
         <button className="link-button" onClick={onReplay} type="button">
           <RotateCcw className="size-4" />이 장면 다시 보기
@@ -520,6 +524,71 @@ function PracticePanel({
             다음 장면 보기
           </button>
         )}
+      </div>
+    </section>
+  )
+}
+
+function LearningTrackSummary({ segment }: { segment: TheaterSegment }) {
+  const structured = segment.structuredExplanation
+  const actionCount = structured.tracks.action?.cards.length ?? 0
+  const preservedCount = getLearnerPreservedCandidates(segment).length
+
+  return (
+    <section
+      aria-label="이 장면을 나누어 보는 방법"
+      className="mt-5 grid gap-2 sm:grid-cols-4"
+    >
+      <TrackBadge label="쉬운말" value="지금 장면" />
+      <TrackBadge label="할 일" value={`${actionCount}개 카드`} />
+      <TrackBadge
+        label="확인"
+        value={structured.tracks.teachBack ? '질문 1개' : '어른과 확인'}
+      />
+      <TrackBadge
+        label="헷갈림"
+        value={preservedCount ? `${preservedCount}개 보관` : '없음'}
+      />
+    </section>
+  )
+}
+
+function TrackBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-3">
+      <p className="text-xs font-semibold text-[#596257]">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-[#151713]">{value}</p>
+    </div>
+  )
+}
+
+function PreservedCandidatePanel({ segment }: { segment: TheaterSegment }) {
+  const candidates = getLearnerPreservedCandidates(segment)
+
+  if (candidates.length === 0) {
+    return null
+  }
+
+  return (
+    <section className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
+      <h2 className="text-lg font-semibold">헷갈릴 수 있어요</h2>
+      <p className="mt-2 text-sm leading-6 text-[#596257]">
+        화면에 보이거나 생각날 수 있지만, 이 장면의 행동 카드로는 쓰지 않아요.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {candidates.map((candidate) => (
+          <div
+            key={`${candidate.category}-${candidate.candidate}`}
+            className="rounded-md border border-[#dfe4da] bg-white px-4 py-3"
+          >
+            <p className="text-sm font-semibold text-[#151713]">
+              {getLearnerCandidateText(candidate.candidate)}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-[#596257]">
+              지금은 고르지 않아요.
+            </p>
+          </div>
+        ))}
       </div>
     </section>
   )
@@ -603,6 +672,26 @@ function getLearnerReasonText(reason: string) {
     .replace('대비', '준비')
 }
 
+function getLearnerPreservedCandidates(segment: TheaterSegment) {
+  return segment.structuredExplanation.suppressedCandidates
+    .filter((candidate) =>
+      ['unsafe_action', 'unsupported_action', 'not_for_learner'].includes(
+        candidate.category,
+      ),
+    )
+    .slice(0, 2)
+}
+
+function getLearnerCandidateText(candidate: string) {
+  return candidate
+    .replace('엘리베이터 타기', '엘리베이터')
+    .replace('엘리베이터를 타지 않습니다.', '엘리베이터')
+    .replace('출입문을 열어 두지 않습니다.', '문 열어 두기')
+    .replace('연기 흡입을 줄입니다.', '그냥 서서 걷기')
+    .replace('바깥으로 뛰어나가지 않습니다.', '바로 밖으로 뛰기')
+    .replace('가스와 전기는 어른과 함께 확인합니다.', '혼자 가스 만지기')
+}
+
 function selectScenarioFromPath() {
   const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
   const id =
@@ -620,15 +709,17 @@ function selectScenarioFromPath() {
 }
 
 function getNextScenario(currentScenario: TheaterShow) {
-  const index = learningScenarios.findIndex(
+  const index = practiceSequenceScenarios.findIndex(
     (scenario) => scenario.id === currentScenario.id,
   )
 
   if (index === -1) {
-    return learningScenarios[0]!
+    return practiceSequenceScenarios[0]!
   }
 
-  return learningScenarios[(index + 1) % learningScenarios.length]!
+  return practiceSequenceScenarios[
+    (index + 1) % practiceSequenceScenarios.length
+  ]!
 }
 
 function isExpectedPlaybackInterruption(error: unknown) {

@@ -6,7 +6,7 @@ import {
   Users,
 } from 'lucide-react'
 
-import { learningScenarios } from './lib/demo-theater-content'
+import { homeLearningScenarios } from './lib/demo-theater-content'
 import { cn } from './lib/utils'
 
 const safetyNotice =
@@ -70,7 +70,7 @@ export default function LearningHomePage() {
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {learningScenarios.map((scenario) => (
+            {homeLearningScenarios.map((scenario) => (
               <a
                 key={scenario.id}
                 className="group rounded-md border border-[#dfe4da] bg-white p-5 shadow-[0_14px_36px_rgba(21,23,19,0.05)] transition hover:border-[#151713]/30"
@@ -84,15 +84,27 @@ export default function LearningHomePage() {
                     )}
                   />
                   <span className="text-sm font-semibold text-[#596257]">
-                    {scenario.segments.length}개 장면
+                    {scenario.id === 'earthquake-protect-flow'
+                      ? '이어지는 연습'
+                      : `${scenario.segments.length}개 장면`}
                   </span>
                 </div>
                 <h3 className="mt-4 text-2xl font-semibold tracking-tight">
-                  {scenario.title}
+                  {scenario.homeTitle ?? scenario.title}
                 </h3>
                 <p className="mt-3 min-h-12 text-sm leading-6 text-[#596257]">
-                  {scenario.note}
+                  {scenario.homeNote ?? scenario.note}
                 </p>
+                {scenario.id === 'earthquake-protect-flow' ? (
+                  <div className="mt-4 grid gap-2 text-sm font-semibold text-[#151713] sm:grid-cols-2">
+                    <span className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
+                      1. 흔들릴 때
+                    </span>
+                    <span className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
+                      2. 멈춘 뒤
+                    </span>
+                  </div>
+                ) : null}
                 <div className="mt-5 flex items-center gap-2 text-sm font-semibold">
                   연습 시작
                   <ArrowRight className="size-4 transition group-hover:translate-x-1" />

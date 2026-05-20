@@ -43,6 +43,11 @@ describe('learningScenarios', () => {
         const learnerActionLabels = getLearnerActionCards(segment).map(
           (card) => card.label,
         )
+        for (const actionLabel of learnerActionLabels) {
+          expect(actionLabel).not.toMatch(
+            /않아요|않습니다|말아요|말고|피해요|금지|하지|만지지|무리해서/,
+          )
+        }
         for (const option of segment.answerOptions.filter(
           (item) => !item.correct,
         )) {
