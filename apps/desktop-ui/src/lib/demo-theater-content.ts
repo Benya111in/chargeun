@@ -406,8 +406,8 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 43_500,
         id: 'fire-full-seal-room',
         label: '문틈을 막고 알려요',
-        learnerExplanation: '연기가 들어오면 문틈을 막고 구조를 요청해요.',
-        learnerPrompt: '방 안에서 기다려야 할 수 있어요.',
+        learnerExplanation: '연기가 들어오면 문틈을 막고 119에 알려요.',
+        learnerPrompt: '연기가 들어와서 바로 나가기 어려워요.',
         actionSteps: ['문을 닫아요', '문틈을 막아요', '119에 알려요'],
         narration: [
           {

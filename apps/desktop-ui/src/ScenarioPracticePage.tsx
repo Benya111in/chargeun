@@ -797,9 +797,7 @@ function ScenarioReviewCarousel({
         <h3 className="text-2xl font-semibold leading-8">{group.title}</h3>
 
         <section className="mt-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2">
-          <p className="text-sm font-semibold text-sky-900">
-            그때 무슨 일이었나요
-          </p>
+          <p className="text-sm font-semibold text-sky-900">상황</p>
           <p className="mt-1 text-lg font-semibold leading-7">
             {group.situationText}
           </p>
