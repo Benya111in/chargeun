@@ -317,6 +317,27 @@ describe('learningScenarios', () => {
     ).toBe('학교에서 지진이 났어요.')
   })
 
+  it('keeps the earthquake elevator clip isolated from nearby scenes', () => {
+    const earthquakeScenario = learningScenarios.find(
+      (scenario) => scenario.id === 'earthquake-protect-flow',
+    )!
+
+    const school = earthquakeScenario.segments.find(
+      (segment) => segment.id === 'earthquake-full-school-evacuation',
+    )
+    const elevator = earthquakeScenario.segments.find(
+      (segment) => segment.id === 'earthquake-full-elevator-wait',
+    )
+    const afterReport = earthquakeScenario.segments.find(
+      (segment) => segment.id === 'earthquake-full-after-report',
+    )
+
+    expect(school?.endMs).toBe(177_000)
+    expect(elevator?.startMs).toBe(177_000)
+    expect(elevator?.endMs).toBe(185_600)
+    expect(afterReport?.startMs).toBe(194_500)
+  })
+
   it('hides learner action cards when structured status requires review', () => {
     const [segment] = learningScenarios[0]!.segments
     const reviewSegment = {
