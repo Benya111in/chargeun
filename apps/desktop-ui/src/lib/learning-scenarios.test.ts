@@ -11,7 +11,7 @@ import {
 } from './learner-copy'
 
 const hardLearnerCopyPattern =
-  /상황|위험|안내|확인|비상구|표지|방향|스위치|유입|확보|찾기해야|해야합니다|합니다|습니다|하십시오|이용|요청|차단|화염|생존|대피공간|행동요령|대피소|공식|기관|통신|낙하물|붕괴물|공동주택|무작정|차량|혼잡|2차 피해|발생/u
+  /상황|위험|확인|비상구|표지|방향|유입|확보|찾기해야|해야합니다|합니다|습니다|하십시오|이용|요청|차단|화염|생존|행동요령|공식|통신|낙하물|붕괴물|공동주택|무작정|차량|혼잡|2차 피해|발생/u
 
 function getLearnerVisibleTexts(
   segment: (typeof learningScenarios)[number]['segments'][number],
@@ -79,6 +79,10 @@ describe('learningScenarios', () => {
             /어디로 어디로|말를|보기하기|때을|찾기해야|가기해야|계단으로 안전한 곳|다친 사람과 방송/,
           )
         }
+        const visibleText = getLearnerVisibleTexts(segment, scenario).join(' ')
+        for (const keyword of segment.requiredLearnerKeywords) {
+          expect(visibleText).toContain(keyword)
+        }
 
         if (segment.practiceMode === 'intro') {
           expect(segment.actionSteps).toHaveLength(0)
@@ -97,6 +101,16 @@ describe('learningScenarios', () => {
           )
           for (const actionReason of segment.actionReasons) {
             expect(actionReason.length).toBeLessThanOrEqual(35)
+          }
+          for (const actionStep of segment.actionSteps) {
+            if (actionStep.includes('말해요')) {
+              expect(actionStep).toMatch(
+                /(어른|선생님|가족|보호자|119).*(말해요)|말해요.*(어른|선생님|가족|보호자|119)/,
+              )
+              expect(actionStep).not.toMatch(
+                /^(어른|선생님|가족|보호자)에게 말해요$/,
+              )
+            }
           }
           expect(
             getLearnerActionCards(segment).map((card) => card.label),

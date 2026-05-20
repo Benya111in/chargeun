@@ -42,6 +42,7 @@ export type TheaterSegment = {
   previewMs?: number
   practiceMode: SegmentPracticeMode
   primarySourceTitle: string | null
+  requiredLearnerKeywords: string[]
   ruleMatches: GroundedRuleMatch[]
   safetyWarnings: string[]
   safetyNotice: string
@@ -106,6 +107,7 @@ type SegmentSeed = {
   pauseMs?: number
   previewMs?: number
   practiceMode?: SegmentPracticeMode
+  requiredLearnerKeywords?: string[]
   rules: RuleRecord[]
   segmentOverrides?: Partial<Segment>
   startMs: number
@@ -213,7 +215,8 @@ export const learningScenarios: TheaterShow[] = [
         label: '문 닫고 계단으로 가요',
         learnerExplanation: '현관문을 닫고 계단으로 나가요.',
         learnerPrompt: '우리 집에서 불이 났어요.',
-        actionSteps: ['문을 닫아요', '계단으로 나가요'],
+        actionSteps: ['현관문을 닫아요', '계단으로 나가요'],
+        requiredLearnerKeywords: ['현관문', '계단'],
         narration: [
           {
             endMs: 22_500,
@@ -284,6 +287,7 @@ export const learningScenarios: TheaterShow[] = [
         learnerExplanation: '불이 났을 때 엘리베이터는 타지 않아요.',
         learnerPrompt: '계단과 엘리베이터가 보여요.',
         actionSteps: ['계단을 찾아요', '천천히 내려가요'],
+        requiredLearnerKeywords: ['엘리베이터', '계단'],
         narration: [
           {
             endMs: 27_500,
@@ -348,8 +352,9 @@ export const learningScenarios: TheaterShow[] = [
         actionSteps: [
           '대피공간으로 가요',
           '문을 닫아요',
-          '119나 어른에게 알려요',
+          '대피공간 위치를 119나 어른에게 알려요',
         ],
+        requiredLearnerKeywords: ['연기', '대피공간', '119'],
         narration: [
           {
             endMs: 30_000,
@@ -412,9 +417,14 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 43_500,
         id: 'fire-full-seal-room',
         label: '문틈을 막고 알려요',
-        learnerExplanation: '연기가 들어오면 문틈을 막고 119에 알려요.',
+        learnerExplanation: '방문을 닫고 문틈을 막아 119에 알려요.',
         learnerPrompt: '연기가 들어와서 바로 나가기 어려워요.',
-        actionSteps: ['문을 닫아요', '문틈을 막아요', '119에 알려요'],
+        actionSteps: [
+          '방문을 닫아요',
+          '젖은 수건으로 문틈을 막아요',
+          '방 안 위치를 119에 알려요',
+        ],
+        requiredLearnerKeywords: ['방문', '젖은 수건', '문틈', '119'],
         narration: [
           {
             endMs: 43_500,
@@ -483,6 +493,7 @@ export const learningScenarios: TheaterShow[] = [
           '집 안에서 기다려요',
           '안내 방송을 들어요',
         ],
+        requiredLearnerKeywords: ['다른 집', '창문', '집 안', '안내 방송'],
         narration: [
           {
             endMs: 53_000,
@@ -715,6 +726,7 @@ export const learningScenarios: TheaterShow[] = [
         learnerExplanation: '탁자 아래에서 다리를 꼭 잡아요.',
         learnerPrompt: '흔들림은 1~2분쯤 이어져요.',
         actionSteps: ['몸을 낮춰요', '탁자 아래로 가요', '탁자 다리를 잡아요'],
+        requiredLearnerKeywords: ['1~2분', '탁자', '탁자 다리'],
         narration: [
           {
             endMs: 48_000,
@@ -778,6 +790,7 @@ export const learningScenarios: TheaterShow[] = [
         learnerExplanation: '방석으로 머리를 가리고 유리에 등을 돌려요.',
         learnerPrompt: '탁자가 없을 수 있어요.',
         actionSteps: ['방석을 들어요', '머리를 가려요', '유리에 등을 돌려요'],
+        requiredLearnerKeywords: ['탁자', '방석', '유리'],
         narration: [
           {
             endMs: 60_680,
@@ -838,13 +851,19 @@ export const learningScenarios: TheaterShow[] = [
         description: '가스와 전기는 어른에게 말해요.',
         endMs: 74_920,
         id: 'earthquake-full-gas-electric',
-        label: '가스와 전기를 말해요',
-        learnerExplanation: '가스 밸브와 전기는 어른에게 말해요.',
+        label: '가스와 전기는 어른에게 말해요',
+        learnerExplanation: '가스 중간 밸브와 전기 고장은 어른에게 말해요.',
         learnerPrompt: '흔들림이 멈추면 가스와 전기를 봐요.',
         actionSteps: [
-          '가스 냄새를 말해요',
-          '전기 고장을 말해요',
-          '어른에게 말해요',
+          '가스 냄새를 어른에게 말해요',
+          '가스 중간 밸브가 보이면 어른에게 말해요',
+          '전기 고장이 보이면 어른에게 말해요',
+        ],
+        requiredLearnerKeywords: [
+          '가스 냄새',
+          '가스 중간 밸브',
+          '전기 고장',
+          '어른',
         ],
         narration: [
           {
@@ -901,9 +920,10 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 81_520,
         id: 'earthquake-full-stairs',
         label: '계단으로 나가요',
-        learnerExplanation: '엘리베이터가 보여도 계단으로 가요.',
+        learnerExplanation: '엘리베이터가 보여도 계단으로 건물 밖에 나가요.',
         learnerPrompt: '밖으로 나가야 할 수 있어요.',
-        actionSteps: ['계단을 찾아요', '천천히 내려가요'],
+        actionSteps: ['계단을 찾아요', '건물 밖으로 천천히 내려가요'],
+        requiredLearnerKeywords: ['엘리베이터', '계단', '건물 밖'],
         narration: [
           {
             endMs: 81_520,
@@ -965,6 +985,7 @@ export const learningScenarios: TheaterShow[] = [
           '건물에서 멀어져요',
           '담장에서 멀어져요',
         ],
+        requiredLearnerKeywords: ['유리', '간판', '담장', '가방'],
         actionReasons: [
           '유리와 간판이 떨어질 수 있어요',
           '벽에서 물건이 떨어질 수 있어요',
@@ -1032,12 +1053,20 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 121_240,
         id: 'earthquake-full-open-space',
         label: '안전한 곳으로 걸어가요',
-        learnerExplanation: '안전디딤돌 앱을 보고 넓은 곳으로 가요.',
+        learnerExplanation:
+          '안전디딤돌 앱에서 지진 대피소를 보고 넓은 곳으로 가요.',
         learnerPrompt: '밖으로 나온 뒤 갈 곳을 찾아요.',
         actionSteps: [
-          '안전디딤돌 앱에서 찾아요',
+          '안전디딤돌 앱에서 지진 대피소를 찾아요',
           '넓은 공원으로 걸어가요',
           '넓은 운동장으로 걸어가요',
+        ],
+        requiredLearnerKeywords: [
+          '안전디딤돌',
+          '지진 대피소',
+          '공원',
+          '운동장',
+          '차',
         ],
         actionReasons: [
           '가까운 갈 곳을 볼 수 있어요',
@@ -1119,6 +1148,7 @@ export const learningScenarios: TheaterShow[] = [
         learnerExplanation: '넓은 곳이 없으면 튼튼한 건물로 가요.',
         learnerPrompt: '공원이나 운동장이 안 보일 수 있어요.',
         actionSteps: ['튼튼한 건물을 찾아요', '안으로 들어가요', '몸을 지켜요'],
+        requiredLearnerKeywords: ['공원', '운동장', '튼튼한 건물'],
         narration: [
           {
             endMs: 130_400,
@@ -1182,6 +1212,7 @@ export const learningScenarios: TheaterShow[] = [
           '책상 다리를 잡아요',
           '몸을 작게 해요',
         ],
+        requiredLearnerKeywords: ['사무실', '책상', '책상 다리'],
         narration: [
           {
             endMs: 145_600,
@@ -1243,8 +1274,9 @@ export const learningScenarios: TheaterShow[] = [
         actionSteps: [
           '선생님 말을 들어요',
           '창문에서 떨어져요',
-          '넓은 곳으로 가요',
+          '운동장이나 넓은 공원으로 가요',
         ],
+        requiredLearnerKeywords: ['학교', '선생님', '창문', '운동장', '공원'],
         narration: [
           {
             endMs: 162_440,
@@ -1313,7 +1345,12 @@ export const learningScenarios: TheaterShow[] = [
         label: '119와 방송을 기억해요',
         learnerExplanation: '다친 사람은 119에 알리고 방송을 들어요.',
         learnerPrompt: '다친 사람이 있을 수 있어요.',
-        actionSteps: ['다친 사람을 봐요', '119에 알려요', '라디오를 들어요'],
+        actionSteps: [
+          '다친 사람을 봐요',
+          '다친 사람을 119에 알려요',
+          '라디오나 공공기관 안내를 들어요',
+        ],
+        requiredLearnerKeywords: ['다친 사람', '119', '라디오', '공공기관'],
         narration: [
           {
             endMs: 202_160,
@@ -1374,14 +1411,15 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 230_450,
         id: 'earthquake-full-return-door',
         label: '문은 천천히 열어요',
-        learnerExplanation: '문 주변을 보고 천천히 열어요.',
-        learnerPrompt: '문 뒤에 물건이 쏟아질 수 있어요.',
+        learnerExplanation: '옷장이나 보관함 문을 천천히 열어요.',
+        learnerPrompt: '옷장이나 보관함 문 뒤에 물건이 있을 수 있어요.',
         pauseMs: 230_450,
         actionSteps: [
-          '문 주변을 봐요',
-          '문을 천천히 열어요',
-          '어른에게 말해요',
+          '옷장 문 주변을 봐요',
+          '보관함 문을 천천히 열어요',
+          '쏟아진 물건이 있으면 어른에게 말해요',
         ],
+        requiredLearnerKeywords: ['옷장', '보관함', '문', '물건', '어른'],
         narration: [
           {
             endMs: 223_240,
@@ -1408,7 +1446,7 @@ export const learningScenarios: TheaterShow[] = [
             label: '천천히',
           },
           kind: 'state',
-          prompt: '문을 열 때 어떻게 할까요?',
+          prompt: '옷장 문을 열 때 어떻게 할까요?',
           ruleIds: ['KR_EQ_18'],
         }),
         packet: createPacket({
@@ -1443,14 +1481,15 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 251_880,
         id: 'earthquake-full-door-gas',
         label: '가스 냄새를 말해요',
-        learnerExplanation: '어른에게 말하고 밖으로 나가요.',
+        learnerExplanation: '가스 냄새를 어른에게 말하고 밖으로 나가요.',
         learnerPrompt: '가스 냄새나 새는 소리가 나요.',
         previewMs: 231_000,
         actionSteps: [
-          '냄새와 소리를 말해요',
+          '가스 냄새나 새는 소리를 어른에게 말해요',
           '밖으로 나가요',
-          '다시 쓰기 전에 물어봐요',
+          '다시 쓰기 전 어른에게 물어봐요',
         ],
+        requiredLearnerKeywords: ['가스 냄새', '새는 소리', '어른', '밖'],
         narration: [
           {
             endMs: 235_400,
@@ -1519,9 +1558,14 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 267_960,
         id: 'earthquake-full-electric-water',
         label: '전기는 어른에게 말해요',
-        learnerExplanation: '정전이면 손전등을 써요.',
+        learnerExplanation: '정전이면 손전등을 쓰고 전선은 어른에게 말해요.',
         learnerPrompt: '전기가 고장 난 것 같아요.',
-        actionSteps: ['전선에서 떨어져요', '손전등을 써요', '어른에게 말해요'],
+        actionSteps: [
+          '전선에서 떨어져요',
+          '정전이면 손전등을 써요',
+          '전선 문제를 어른에게 말해요',
+        ],
+        requiredLearnerKeywords: ['전기', '정전', '손전등', '전선', '어른'],
         narration: [
           {
             endMs: 259_960,
@@ -1583,14 +1627,15 @@ export const learningScenarios: TheaterShow[] = [
         description: '물은 어른과 먼저 살펴요.',
         endMs: 285_640,
         id: 'earthquake-full-water-report',
-        label: '물 쓰기 전에 말해요',
-        learnerExplanation: '물 쓰기 전에 어른에게 말해요.',
+        label: '물은 어른에게 먼저 말해요',
+        learnerExplanation: '수도꼭지나 화장실 물은 어른에게 먼저 말해요.',
         learnerPrompt: '수도관이 고장 난 것 같아요.',
         actionSteps: [
-          '수도관을 봐요',
-          '물 쓰기 전에 말해요',
-          '어른에게 말해요',
+          '수도관 고장을 어른에게 말해요',
+          '수도꼭지 물은 기다려요',
+          '화장실 물도 어른에게 물어봐요',
         ],
+        requiredLearnerKeywords: ['수도관', '수도꼭지', '화장실', '물', '어른'],
         narration: [
           {
             endMs: 278_840,
@@ -1948,7 +1993,11 @@ export const learningScenarios: TheaterShow[] = [
         label: '가스 냄새를 알려요',
         learnerExplanation: '가스 냄새가 나면 어른에게 말해요.',
         learnerPrompt: '이상한 냄새가 나면 혼자 만지지 않아요.',
-        actionSteps: ['냄새 나는 곳에서 멀어져요', '어른에게 말해요'],
+        actionSteps: [
+          '가스 냄새 나는 곳에서 멀어져요',
+          '가스 냄새를 어른에게 말해요',
+        ],
+        requiredLearnerKeywords: ['가스 냄새', '어른'],
         teachBack: createTeachBack({
           contrast: {
             feedback:
@@ -1998,7 +2047,11 @@ export const learningScenarios: TheaterShow[] = [
         label: '전기가 이상하면 알려요',
         learnerExplanation: '전기가 이상하면 어른에게 말해요.',
         learnerPrompt: '전등이 꺼지거나 전기가 이상해요.',
-        actionSteps: ['전기 스위치에서 떨어져요', '어른에게 말해요'],
+        actionSteps: [
+          '전기 스위치에서 떨어져요',
+          '전기가 고장 나면 어른에게 말해요',
+        ],
+        requiredLearnerKeywords: ['전기', '버튼', '어른'],
         teachBack: createTeachBack({
           contrast: {
             feedback:
@@ -2179,6 +2232,7 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     previewMs: seed.previewMs,
     practiceMode,
     primarySourceTitle: ruleMatches[0]?.rule.source_title ?? null,
+    requiredLearnerKeywords: seed.requiredLearnerKeywords ?? [],
     ruleMatches,
     safetyWarnings: safetyView.warnings,
     safetyNotice: defaultSafetyNotice,

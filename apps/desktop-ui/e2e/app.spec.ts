@@ -241,7 +241,9 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   })
   await expect(page.getByText('밖으로 나온 뒤 갈 곳을 찾아요.')).toHaveCount(2)
   await expect(
-    page.getByText('안전디딤돌 앱에서 찾아요', { exact: true }),
+    page.getByText('안전디딤돌 앱에서 지진 대피소를 찾아요', {
+      exact: true,
+    }),
   ).toHaveCount(2)
   await expect(page.getByText('가까운 갈 곳을 볼 수 있어요')).toBeVisible()
   await expect(

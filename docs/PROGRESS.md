@@ -6,6 +6,7 @@
 
 - 지진 전체 연습을 14장면에서 16장면으로 재구성해, 긴 음성 설명을 한 장면에 과하게 압축하지 않고 `탁자 다리`, `방석`, `유리`, `간판`, `안전디딤돌`, `공원/운동장`, `튼튼한 건물`, `손전등`, `수도관`, `물 쓰기 전 확인` 같은 핵심 단서를 학습자 카드에 보이도록 재구성했다.
 - 지진 후속 행동을 더 정확히 grounding하기 위해 학교 이동, 가스 냄새/새는 소리, 전기/정전, 귀가 후 문/설비 확인, 수도관/물 사용, 넓은 곳이 없을 때 튼튼한 건물 규칙과 공식 source chunk를 추가했다. 엘리베이터/지하철이 섞여 보이는 원본 구간은 학습 흐름에서 제거했다.
+- 쉬운말 변환 중 핵심 단어가 사라지지 않도록 `requiredLearnerKeywords`를 추가했다. `옷장/보관함 문`, `가스 냄새`, `새는 소리`, `전선`, `수도꼭지`, `화장실`, `지진 대피소`, `안내 방송` 같은 단어가 학습자 화면에 남는지 테스트한다.
 - `learner-copy` 변환에서 `가기해야`, `지키기하는` 같은 어색한 치환 찌꺼기가 생기지 않도록 exact replacement와 regression test를 추가했다.
 - `/scenario/earthquake-protect-flow` 브라우저 검증에서 3번 방석/유리 장면과 16번 수도관/물 사용 장면이 실제 영상 정지 후 쉬운말, 순서 카드, 하지 말 것, 확인 질문으로 보이는 것을 확인했다.
 - `pnpm --filter desktop-ui test -- learning-scenarios`, `pnpm --filter desktop-ui typecheck`, `pnpm --filter desktop-ui lint`, `pnpm --filter desktop-ui test:e2e`, `pnpm --filter desktop-ui build` 검증을 완료했다.
