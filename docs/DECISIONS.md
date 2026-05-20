@@ -92,6 +92,11 @@
 - 이유: GitHub Pages로 공유할 때 첫 화면부터 여러 연습 카드, 내부 링크, 상단 네비게이션이 보이면 사용자가 어디를 눌러야 하는지 흔들린다. 이번 링크는 제품 전체 탐색이 아니라 한 번의 학습 체험을 끝까지 보게 하는 목적이다.
 - 영향: `/`는 서비스 소개와 `학습 체험하기` CTA만 노출한다. CTA는 `#/scenario/fire-grounded-flow`로 이동하고, 화재 완료 후 지진으로 이어진다. 마지막 연습 종료 시 설문 요청 모달을 보여 주며, 기본 구글폼 URL은 `https://forms.gle/nzCofnS9KosQ3X566`이다. 필요하면 `VITE_SURVEY_FORM_URL` 환경변수로 덮어쓴다.
 
+### D-075 GitHub Pages는 Actions artifact 배포를 사용한다
+
+- 이유: Vite 정적 번들은 repo 하위 경로에서 열릴 수 있어야 하고, mp4/JPG public 자산도 같은 배포 산출물 안에 있어야 한다. `dist`를 직접 commit하는 방식은 반복 배포 때 충돌과 용량 churn이 커진다.
+- 영향: `.github/workflows/github-pages.yml`에서 pnpm install/build 후 `apps/desktop-ui/dist`를 Pages artifact로 업로드한다. 사용자 링크는 해시 라우팅을 사용하므로 GitHub Pages project URL에서도 새로고침 404 없이 동작한다.
+
 ## 2026-04-14
 
 ### D-001 macOS 단일 경로 우선
