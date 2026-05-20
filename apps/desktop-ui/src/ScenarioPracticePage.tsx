@@ -64,7 +64,6 @@ export default function ScenarioPracticePage() {
 function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const [segmentIndex, setSegmentIndex] = useState(0)
   const [stage, setStage] = useState<PracticeStage>('ready')
-  const [showReason, setShowReason] = useState(false)
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null)
   const [playbackNotice, setPlaybackNotice] = useState('')
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -77,7 +76,6 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const boundaryMonitorRef = useRef<number | null>(null)
   const [playRequestId, setPlayRequestId] = useState(0)
   const segment = scenario.segments[segmentIndex]
-  const learnerActionCards = getLearnerActionCards(segment)
   const nextPractice = getNextScenario(scenario)
   const isFinalSegment = segmentIndex === scenario.segments.length - 1
   const reviewGroups = isFinalSegment
@@ -245,7 +243,6 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     })
     setSegmentIndex(nextIndex)
     setStage('playback')
-    setShowReason(false)
     setSelectedAnswerId(null)
     setPlaybackNotice('')
     pendingPlaybackIndexRef.current = nextIndex
@@ -260,7 +257,6 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     clearBoundaryMonitor()
     setSegmentIndex(nextIndex)
     setStage('ready')
-    setShowReason(false)
     setSelectedAnswerId(null)
     setPlaybackNotice('')
     autoPauseSegmentRef.current = null
@@ -292,108 +288,121 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 
   return (
     <main className="min-h-screen bg-[#f7f8f4] text-[#151713]">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1240px] gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-6">
-        <section className="flex min-w-0 flex-col gap-4">
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe4da] pb-4">
-            <a
-              className="inline-flex min-h-11 items-center rounded-md bg-[#151713] px-3 py-2 text-sm font-semibold text-white"
-              href="/"
-            >
-              안심트랙 연습
-            </a>
-            <div className="flex flex-wrap gap-2">
-              <a className="link-button" href="/">
-                다른 연습 고르기
-              </a>
-            </div>
-          </header>
+      <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col gap-2 px-4 py-2 lg:px-6">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe4da] pb-2">
+          <a
+            className="inline-flex min-h-9 items-center rounded-md bg-[#151713] px-3 py-1 text-sm font-semibold text-white"
+            href="/"
+          >
+            안심트랙 연습
+          </a>
+          <a
+            className="inline-flex min-h-9 items-center rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-semibold text-[#151713]"
+            href="/"
+          >
+            다른 연습 고르기
+          </a>
+        </header>
 
-          <section className="overflow-hidden rounded-md border border-[#dfe4da] bg-black">
-            <div className="relative aspect-video bg-black">
-              <video
-                key={scenario.id}
-                ref={videoRef}
-                className="h-full w-full object-contain"
-                onEnded={(event) => {
-                  if (!clampSegmentPlayback(event.currentTarget)) {
-                    playbackWindowRef.current = null
-                    pendingPlaybackIndexRef.current = null
-                    setStage('explanation')
-                  }
-                }}
-                onLoadedMetadata={(event) => {
-                  event.currentTarget.currentTime = getSegmentStartSec(segment)
-                }}
-                onTimeUpdate={(event) => {
-                  if (
-                    stage === 'playback' &&
-                    autoPauseSegmentRef.current !==
-                      playbackWindowRef.current?.segmentId
-                  ) {
-                    clampSegmentPlayback(event.currentTarget)
-                  }
-                }}
-                playsInline
-                poster={scenario.posterSrc}
-                preload="auto"
-              >
-                <source src={scenario.videoSrc} type="video/mp4" />
-              </video>
+        <SafetyBanner notice={segment.safetyNotice} />
 
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/76 via-black/10 to-black/44" />
-
-              <div className="absolute inset-x-0 top-0 flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-                <div className="rounded-md border border-white/12 bg-black/42 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm">
-                  {scenario.title}
-                </div>
-                <div className="rounded-md border border-white/12 bg-black/42 px-3 py-2 text-sm text-white/86 backdrop-blur-sm">
-                  {segmentIndex + 1} / {scenario.segments.length}
-                </div>
-              </div>
-
-              {stage === 'ready' ? (
-                <button
-                  aria-label="영상 시작하기"
-                  className="absolute inset-0 flex items-center justify-center"
-                  onClick={() => {
-                    playSegment(segmentIndex)
+        <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1.08fr)_minmax(430px,0.72fr)]">
+          <section className="flex min-w-0 flex-col gap-3">
+            <section className="overflow-hidden rounded-md border border-[#dfe4da] bg-black">
+              <div className="relative h-[260px] bg-black 2xl:h-[300px]">
+                <video
+                  key={scenario.id}
+                  ref={videoRef}
+                  className="h-full w-full object-contain"
+                  onEnded={(event) => {
+                    if (!clampSegmentPlayback(event.currentTarget)) {
+                      playbackWindowRef.current = null
+                      pendingPlaybackIndexRef.current = null
+                      setStage('explanation')
+                    }
                   }}
+                  onLoadedMetadata={(event) => {
+                    event.currentTarget.currentTime =
+                      getSegmentStartSec(segment)
+                  }}
+                  onTimeUpdate={(event) => {
+                    if (
+                      stage === 'playback' &&
+                      autoPauseSegmentRef.current !==
+                        playbackWindowRef.current?.segmentId
+                    ) {
+                      clampSegmentPlayback(event.currentTarget)
+                    }
+                  }}
+                  playsInline
+                  poster={scenario.posterSrc}
+                  preload="auto"
+                >
+                  <source src={scenario.videoSrc} type="video/mp4" />
+                </video>
+
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/76 via-black/10 to-black/44" />
+
+                <div className="absolute inset-x-0 top-0 flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                  <div className="rounded-md border border-white/12 bg-black/42 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+                    {scenario.title}
+                  </div>
+                  <div className="rounded-md border border-white/12 bg-black/42 px-3 py-2 text-sm text-white/86 backdrop-blur-sm">
+                    {segmentIndex + 1} / {scenario.segments.length}
+                  </div>
+                </div>
+
+                {stage === 'ready' ? (
+                  <button
+                    aria-label="영상 시작하기"
+                    className="absolute inset-0 flex items-center justify-center"
+                    onClick={() => {
+                      playSegment(segmentIndex)
+                    }}
+                    type="button"
+                  >
+                    <span className="inline-flex items-center gap-3 rounded-md border border-white/16 bg-black/58 px-7 py-4 text-xl font-semibold text-white backdrop-blur-sm">
+                      <Play className="size-6" />
+                      시작하기
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+            </section>
+
+            <div className="flex gap-2">
+              {scenario.segments.map((item, index) => (
+                <button
+                  key={item.id}
+                  aria-label={`${index + 1}번째 장면`}
+                  className="flex min-h-10 flex-1 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-2"
+                  onClick={() => loadSegment(index)}
                   type="button"
                 >
-                  <span className="inline-flex items-center gap-3 rounded-md border border-white/16 bg-black/58 px-7 py-4 text-xl font-semibold text-white backdrop-blur-sm">
-                    <Play className="size-6" />
-                    시작하기
+                  <span
+                    className={cn(
+                      'h-2 flex-1 rounded-full transition',
+                      index < segmentIndex
+                        ? 'bg-emerald-500'
+                        : index === segmentIndex
+                          ? 'bg-[#151713]'
+                          : 'bg-[#dfe4da]',
+                    )}
+                  />
+                  <span className="text-xs font-semibold text-[#596257]">
+                    {index + 1}번
                   </span>
                 </button>
-              ) : null}
+              ))}
             </div>
-          </section>
 
-          <div className="flex gap-2">
-            {scenario.segments.map((item, index) => (
-              <button
-                key={item.id}
-                aria-label={`${index + 1}번째 장면`}
-                className="flex min-h-11 flex-1 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-2"
-                onClick={() => loadSegment(index)}
-                type="button"
-              >
-                <span
-                  className={cn(
-                    'h-2 flex-1 rounded-full transition',
-                    index < segmentIndex
-                      ? 'bg-emerald-500'
-                      : index === segmentIndex
-                        ? 'bg-[#151713]'
-                        : 'bg-[#dfe4da]',
-                  )}
-                />
-                <span className="text-xs font-semibold text-[#596257]">
-                  {index + 1}번
-                </span>
-              </button>
-            ))}
-          </div>
+            <PracticeHero
+              headingRef={explanationHeadingRef}
+              playbackNotice={playbackNotice}
+              segment={segment}
+              stage={stage}
+            />
+          </section>
 
           <PracticePanel
             isFinalSegment={isFinalSegment}
@@ -402,70 +411,60 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
             onReplay={() => playSegment(segmentIndex)}
             onRestart={() => playSegment(0)}
             onRest={rest}
-            onToggleReason={() => setShowReason((value) => !value)}
-            playbackNotice={playbackNotice}
-            headingRef={explanationHeadingRef}
             reviewGroups={reviewGroups}
             segment={segment}
             selectedAnswerId={selectedAnswerId}
             selectedAnswer={selectedAnswer}
             setSelectedAnswerId={setSelectedAnswerId}
-            showReason={showReason}
             stage={stage}
           />
-        </section>
-
-        <aside className="flex flex-col gap-4">
-          <SafetyCard notice={segment.safetyNotice} />
-          <section className="rounded-md border border-[#dfe4da] bg-white p-5">
-            <h2 className="text-lg font-semibold">
-              {reviewGroups.length > 0 ? '오늘 배운 순서' : '오늘 기억할 순서'}
-            </h2>
-            {reviewGroups.length > 0 ? (
-              <ol className="mt-4 grid gap-3">
-                {reviewGroups.map((group, index) => (
-                  <li
-                    key={group.segmentId}
-                    className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-3"
-                  >
-                    <span className="text-sm font-semibold text-[#596257]">
-                      {index + 1}번
-                    </span>
-                    <p className="mt-1 text-lg font-semibold">{group.title}</p>
-                  </li>
-                ))}
-              </ol>
-            ) : learnerActionCards.length > 0 ? (
-              <ol className="mt-4 grid gap-3">
-                {learnerActionCards.map((card) => (
-                  <li
-                    key={`${card.order}-${card.label}`}
-                    className="flex items-center gap-3 rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-3"
-                  >
-                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-[#151713] text-sm font-semibold text-white">
-                      {getActionStepLabel(
-                        card.order,
-                        learnerActionCards.length,
-                      )}
-                    </span>
-                    <span className="text-lg font-semibold">{card.label}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-4 rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-3 text-lg font-semibold leading-8 text-[#596257]">
-                {segment.practiceMode === 'intro'
-                  ? '이 장면은 소개예요. 다음 장면에서 행동을 연습해요.'
-                  : '이 장면은 선생님이나 보호자와 공식 안내를 확인해요.'}
-              </p>
-            )}
-          </section>
-          <a className="link-button justify-center" href="/teacher">
-            어른용 안내
-          </a>
-        </aside>
+        </div>
       </div>
     </main>
+  )
+}
+
+function PracticeHero({
+  headingRef,
+  playbackNotice,
+  segment,
+  stage,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>
+  playbackNotice: string
+  segment: TheaterSegment
+  stage: PracticeStage
+}) {
+  const isResting = stage === 'rest'
+  const isExplaining = stage === 'explanation'
+
+  return (
+    <section className="rounded-md border border-[#dfe4da] bg-white p-3 [container-type:inline-size]">
+      <p className="text-sm font-semibold text-[#596257]">
+        {isResting ? '잠깐 멈췄어요.' : segment.learnerPrompt}
+      </p>
+      <h1
+        ref={isExplaining ? headingRef : undefined}
+        tabIndex={isExplaining ? -1 : undefined}
+        className="mt-1 whitespace-nowrap text-[clamp(1.65rem,5cqw,2.85rem)] font-semibold leading-[1.03] tracking-tight outline-none"
+      >
+        {isResting
+          ? '잠깐 쉬어도 괜찮아요.'
+          : isExplaining
+            ? segment.learnerExplanation
+            : '영상을 보고 멈추면 같이 연습해요.'}
+      </h1>
+      {isResting ? (
+        <p className="mt-2 text-lg font-semibold leading-7 text-[#596257]">
+          필요하면 선생님이나 보호자를 불러요.
+        </p>
+      ) : null}
+      {playbackNotice ? (
+        <p className="mt-4 text-sm leading-6 text-amber-700">
+          {playbackNotice}
+        </p>
+      ) : null}
+    </section>
   )
 }
 
@@ -476,15 +475,11 @@ function PracticePanel({
   onReplay,
   onRestart,
   onRest,
-  onToggleReason,
-  playbackNotice,
-  headingRef,
   reviewGroups,
   segment,
   selectedAnswer,
   selectedAnswerId,
   setSelectedAnswerId,
-  showReason,
   stage,
 }: {
   isFinalSegment: boolean
@@ -493,15 +488,11 @@ function PracticePanel({
   onReplay: () => void
   onRestart: () => void
   onRest: () => void
-  onToggleReason: () => void
-  playbackNotice: string
-  headingRef: RefObject<HTMLHeadingElement | null>
   reviewGroups: ScenarioReviewGroup[]
   segment: TheaterSegment
   selectedAnswer?: TheaterSegment['answerOptions'][number]
   selectedAnswerId: string | null
   setSelectedAnswerId: (value: string) => void
-  showReason: boolean
   stage: PracticeStage
 }) {
   const learnerActionCards = getLearnerActionCards(segment)
@@ -512,14 +503,16 @@ function PracticePanel({
 
   if (stage === 'rest') {
     return (
-      <section className="rounded-md border border-[#dfe4da] bg-white p-6">
-        <h1 className="text-4xl font-semibold leading-tight">
-          잠깐 쉬어도 괜찮아요.
-        </h1>
-        <p className="mt-4 text-2xl font-semibold leading-9 text-[#596257]">
-          필요하면 선생님이나 보호자를 불러요. 준비되면 다시 볼 수 있어요.
+      <section className="rounded-md border border-[#dfe4da] bg-white p-3">
+        <h2 className="text-lg font-semibold">쉬기</h2>
+        <p className="mt-1 text-lg font-semibold leading-7 text-[#596257]">
+          준비되면 같은 장면을 다시 볼 수 있어요.
         </p>
-        <button className="link-button mt-5" onClick={onReplay} type="button">
+        <button
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+          onClick={onReplay}
+          type="button"
+        >
           <Play className="size-4" />
           다시 보기
         </button>
@@ -529,92 +522,79 @@ function PracticePanel({
 
   if (stage !== 'explanation') {
     return (
-      <section className="rounded-md border border-[#dfe4da] bg-white p-6">
-        <p className="text-sm font-semibold text-[#596257]">
-          {segment.learnerPrompt}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight">
-          영상을 보고 멈추면 같이 연습해요.
-        </h1>
-        <div className="mt-5 flex flex-wrap gap-2">
+      <section className="rounded-md border border-[#dfe4da] bg-white p-3">
+        <h2 className="text-lg font-semibold">장면을 본 뒤 연습해요</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
           {stage === 'playback' ? (
-            <button className="link-button" onClick={onReplay} type="button">
+            <button
+              className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+              onClick={onReplay}
+              type="button"
+            >
               <Play className="size-4" />
               다시 보기
             </button>
           ) : null}
-          <button className="link-button" onClick={onRest} type="button">
+          <button
+            className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+            onClick={onRest}
+            type="button"
+          >
             <PauseCircle className="size-4" />
             쉬기
           </button>
         </div>
-        {playbackNotice ? (
-          <p className="mt-4 text-sm leading-6 text-amber-700">
-            {playbackNotice}
-          </p>
-        ) : null}
       </section>
     )
   }
 
   return (
-    <section className="rounded-md border border-[#dfe4da] bg-white p-6">
-      <p className="text-sm font-semibold text-[#596257]">
-        {segment.learnerPrompt}
-      </p>
-      <h1
-        ref={headingRef}
-        tabIndex={-1}
-        className="mt-3 text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1.08] tracking-tight outline-none"
-      >
-        {segment.learnerExplanation}
-      </h1>
-
+    <section className="rounded-md border border-[#dfe4da] bg-white p-3">
       {isReviewSegment ? (
         <ScenarioReviewList groups={reviewGroups} />
       ) : (
         <SceneNarrationList segment={segment} />
       )}
 
-      <div className="mt-6 grid gap-3">
+      <div className="mt-3 grid gap-2">
         {isReviewSegment ? (
-          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4">
-            <h2 className="text-lg font-semibold">전체 복습</h2>
-            <p className="mt-2 text-xl font-semibold leading-8 text-[#596257]">
+          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
+            <h2 className="text-base font-semibold">전체 복습</h2>
+            <p className="mt-1 text-base font-semibold leading-6 text-[#596257]">
               오늘 배운 행동을 장면 순서대로 다시 봐요.
             </p>
           </section>
         ) : isIntroSegment ? (
-          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4">
-            <h2 className="text-lg font-semibold">지금 장면</h2>
-            <p className="mt-2 text-xl font-semibold leading-8 text-[#596257]">
+          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
+            <h2 className="text-base font-semibold">지금 장면</h2>
+            <p className="mt-1 text-base font-semibold leading-6 text-[#596257]">
               내용을 소개하는 부분이에요. 다음 장면에서 행동을 연습해요.
             </p>
           </section>
         ) : (
           <>
-            <h2 className="text-lg font-semibold">지금 할 일</h2>
+            <h2 className="text-base font-semibold">지금 할 일</h2>
             {canAskQuestion ? (
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-2 md:grid-cols-3">
                 {learnerActionCards.map((card) => (
                   <div
                     key={`${card.order}-${card.label}`}
-                    className="rounded-md border border-[#151713] bg-[#151713] px-4 py-4 text-white"
+                    className="rounded-md border border-[#151713] bg-[#151713] px-3 py-2 text-white"
                   >
-                    <p className="text-sm font-semibold text-white/70">
+                    <p className="text-xs font-semibold text-white/70">
                       {getActionStepLabel(
                         card.order,
                         learnerActionCards.length,
                       )}
                     </p>
-                    <p className="mt-2 text-xl font-semibold leading-8">
+                    <p className="mt-1 text-base font-semibold leading-6">
                       {card.label}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4 text-xl font-semibold leading-8 text-[#596257]">
+              <p className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-3 text-lg font-semibold leading-7 text-[#596257]">
                 확실하지 않아요. 선생님이나 보호자와 공식 안내를 확인해요.
               </p>
             )}
@@ -623,14 +603,14 @@ function PracticePanel({
       </div>
 
       {canAskQuestion ? (
-        <section className="mt-6 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
-          <h2 className="text-xl font-semibold">{segment.checkQuestion}</h2>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <section className="mt-3 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-2">
+          <h2 className="text-base font-semibold">{segment.checkQuestion}</h2>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {segment.answerOptions.map((option) => (
               <button
                 key={option.id}
                 className={cn(
-                  'rounded-md border px-4 py-4 text-left text-lg font-semibold transition',
+                  'rounded-md border px-3 py-1.5 text-left text-base font-semibold transition',
                   selectedAnswer?.correct &&
                     selectedAnswerId !== option.id &&
                     'cursor-not-allowed opacity-55',
@@ -657,47 +637,43 @@ function PracticePanel({
             ))}
           </div>
           {selectedAnswer ? (
-            <p className="mt-3 flex items-center gap-2 text-lg font-semibold leading-8">
-              {selectedAnswer.correct ? (
-                <CheckCircle2 className="size-5" />
-              ) : (
-                <HelpCircle className="size-5" />
-              )}
-              {selectedAnswer.feedback}
-            </p>
+            <div className="mt-3 grid gap-2">
+              <p className="flex items-center gap-2 text-sm font-semibold leading-6">
+                {selectedAnswer.correct ? (
+                  <CheckCircle2 className="size-5" />
+                ) : (
+                  <HelpCircle className="size-5" />
+                )}
+                {selectedAnswer.feedback}
+              </p>
+              <div className="rounded-md border border-[#dfe4da] bg-white px-2 py-1.5">
+                <p className="text-sm font-semibold leading-6">
+                  <span className="mr-2 text-[#596257]">이유</span>
+                  {getLearnerReasonText(segment.explanation.tracks.reason)}
+                </p>
+              </div>
+            </div>
           ) : (
-            <p className="mt-3 text-sm font-semibold leading-6 text-[#596257]">
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#596257]">
               헷갈리면 다시 볼 수 있어요. 맞는 답을 고르면 다음 장면으로 가요.
             </p>
           )}
         </section>
       ) : null}
 
-      {!isIntroSegment && showReason ? (
-        <div className="mt-5 rounded-md border border-[#dfe4da] bg-white px-4 py-4">
-          <p className="text-sm font-semibold text-[#596257]">이유</p>
-          <p className="mt-2 text-xl font-semibold leading-8">
-            {getLearnerReasonText(segment.explanation.tracks.reason)}
-          </p>
-        </div>
-      ) : null}
-
-      <div className="mt-6 flex flex-wrap gap-2">
-        <button className="link-button" onClick={onReplay} type="button">
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+          onClick={onReplay}
+          type="button"
+        >
           <RotateCcw className="size-4" />이 장면 다시 보기
         </button>
-        {!isIntroSegment ? (
-          <button
-            aria-expanded={showReason}
-            className="link-button"
-            onClick={onToggleReason}
-            type="button"
-          >
-            <HelpCircle className="size-4" />
-            {showReason ? '이유 닫기' : '이유 보기'}
-          </button>
-        ) : null}
-        <button className="link-button" onClick={onRest} type="button">
+        <button
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+          onClick={onRest}
+          type="button"
+        >
           <PauseCircle className="size-4" />
           쉬기
         </button>
@@ -710,7 +686,7 @@ function PracticePanel({
         ) : (
           <button
             className={cn(
-              'inline-flex min-h-11 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white',
+              'inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white',
               !canContinue && 'cursor-not-allowed opacity-50',
             )}
             disabled={!canContinue}
@@ -727,26 +703,26 @@ function PracticePanel({
 
 function ScenarioReviewList({ groups }: { groups: ScenarioReviewGroup[] }) {
   return (
-    <section className="mt-6 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
-      <h2 className="text-lg font-semibold">한 번 더 복습해요</h2>
-      <p className="mt-2 text-sm leading-6 text-[#596257]">
+    <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-2">
+      <h2 className="text-base font-semibold">한 번 더 복습해요</h2>
+      <p className="mt-1 text-sm leading-6 text-[#596257]">
         장면별로 기억할 행동을 순서대로 봐요.
       </p>
-      <ol className="mt-3 grid gap-3">
+      <ol className="mt-2 grid gap-2">
         {groups.map((group, index) => (
           <li
             key={group.segmentId}
-            className="rounded-md border border-[#dfe4da] bg-white px-4 py-4"
+            className="rounded-md border border-[#dfe4da] bg-white px-3 py-2"
           >
             <p className="text-xs font-semibold text-[#596257]">
               {index + 1}번 장면
             </p>
             <h3 className="mt-1 text-lg font-semibold">{group.title}</h3>
-            <ol className="mt-3 grid gap-2 sm:grid-cols-2">
+            <ol className="mt-2 grid gap-2 sm:grid-cols-2">
               {group.steps.map((step, stepIndex) => (
                 <li
                   key={`${group.segmentId}-${step}`}
-                  className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-3"
+                  className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2"
                 >
                   <span className="text-xs font-semibold text-[#596257]">
                     {stepIndex + 1}번
@@ -768,9 +744,9 @@ function SceneNarrationList({ segment }: { segment: TheaterSegment }) {
   const steps = segment.learnerSequence
 
   return (
-    <section className="mt-6 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
-      <h2 className="text-lg font-semibold">순서대로 읽어봐요</h2>
-      <ol className="mt-3 grid gap-2">
+    <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-2">
+      <h2 className="text-base font-semibold">순서대로 읽어봐요</h2>
+      <ol className="mt-2 grid gap-2">
         {steps.map((step, index) => (
           <li key={`${index}-${step.kind}-${step.text}`}>
             <LearnerSequenceCard index={index} step={step} />
@@ -791,21 +767,21 @@ function LearnerSequenceCard({
   const tone = getLearnerSequenceTone(step.kind)
 
   return (
-    <div className={cn('rounded-md border px-4 py-3', tone.cardClassName)}>
+    <div className={cn('rounded-md border px-3 py-1.5', tone.cardClassName)}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-[#596257]">
+        <span className="text-[11px] font-semibold text-[#596257]">
           {index + 1}번
         </span>
         <span
           className={cn(
-            'rounded-md px-2 py-1 text-xs font-semibold',
+            'rounded-md px-1.5 py-0.5 text-[11px] font-semibold',
             tone.badgeClassName,
           )}
         >
           {step.kind === 'situation' ? '상황' : '해야 할 일'}
         </span>
       </div>
-      <p className="mt-2 text-base font-semibold leading-7 text-[#151713]">
+      <p className="mt-1 text-sm font-semibold leading-5 text-[#151713]">
         {step.text}
       </p>
     </div>
@@ -843,14 +819,14 @@ function FinalPracticeActions({
     <>
       {canContinue ? (
         <a
-          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white"
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white"
           href={nextHref}
         >
           {nextPractice ? '다음 연습으로 가기' : '오늘 연습 끝내기'}
         </a>
       ) : (
         <button
-          className="inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white opacity-50"
+          className="inline-flex min-h-9 cursor-not-allowed items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white opacity-50"
           disabled
           type="button"
         >
@@ -866,7 +842,7 @@ function FinalPracticeActions({
             : '처음 화면으로 가기'
         }
         className={cn(
-          'inline-flex min-h-11 max-w-full flex-col items-start gap-1 rounded-md border border-[#dfe4da] bg-white px-4 py-3 text-left text-[#151713]',
+          'inline-flex min-h-9 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-left text-[#151713]',
           !canContinue && 'pointer-events-none opacity-55',
         )}
         href={nextHref}
@@ -883,7 +859,11 @@ function FinalPracticeActions({
             : '다른 연습을 고르거나 처음부터 다시 볼 수 있어요.'}
         </span>
       </a>
-      <button className="link-button" onClick={onRestart} type="button">
+      <button
+        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+        onClick={onRestart}
+        type="button"
+      >
         <RotateCcw className="size-4" />
         처음부터 다시 보기
       </button>
@@ -891,11 +871,13 @@ function FinalPracticeActions({
   )
 }
 
-function SafetyCard({ notice }: { notice: string }) {
+function SafetyBanner({ notice }: { notice: string }) {
   return (
-    <section className="rounded-md border border-amber-300 bg-amber-50 p-5 text-amber-950">
-      <p className="text-sm font-semibold">연습 전에 기억해요</p>
-      <p className="mt-3 text-xl font-semibold leading-8">{notice}</p>
+    <section className="rounded-md border border-amber-300 bg-amber-50 px-4 py-1 text-amber-950">
+      <p className="text-sm font-semibold leading-6">
+        <span className="mr-3 text-sm">연습 전에 기억해요</span>
+        {notice}
+      </p>
     </section>
   )
 }
@@ -909,6 +891,14 @@ function getLearnerReasonText(reason: string) {
     .replace(
       '여진과 2차 피해가 있을 수 있어 공식 안내 확인이 필요합니다.',
       '위험이 더 생길 수 있어요. 119나 어른에게 알려요.',
+    )
+    .replace(
+      '닫힌 문은 화염과 연기의 이동을 줄이는 데 도움이 됩니다.',
+      '문을 닫으면 연기가 덜 퍼져요.',
+    )
+    .replace(
+      '닫힌 문은 불길과 연기의 이동을 줄이는 데 도움이 됩니다.',
+      '문을 닫으면 연기가 덜 퍼져요.',
     )
     .replace('화염', '불길')
     .replace('연기와 불길의 확산을 늦춥니다', '불과 연기가 덜 퍼져요')

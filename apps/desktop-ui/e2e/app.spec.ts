@@ -40,6 +40,9 @@ test('runs the scenario practice loop', async ({ page }) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
   await expect(page.getByText('아파트 화재 연습을 시작해요.')).toBeVisible()
+  await expect(page.getByText('연습 전에 기억해요')).toBeVisible()
+  await expect(page.getByText('오늘 기억할 순서')).toHaveCount(0)
+  await expect(page.getByText('어른용 안내')).toHaveCount(0)
   await expect(page.getByText('순서대로 읽어봐요')).toBeVisible()
   await expect(page.getByText('음성 설명')).toHaveCount(0)
   await expect(page.getByText('화면 글자')).toHaveCount(0)
@@ -86,6 +89,12 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(
     page.getByText('괜찮아요. 문을 닫는 장면을 다시 봐요.'),
   ).toBeVisible()
+  await expect(page.getByText('이유', { exact: true })).toBeVisible()
+  await expect(page.getByText('문을 닫으면 연기가 덜 퍼져요.')).toBeVisible()
+  await expect(
+    page.getByText('닫힌 문은 불길과 연기의 이동을 줄이는 데 도움이 됩니다.'),
+  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '이유 보기' })).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
@@ -98,9 +107,6 @@ test('runs the scenario practice loop', async ({ page }) => {
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeEnabled()
   await expect(page.getByRole('button', { name: '열어 두기' })).toBeDisabled()
-
-  await page.getByRole('button', { name: '이유 보기' }).click()
-  await expect(page.getByRole('button', { name: '이유 닫기' })).toBeVisible()
   await expect(page.getByText('이유', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '다음 장면 보기' }).click()
@@ -154,7 +160,8 @@ test('offers next practice and restart controls after the final scene', async ({
   await expect(
     page.getByRole('heading', { name: '계단으로 대피해요' }),
   ).toBeVisible()
-  await expect(page.getByText('오늘 배운 순서')).toBeVisible()
+  await expect(page.getByText('오늘 배운 순서')).toHaveCount(0)
+  await expect(page.getByText('어른용 안내')).toHaveCount(0)
   await expect(
     page.getByText(
       '내용을 소개하는 부분이에요. 다음 장면에서 행동을 연습해요.',
