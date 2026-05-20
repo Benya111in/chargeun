@@ -14,6 +14,11 @@ import {
   type TheaterSegment,
   type TheaterShow,
 } from './lib/demo-theater-content'
+import {
+  simplifyLearnerCopy,
+  simplifyLearnerReason,
+  simplifyLearnerWarning,
+} from './lib/learner-copy'
 import { getLearnerActionCards } from './lib/learner-action-visibility'
 import { cn } from './lib/utils'
 
@@ -850,6 +855,9 @@ function FinalPracticeActions({
   onRestart: () => void
 }) {
   const nextHref = nextPractice ? `/scenario/${nextPractice.id}` : '/'
+  const nextPracticeNote = nextPractice
+    ? simplifyLearnerCopy(nextPractice.homeNote ?? nextPractice.note)
+    : null
 
   return (
     <>
@@ -874,7 +882,7 @@ function FinalPracticeActions({
       <a
         aria-label={
           nextPractice
-            ? `다음 연습 ${nextPractice.title} ${nextPractice.note}`
+            ? `다음 연습 ${nextPractice.title} ${nextPracticeNote}`
             : '처음 화면으로 가기'
         }
         className={cn(
@@ -891,7 +899,7 @@ function FinalPracticeActions({
         </span>
         <span className="text-xs leading-5 text-[#596257]">
           {nextPractice
-            ? nextPractice.note
+            ? nextPracticeNote
             : '다른 연습을 고르거나 처음부터 다시 볼 수 있어요.'}
         </span>
       </a>
@@ -935,57 +943,8 @@ function getLearnerDoNotText(segment: TheaterSegment) {
   return simplifyLearnerWarning(warning)
 }
 
-function simplifyLearnerWarning(warning: string) {
-  return warning
-    .replace('문을 열어 둔 채 뛰어나오지 않습니다.', '문 열어 두지 않아요.')
-    .replace('엘리베이터를 타지 않습니다.', '엘리베이터 타지 않아요.')
-    .replace(
-      '흔들리는 동안 서둘러 밖으로 뛰어나가지 않습니다.',
-      '흔들릴 때 바로 밖으로 뛰어나가지 않아요.',
-    )
-    .replace(
-      '유리창이나 무거운 가구 근처로 이동하지 않습니다.',
-      '유리창이나 무거운 가구 가까이 가지 않아요.',
-    )
-    .replace(
-      '흔들림이 끝나자마자 무작정 이동하지 않습니다.',
-      '흔들림이 멈춰도 바로 뛰어나가지 않아요.',
-    )
-    .replace('엘리베이터를 계속 사용하지 않습니다.', '엘리베이터 타지 않아요.')
-    .replace(
-      '차량으로 서둘러 이동하지 않습니다.',
-      '차를 타고 급하게 가지 않아요.',
-    )
-    .replace('직접 조작하지 않습니다.', '혼자 만지지 않아요.')
-    .replace(/하지 않습니다\./gu, '하지 않아요.')
-    .replace(/않습니다\./gu, '않아요.')
-    .replace(/금지$/u, '하지 않아요.')
-}
-
 function getLearnerReasonText(reason: string) {
-  return reason
-    .replace(
-      '여진과 화재에 대비하면서 안전한 출구를 확보해야 합니다.',
-      '또 흔들릴 수 있어요. 나갈 길을 확인해요.',
-    )
-    .replace(
-      '여진과 2차 피해가 있을 수 있어 공식 안내 확인이 필요합니다.',
-      '위험이 더 생길 수 있어요. 119나 어른에게 알려요.',
-    )
-    .replace(
-      '닫힌 문은 화염과 연기의 이동을 줄이는 데 도움이 됩니다.',
-      '문을 닫으면 연기가 덜 퍼져요.',
-    )
-    .replace(
-      '닫힌 문은 불길과 연기의 이동을 줄이는 데 도움이 됩니다.',
-      '문을 닫으면 연기가 덜 퍼져요.',
-    )
-    .replace('화염', '불길')
-    .replace('연기와 불길의 확산을 늦춥니다', '불과 연기가 덜 퍼져요')
-    .replace('낙하물', '떨어지는 물건')
-    .replace('여진', '또 흔들림')
-    .replace('확보', '찾기')
-    .replace('대비', '준비')
+  return simplifyLearnerReason(reason)
 }
 
 function buildPlaybackWindow({

@@ -147,7 +147,7 @@ test('offers next practice and restart controls after the final scene', async ({
 
   await expect(
     page.getByRole('heading', {
-      name: '무조건 나가기보다 상황에 맞게 행동해요.',
+      name: '무조건 나가기보다 그때그때 맞게 행동해요.',
     }),
   ).toBeVisible()
   await expect(page.getByText('한 번 더 복습해요')).toBeVisible()
@@ -164,7 +164,7 @@ test('offers next practice and restart controls after the final scene', async ({
   await expect(page.getByText('문을 닫아요').first()).toBeVisible()
   await expect(page.getByText('계단으로 나가요').first()).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: '계단으로 대피해요' }),
+    page.getByRole('heading', { name: '계단으로 나가요' }),
   ).toBeVisible()
   await expect(page.getByText('오늘 배운 순서')).toHaveCount(0)
   await expect(page.getByText('어른용 안내')).toHaveCount(0)
@@ -185,7 +185,7 @@ test('offers next practice and restart controls after the final scene', async ({
   ).toHaveAttribute('href', '/scenario/earthquake-protect-flow')
   await expect(
     page.getByRole('link', {
-      name: '다음 연습 지진이 났을 때 머리를 보호하고, 멈춘 뒤에는 어른과 주변을 확인해요',
+      name: '다음 연습 지진이 났을 때 흔들릴 때, 멈춘 뒤, 가스와 전기를 보는 것까지 이어서 연습해요',
     }),
   ).toBeVisible()
 
@@ -208,7 +208,7 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   })
 
   await expect(
-    page.getByText('전기가 이상하면 어른에게 말하고 공식 안내를 기다려요.'),
+    page.getByText('전기가 고장 난 것 같으면 어른에게 말하고 방송을 기다려요.'),
   ).toBeVisible()
   await expect(
     page.getByRole('link', { name: '다음 연습으로 가기' }),
@@ -258,7 +258,9 @@ test('ends the final earthquake after-shaking practice without looping', async (
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
 
-  await expect(page.getByText('전기 이상은 어른에게 말해요.')).toBeVisible()
+  await expect(
+    page.getByText('전기가 고장 난 것 같으면 어른에게 말해요.'),
+  ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '맞는 답을 고르면 마칠 수 있어요' }),
   ).toBeDisabled()

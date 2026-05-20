@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 
 import { homeLearningScenarios } from './lib/demo-theater-content'
+import { simplifyLearnerCopy } from './lib/learner-copy'
 import { cn } from './lib/utils'
 
 const safetyNotice =
@@ -92,7 +93,7 @@ export default function LearningHomePage() {
                   {scenario.homeTitle ?? scenario.title}
                 </h3>
                 <p className="mt-3 min-h-12 text-sm leading-6 text-[#596257]">
-                  {scenario.homeNote ?? scenario.note}
+                  {simplifyLearnerCopy(scenario.homeNote ?? scenario.note)}
                 </p>
                 <div className="mt-5 flex items-center gap-2 text-sm font-semibold">
                   연습 시작

@@ -21,6 +21,7 @@ import {
   fireRuleCatalog,
   officialChunkCatalog,
 } from './rule-catalog'
+import { simplifyLearnerCopy, simplifyTeachBack } from './learner-copy'
 
 export type TheaterSegment = {
   actionSteps: string[]
@@ -273,7 +274,7 @@ export const learningScenarios: TheaterShow[] = [
         description: '엘리베이터 말고 계단으로 가요.',
         endMs: 27_500,
         id: 'fire-full-stairs',
-        label: '계단으로 대피해요',
+        label: '계단으로 나가요',
         learnerExplanation: '불이 났을 때 엘리베이터는 타지 않아요.',
         learnerPrompt: '계단과 엘리베이터가 보여요.',
         actionSteps: ['계단을 찾아요', '천천히 내려가요'],
@@ -612,8 +613,7 @@ export const learningScenarios: TheaterShow[] = [
   {
     accentClassName: 'bg-sky-400',
     id: 'earthquake-protect-flow',
-    homeNote:
-      '오프닝부터 흔들릴 때, 멈춘 뒤, 가스와 전기 확인까지 이어서 연습해요',
+    homeNote: '흔들릴 때, 멈춘 뒤, 가스와 전기를 보는 것까지 이어서 연습해요',
     homeTitle: '지진이 났을 때',
     note: '머리를 보호하고, 멈춘 뒤에는 어른과 주변을 확인해요',
     posterSrc: '/demo/earthquake-review-02.jpg',
@@ -1166,9 +1166,14 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 214_400,
         id: 'earthquake-full-after-report',
         label: '멈춘 뒤 확인해요',
-        learnerExplanation: '흔들림이 멈추면 다친 사람과 안내를 확인해요.',
+        learnerExplanation:
+          '흔들림이 멈추면 다친 사람이 있는지 보고, 방송을 들어요.',
         learnerPrompt: '멈췄다고 바로 뛰면 위험할 수 있어요.',
-        actionSteps: ['다친 사람을 봐요', '119에 알려요', '공식 안내를 들어요'],
+        actionSteps: [
+          '다친 사람을 봐요',
+          '119에 알려요',
+          '어른 말이나 방송을 들어요',
+        ],
         narration: [
           {
             endMs: 192_920,
@@ -1191,14 +1196,14 @@ export const learningScenarios: TheaterShow[] = [
         ],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 바로 뛰지 말고 먼저 확인해요.',
+            feedback: '괜찮아요. 바로 뛰지 말고 먼저 주변을 봐요.',
             id: 'rush',
             label: '바로 뛰기',
           },
           correct: {
-            feedback: '맞아요. 다친 사람과 안내를 확인해요.',
+            feedback: '맞아요. 다친 사람이 있는지 보고, 방송을 들어요.',
             id: 'check',
-            label: '확인하기',
+            label: '주변 보기',
           },
           kind: 'signal',
           prompt: '흔들림이 멈춘 뒤 무엇을 할까요?',
@@ -1322,17 +1327,16 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '전기 이상과 물 사용도 어른과 확인해요.',
+        description: '전기가 이상하면 어른에게 말해요.',
         endMs: 307_440,
         id: 'earthquake-full-electric-final',
         label: '마지막으로 확인해요',
-        learnerExplanation:
-          '전기가 이상하면 어른에게 말하고 공식 안내를 기다려요.',
+        learnerExplanation: '전기가 이상하면 어른에게 말하고 방송을 기다려요.',
         learnerPrompt: '마지막으로 다시 기억해요.',
         actionSteps: [
           '전기에서 떨어져요',
           '어른에게 말해요',
-          '안내를 기다려요',
+          '어른 말을 기다려요',
         ],
         narration: [
           {
@@ -1695,11 +1699,11 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '전기 이상은 어른에게 알려요.',
+        description: '전기가 이상하면 어른에게 알려요.',
         endMs: 30_030,
         id: 'earthquake-after-report',
-        label: '전기 이상을 알려요',
-        learnerExplanation: '전기 이상은 어른에게 말해요.',
+        label: '전기가 이상하면 알려요',
+        learnerExplanation: '전기가 이상하면 어른에게 말해요.',
         learnerPrompt: '전등이 꺼지거나 전기가 이상해요.',
         actionSteps: ['전기 스위치에서 떨어져요', '어른에게 말해요'],
         teachBack: createTeachBack({
@@ -1808,32 +1812,39 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
       safetyView.explanation.tracks.caregiver ??
       '장면을 짧게 멈추고 쉬운말과 행동 카드를 함께 확인합니다.',
   }
+  const actionSteps =
+    practiceMode === 'intro'
+      ? []
+      : (
+          seed.actionSteps ?? [
+            safetyView.explanation.tracks.action ??
+              safetyView.explanation.tracks.easy,
+          ]
+        ).map(simplifyLearnerCopy)
+  const learnerTeachBack = simplifyTeachBack(seed.teachBack)
   const structuredExplanation = buildStructuredLearningExplanation({
-    decisionPoint: seed.teachBack.prompt,
+    decisionPoint: learnerTeachBack.prompt,
     evidence: seed.packet,
     explanation: safetyView.explanation,
-    learnerActionSteps: seed.actionSteps,
+    learnerActionSteps: actionSteps,
     ruleMatches,
     rules: seed.rules,
     segment,
     sourceChunks: officialChunkCatalog,
     sourceId: seed.packet.sessionId,
-    teachBack: seed.teachBack,
+    teachBack: learnerTeachBack,
     teacherGuide: {
       correctionHint: teacherGuide.correction,
       script: teacherGuide.script,
     },
   })
   const teachBack = structuredExplanation.tracks.teachBack ?? null
-  const actionSteps =
-    practiceMode === 'intro'
-      ? []
-      : (seed.actionSteps ?? [
-          safetyView.explanation.tracks.action ??
-            safetyView.explanation.tracks.easy,
-        ])
-  const learnerExplanation = seed.learnerExplanation ?? seed.description
-  const learnerPrompt = seed.learnerPrompt ?? seed.description
+  const learnerExplanation = simplifyLearnerCopy(
+    seed.learnerExplanation ?? seed.description,
+  )
+  const learnerPrompt = simplifyLearnerCopy(
+    seed.learnerPrompt ?? seed.description,
+  )
 
   return {
     actionSteps,
@@ -1843,11 +1854,11 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
         : toPracticeAnswerOptions(teachBack),
     checkQuestion:
       practiceMode === 'intro' ? '' : (teachBack?.prompt ?? '무엇을 할까요?'),
-    description: seed.description,
+    description: simplifyLearnerCopy(seed.description),
     endMs: seed.endMs,
     explanation: safetyView.explanation,
     id: seed.id,
-    label: seed.label,
+    label: simplifyLearnerCopy(seed.label),
     learnerExplanation,
     learnerPrompt,
     learnerSequence: buildLearnerSequence({
@@ -1918,9 +1929,9 @@ function buildLearnerSequence({
               practiceMode === 'action' && index > 0
                 ? ('action' as const)
                 : ('situation' as const),
-            text: step.trim(),
+            text: simplifyLearnerCopy(step.trim()),
           }
-        : { kind: step.kind, text: step.text.trim() },
+        : { kind: step.kind, text: simplifyLearnerCopy(step.text.trim()) },
     )
     .filter((step) => step.text)
 

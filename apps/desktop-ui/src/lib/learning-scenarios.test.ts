@@ -4,6 +4,41 @@ import { structuredLearningExplanationSchema } from '@ansimtrack/shared-types'
 
 import { learningScenarios } from './demo-theater-content'
 import { getLearnerActionCards } from './learner-action-visibility'
+import {
+  simplifyLearnerCopy,
+  simplifyLearnerReason,
+  simplifyLearnerWarning,
+} from './learner-copy'
+
+const hardLearnerCopyPattern =
+  /상황|위험|안내|확인|비상구|표지|방향|스위치|유입|확보|찾기해야|해야합니다|합니다|습니다|하십시오|이용|요청|차단|화염|생존|대피공간|행동요령|대피소|공식|기관|통신|낙하물|붕괴물|공동주택|무작정|차량|혼잡|2차 피해|발생/u
+
+function getLearnerVisibleTexts(
+  segment: (typeof learningScenarios)[number]['segments'][number],
+  scenario: (typeof learningScenarios)[number],
+) {
+  return [
+    scenario.homeTitle ?? scenario.title,
+    simplifyLearnerCopy(scenario.homeNote ?? scenario.note),
+    segment.label,
+    segment.description,
+    segment.learnerPrompt,
+    segment.learnerExplanation,
+    ...segment.actionSteps,
+    ...segment.learnerSequence.map((step) => step.text),
+    segment.checkQuestion,
+    ...segment.answerOptions.flatMap((option) => [
+      option.label,
+      option.feedback,
+    ]),
+    simplifyLearnerWarning(
+      segment.structuredExplanation.tracks.doNot?.text ??
+        segment.explanation.doNot ??
+        '',
+    ),
+    simplifyLearnerReason(segment.explanation.tracks.reason),
+  ].filter((text): text is string => Boolean(text))
+}
 
 describe('learningScenarios', () => {
   it('keeps every segment ready for learner practice and teacher guidance', () => {
@@ -37,6 +72,12 @@ describe('learningScenarios', () => {
         expect(segment.teachBack).toEqual(
           segment.structuredExplanation.tracks.teachBack,
         )
+        for (const text of getLearnerVisibleTexts(segment, scenario)) {
+          expect(text).not.toMatch(hardLearnerCopyPattern)
+          expect(text).not.toMatch(
+            /어디로 어디로|말를|보기하기|때을|찾기해야|계단으로 안전한 곳|다친 사람과 방송/,
+          )
+        }
 
         if (segment.practiceMode === 'intro') {
           expect(segment.actionSteps).toHaveLength(0)
@@ -124,6 +165,21 @@ describe('learningScenarios', () => {
         ),
       ).toBe(true)
     }
+  })
+
+  it('simplifies hard learner copy and prevents replacement artifacts', () => {
+    expect(
+      simplifyLearnerWarning('연기 유입 방향으로 창문을 무작정 열지 않습니다.'),
+    ).toBe('연기가 들어오는 쪽 창문은 바로 열지 않아요.')
+    expect(
+      simplifyLearnerReason(
+        '실내로 들어오는 연기량을 줄여 생존 시간을 확보해야 합니다.',
+      ),
+    ).toBe('방 안으로 연기가 덜 들어오게 해야 해요.')
+    expect(
+      simplifyLearnerCopy('전기 이상은 어른에게 말하고 공식 안내를 기다려요.'),
+    ).toBe('전기가 고장 난 것 같으면 어른에게 말하고 방송을 기다려요.')
+    expect(simplifyLearnerCopy('어디로 대피할까요?')).toBe('어디로 갈까요?')
   })
 
   it('keeps core spoken and onscreen education points in narration coverage', () => {
