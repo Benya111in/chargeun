@@ -417,7 +417,10 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
                     className="flex items-center gap-3 rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-3"
                   >
                     <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-[#151713] text-sm font-semibold text-white">
-                      {card.order}
+                      {getActionStepLabel(
+                        card.order,
+                        learnerActionCards.length,
+                      )}
                     </span>
                     <span className="text-lg font-semibold">{card.label}</span>
                   </li>
@@ -538,6 +541,8 @@ function PracticePanel({
         {segment.learnerExplanation}
       </h1>
 
+      <SceneNarrationList segment={segment} />
+
       <div className="mt-6 grid gap-3">
         {isIntroSegment ? (
           <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4">
@@ -557,7 +562,10 @@ function PracticePanel({
                     className="rounded-md border border-[#151713] bg-[#151713] px-4 py-4 text-white"
                   >
                     <p className="text-sm font-semibold text-white/70">
-                      {card.order}번
+                      {getActionStepLabel(
+                        card.order,
+                        learnerActionCards.length,
+                      )}
                     </p>
                     <p className="mt-2 text-xl font-semibold leading-8">
                       {card.label}
@@ -673,6 +681,40 @@ function PracticePanel({
           </button>
         )}
       </div>
+    </section>
+  )
+}
+
+function SceneNarrationList({ segment }: { segment: TheaterSegment }) {
+  const cues = [...segment.narration].sort(
+    (left, right) =>
+      left.startMs - right.startMs ||
+      left.endMs - right.endMs ||
+      getCueSourceOrder(left.source) - getCueSourceOrder(right.source),
+  )
+
+  return (
+    <section className="mt-6 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
+      <h2 className="text-lg font-semibold">장면에서 나온 내용</h2>
+      <p className="mt-2 text-sm leading-6 text-[#596257]">
+        영상에서 들린 말과 화면에 나온 글자를 차례대로 읽어요.
+      </p>
+      <ol className="mt-3 grid gap-2">
+        {cues.map((cue, index) => (
+          <li
+            key={`${cue.startMs}-${cue.endMs}-${cue.source}-${cue.text}`}
+            className="rounded-md border border-[#dfe4da] bg-white px-4 py-3"
+          >
+            <p className="text-xs font-semibold text-[#596257]">
+              {getNarrationStepLabel(index, cues.length)} ·{' '}
+              {getCueSourceLabel(cue.source)}
+            </p>
+            <p className="mt-1 text-base font-semibold leading-7 text-[#151713]">
+              {cue.text}
+            </p>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
@@ -797,6 +839,58 @@ function getSegmentStartSec(segment: TheaterSegment) {
   }
 
   return rawStartSec + segmentStartGuardSec
+}
+
+function getActionStepLabel(order: number, total: number) {
+  if (order === 1) {
+    return '먼저'
+  }
+
+  if (order === total) {
+    return '마지막'
+  }
+
+  return '다음'
+}
+
+function getNarrationStepLabel(index: number, total: number) {
+  if (index === 0) {
+    return '먼저'
+  }
+
+  if (index === total - 1) {
+    return '마지막'
+  }
+
+  return '다음'
+}
+
+function getCueSourceLabel(
+  source: TheaterSegment['narration'][number]['source'],
+) {
+  if (source === 'audio') {
+    return '음성 설명'
+  }
+
+  if (source === 'caption') {
+    return '자막'
+  }
+
+  return '화면 글자'
+}
+
+function getCueSourceOrder(
+  source: TheaterSegment['narration'][number]['source'],
+) {
+  if (source === 'audio') {
+    return 0
+  }
+
+  if (source === 'caption') {
+    return 1
+  }
+
+  return 2
 }
 
 function selectScenarioFromPath() {

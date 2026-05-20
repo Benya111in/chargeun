@@ -40,6 +40,12 @@ test('runs the scenario practice loop', async ({ page }) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
   await expect(page.getByText('아파트 화재 연습을 시작해요.')).toBeVisible()
+  await expect(page.getByText('장면에서 나온 내용')).toBeVisible()
+  await expect(
+    page.getByText(
+      '매년 약 2,800건이 발생하는 아파트 화재. 사상자의 약 40%는 대피 중 발생했습니다. 아파트에 화재가 발생했을 때 다음과 같이 행동합시다.',
+    ),
+  ).toBeVisible()
   await expect(page.getByText('지금 장면')).toBeVisible()
   await expect(
     page.getByText(
@@ -62,6 +68,11 @@ test('runs the scenario practice loop', async ({ page }) => {
     page.getByRole('listitem').filter({ hasText: '문을 닫아요' }),
   ).toBeVisible()
   await expect(page.getByText('현관문을 닫고 계단으로 나가요.')).toBeVisible()
+  await expect(
+    page.getByText(
+      '우리 집 화재로 대피할 때는 연기와 화염을 차단하기 위해 반드시 현관문을 닫고 계단을 이용해 외부로 빠져나와야 합니다.',
+    ),
+  ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
