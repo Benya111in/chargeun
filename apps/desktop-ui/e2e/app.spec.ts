@@ -37,7 +37,7 @@ test('runs the scenario practice loop', async ({ page }) => {
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
 
-  await page.getByRole('button', { name: '엘리베이터' }).click()
+  await page.getByRole('button', { name: '엘리베이터는 타지 않아요' }).click()
   await expect(
     page.getByText('괜찮아요. 엘리베이터보다 계단과 출구를 찾아요.'),
   ).toBeVisible()
@@ -52,14 +52,43 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeEnabled()
-  await expect(page.getByRole('button', { name: '엘리베이터' })).toBeDisabled()
+  await expect(
+    page.getByRole('button', { name: '엘리베이터는 타지 않아요' }),
+  ).toBeDisabled()
 
-  await page.getByRole('button', { name: '왜요?' }).click()
+  await page.getByRole('button', { name: '이유 보기' }).click()
   await expect(page.getByRole('button', { name: '이유 닫기' })).toBeVisible()
   await expect(page.getByText('이유', { exact: true })).toBeVisible()
 
+  await page.getByRole('button', { name: '다음 장면 보기' }).click()
+  await expect(page.getByText('2 / 3')).toBeVisible()
+  await expect
+    .poll(async () =>
+      page.locator('video').evaluate((video) => video.currentTime),
+    )
+    .toBeGreaterThan(7)
+  await expect(page.getByText('화재 때는 계단을 찾아요.')).toBeVisible({
+    timeout: 10_000,
+  })
+
   await page.getByRole('button', { name: '쉬기' }).click()
   await expect(page.getByText('잠깐 쉬어도 괜찮아요.')).toBeVisible()
+})
+
+test('keeps earthquake review scenario route as a compatibility alias', async ({
+  page,
+}) => {
+  await page.goto('/scenario/earthquake-review-flow')
+
+  await expect(page.getByText('지진이 흔들릴 때').first()).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '영상 시작하기' }),
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      '이 앱은 연습용입니다. 실제 위험하면 119·112·주변 어른·현장 안내를 먼저 따르세요.',
+    ),
+  ).toBeVisible()
 })
 
 test('keeps /demo as the fire scenario compatibility route', async ({
@@ -153,6 +182,50 @@ test('runs live-lab screen share with a synthetic browser stream', async ({
   ).toBeVisible()
 })
 
+test('rejects empty live-lab screen share streams', async ({ page }) => {
+  await installEmptyScreenShare(page)
+  await mockLiveLabApis(page)
+
+  await page.goto('/live-lab')
+  await page.getByLabel('베타 접근 코드').fill('live')
+  await page.getByRole('button', { name: '확인' }).click()
+  await expect(page.getByText('베타 코드가 확인되었습니다.')).toBeVisible()
+
+  await page.getByRole('button', { name: '화면 공유 시작' }).click()
+
+  await expect(
+    page.getByText(
+      '공유된 화면 영상을 찾지 못했습니다. 화면이나 탭을 다시 선택해 주세요.',
+    ),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '화면 공유 시작' }),
+  ).toBeEnabled()
+  await expect(
+    page.getByRole('button', { name: '화면 공유 중지' }),
+  ).toBeDisabled()
+})
+
+test('disables live-lab start when browser screen share is unsupported', async ({
+  page,
+}) => {
+  await installUnsupportedScreenShare(page)
+  await mockLiveLabApis(page)
+
+  await page.goto('/live-lab')
+  await page.getByLabel('베타 접근 코드').fill('live')
+  await page.getByRole('button', { name: '확인' }).click()
+
+  await expect(
+    page.getByText(
+      '이 브라우저에서는 화면 공유를 사용할 수 없습니다. 데스크톱 Chrome에서 열어 주세요.',
+    ),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '화면 공유 시작' }),
+  ).toBeDisabled()
+})
+
 test('gates the operator workspace on direct /qa access', async ({ page }) => {
   await page.goto('/qa')
 
@@ -238,6 +311,27 @@ async function installSyntheticScreenShare(page: Page) {
         ...(navigator.mediaDevices ?? {}),
         getDisplayMedia: async () => makeStream(),
       },
+    })
+  })
+}
+
+async function installEmptyScreenShare(page: Page) {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        ...(navigator.mediaDevices ?? {}),
+        getDisplayMedia: async () => new MediaStream(),
+      },
+    })
+  })
+}
+
+async function installUnsupportedScreenShare(page: Page) {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {},
     })
   })
 }

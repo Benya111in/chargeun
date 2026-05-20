@@ -93,6 +93,7 @@ export type BuildStructuredLearningExplanationInput = {
   decisionPoint?: string
   evidence: PerceptionPacket
   explanation?: SegmentExplanation
+  learnerActionSteps?: string[]
   ruleMatches?: GroundedRuleMatch[]
   rules: RuleRecord[]
   segment: Segment
@@ -134,11 +135,10 @@ export const buildStructuredLearningExplanation = (
   const primaryRule = groundedRules[0]
   const actionCards =
     status === 'validated'
-      ? groundedRules.slice(0, 3).map((rule, index) => ({
-          label: toLearnerActionLabel(rule.action),
-          officialRuleIds: [rule.rule_id],
-          order: index + 1,
-        }))
+      ? buildActionCards({
+          learnerActionSteps: input.learnerActionSteps,
+          rules: groundedRules,
+        })
       : undefined
   const hasGroundedAction = Boolean(actionCards?.length)
   const requiresHumanReview = status !== 'validated'
@@ -452,6 +452,33 @@ function buildDecisionPoint(
   }
 
   return `${toLearnerActionLabel(rule.action).replace(/[.!?。]+$/u, '')}?`
+}
+
+function buildActionCards(input: {
+  learnerActionSteps?: string[]
+  rules: RuleRecord[]
+}): NonNullable<StructuredLearningExplanation['tracks']['action']>['cards'] {
+  const labels = (input.learnerActionSteps ?? [])
+    .map((step) => step.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+
+  if (labels.length > 0) {
+    return labels.map((label, index) => ({
+      label: limitText(label, 40),
+      officialRuleIds: [
+        input.rules[Math.min(index, input.rules.length - 1)]?.rule_id ??
+          input.rules[0]!.rule_id,
+      ],
+      order: index + 1,
+    }))
+  }
+
+  return input.rules.slice(0, 3).map((rule, index) => ({
+    label: toLearnerActionLabel(rule.action),
+    officialRuleIds: [rule.rule_id],
+    order: index + 1,
+  }))
 }
 
 function toLearnerActionLabel(action: string) {

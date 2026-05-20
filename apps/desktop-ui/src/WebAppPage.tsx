@@ -108,6 +108,7 @@ function WebAppPage() {
   const capture = useWebCaptureController()
   const betaReady = betaStatus === 'valid' && betaCode.trim().length > 0
   const desktopReady = isDesktopBrowserForLiveCapture()
+  const captureSupported = desktopReady && capture.state.source.ready
   const audio = useWebAudioTranscription({
     betaCode,
     enabled: betaReady && Boolean(capture.state.activeSession),
@@ -382,10 +383,16 @@ function WebAppPage() {
                   Chrome에서 열어 주세요.
                 </NoticeBanner>
               ) : null}
+              {desktopReady && !capture.state.source.ready ? (
+                <NoticeBanner tone="review">
+                  이 브라우저에서는 화면 공유를 사용할 수 없습니다. 데스크톱
+                  Chrome에서 열어 주세요.
+                </NoticeBanner>
+              ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <ActionButton
-                  disabled={!betaReady || !desktopReady || liveEnabled}
+                  disabled={!betaReady || !captureSupported || liveEnabled}
                   icon={<Play className="size-4" />}
                   onClick={handleStartShare}
                   variant="primary"

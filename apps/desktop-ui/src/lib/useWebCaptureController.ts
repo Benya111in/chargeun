@@ -133,13 +133,24 @@ export function useWebCaptureController() {
             frameRate: { ideal: 30, max: 30 },
           },
         })
+        const videoTracks = stream.getVideoTracks()
+        const [videoTrack] = videoTracks
+
+        if (!videoTrack || videoTrack.readyState === 'ended') {
+          stopMediaStream(stream)
+          const nextNotice =
+            '공유된 화면 영상을 찾지 못했습니다. 화면이나 탭을 다시 선택해 주세요.'
+          setPermission('unknown')
+          setStatus('error')
+          setNotice(nextNotice)
+          return { notice: nextNotice, ok: false }
+        }
 
         stopMediaStream(previewStreamRef.current)
         previewStreamRef.current = stream
         setPreviewStream(stream)
         setPermission('granted')
 
-        const [videoTrack] = stream.getVideoTracks()
         const session = createCaptureSession(webScreenShareSource, {
           displayName: videoTrack?.label || '공유한 화면',
           hasAudio: stream.getAudioTracks().length > 0,

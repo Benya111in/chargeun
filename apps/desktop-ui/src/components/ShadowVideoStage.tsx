@@ -84,6 +84,7 @@ export function ShadowVideoStage({
           player.state.replayCursorMs,
         )
       : null)
+  const hasReplayFrame = Boolean(replayFrameRef)
   const liveFrameRef =
     player.state.liveFrameRef ??
     (!isLiveReplay
@@ -198,7 +199,9 @@ export function ShadowVideoStage({
                 {framePlaceholder}
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/30 to-transparent" />
+            {hasReplayFrame ? (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/30 to-transparent" />
+            ) : null}
             <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 rounded-md border border-white/12 bg-black/42 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/70">
                 <MonitorPlay className="size-4" />
@@ -213,7 +216,7 @@ export function ShadowVideoStage({
               ) : null}
             </div>
             {liveFrameRef ? (
-              <div className="absolute bottom-4 right-4 w-36 overflow-hidden rounded-md border border-white/12 bg-black/42 shadow-[0_20px_40px_rgba(0,0,0,0.28)]">
+              <div className="absolute bottom-3 right-3 hidden w-32 overflow-hidden rounded-md border border-white/12 bg-black/42 shadow-[0_20px_40px_rgba(0,0,0,0.28)] sm:block lg:w-36">
                 <img
                   alt="Live edge frame"
                   className="aspect-video w-full object-cover"
@@ -224,17 +227,19 @@ export function ShadowVideoStage({
                 </div>
               </div>
             ) : null}
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
-                현재 장면
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-white">
-                {scenario.segment.title}
-              </p>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/78">
-                {scenario.videoCaption}
-              </p>
-            </div>
+            {hasReplayFrame ? (
+              <div className="border-t border-white/10 bg-black/64 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
+                  현재 장면
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-white">
+                  {scenario.segment.title}
+                </p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/78">
+                  {scenario.videoCaption}
+                </p>
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-col gap-2">
             {scenario.overlayTargets.map((target) => (

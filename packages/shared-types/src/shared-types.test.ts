@@ -171,6 +171,17 @@ describe('structuredLearningExplanationSchema', () => {
 
     expect(result.success).toBe(false)
   })
+
+  it('rejects blocked segments that expose learner action cards', () => {
+    const input = validStructuredExplanation()
+    input.segment.status = 'blocked'
+    input.validation.learnerSafe = false
+    input.validation.requiresHumanReview = true
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
 })
 
 function validStructuredExplanation() {

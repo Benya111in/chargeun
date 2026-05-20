@@ -24,11 +24,6 @@ export default function LearningHomePage() {
             <ShieldAlert className="size-4" />
             안심트랙 연습
           </a>
-          <nav className="flex flex-wrap gap-2 text-sm">
-            <a className="link-button" href="/teacher">
-              선생님/보호자
-            </a>
-          </nav>
         </header>
 
         <section className="grid gap-5 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:py-10">
@@ -107,8 +102,11 @@ export default function LearningHomePage() {
           </div>
         </section>
 
-        <footer className="mt-auto border-t border-[#dfe4da] py-4 text-sm text-[#596257]">
-          선생님이나 보호자와 함께 천천히 연습해요.
+        <footer className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[#dfe4da] py-4 text-sm text-[#596257]">
+          <span>선생님이나 보호자와 함께 천천히 연습해요.</span>
+          <a className="link-button" href="/teacher">
+            어른용 안내
+          </a>
         </footer>
       </div>
     </main>

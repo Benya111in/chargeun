@@ -107,10 +107,67 @@ function serveStatic(req: IncomingMessage, res: ServerResponse) {
     existsSync(directPath) && statSync(directPath).isFile()
       ? directPath
       : join(distDir, 'index.html')
+  const stat = statSync(filePath)
+  const range = req.headers.range
+
+  res.setHeader('accept-ranges', 'bytes')
+  res.setHeader('content-type', contentTypeFor(filePath))
+
+  if (range) {
+    const parsedRange = parseRangeHeader(range, stat.size)
+
+    if (!parsedRange) {
+      res.statusCode = 416
+      res.setHeader('content-range', `bytes */${stat.size}`)
+      res.end()
+      return
+    }
+
+    res.statusCode = 206
+    res.setHeader(
+      'content-range',
+      `bytes ${parsedRange.start}-${parsedRange.end}/${stat.size}`,
+    )
+    res.setHeader('content-length', parsedRange.end - parsedRange.start + 1)
+    createReadStream(filePath, parsedRange).pipe(res)
+    return
+  }
 
   res.statusCode = 200
-  res.setHeader('content-type', contentTypeFor(filePath))
+  res.setHeader('content-length', stat.size)
   createReadStream(filePath).pipe(res)
+}
+
+function parseRangeHeader(range: string, size: number) {
+  const match = range.match(/^bytes=(\d*)-(\d*)$/)
+
+  if (!match) {
+    return null
+  }
+
+  const [, rawStart, rawEnd] = match
+  const suffixLength = rawStart ? null : Number(rawEnd)
+  const start = rawStart
+    ? Number(rawStart)
+    : Number.isFinite(suffixLength)
+      ? Math.max(size - suffixLength, 0)
+      : 0
+  const end = rawEnd && rawStart ? Number(rawEnd) : size - 1
+
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    start < 0 ||
+    end < start ||
+    start >= size
+  ) {
+    return null
+  }
+
+  return {
+    end: Math.min(end, size - 1),
+    start,
+  }
 }
 
 function contentTypeFor(filePath: string) {
@@ -123,6 +180,8 @@ function contentTypeFor(filePath: string) {
       return 'text/javascript; charset=utf-8'
     case '.json':
       return 'application/json; charset=utf-8'
+    case '.mp4':
+      return 'video/mp4'
     case '.png':
       return 'image/png'
     case '.svg':

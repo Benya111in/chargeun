@@ -193,6 +193,7 @@ describe('buildStructuredLearningExplanation', () => {
     const structured = buildStructuredLearningExplanation({
       decisionPoint: '나갈 때 문을 닫아야 하는가',
       evidence: packet,
+      learnerActionSteps: ['문을 닫아요', '문을 열어 두지 않아요'],
       rules: fireRules,
       segment,
       sourceId: 'fire-grounded-flow',
@@ -203,6 +204,10 @@ describe('buildStructuredLearningExplanation', () => {
     expect(structured.tracks.action?.cards[0]?.officialRuleIds).toContain(
       'KR_FIRE_04',
     )
+    expect(structured.tracks.action?.cards.map((card) => card.label)).toEqual([
+      '문을 닫아요',
+      '문을 열어 두지 않아요',
+    ])
     expect(structured.evidence.visualEvidence.length).toBeGreaterThan(0)
     expect(structured.evidence.ocrEvidence.length).toBeGreaterThan(0)
     expect(structured.evidence.asrEvidence.length).toBe(1)

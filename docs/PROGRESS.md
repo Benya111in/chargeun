@@ -13,6 +13,13 @@
 - `PerceptionPacket`에서 visual/OCR/ASR/rule evidence를 분리하는 normalization helper를 `perception-pipeline`에 추가했다
 - 현재 `learningScenarios` 모든 segment가 새 structured schema를 통과하도록 adapter를 붙이고, `/teacher`에는 segment status, 행동 카드별 rule id, 분리 근거, 억제 후보를 표시했다
 - `/qa`에는 LRS 초안 체크리스트를 추가해 공식 근거, 한 판단 지점, 쉬운말, 근거 출처 분리, 학습자 공개 가능 여부를 수동 검수할 수 있게 했다
+- 6개 분야별 QA 에이전트를 학습자 흐름, teacher/QA, live-lab, 인지 접근성, 반응형 시각 QA, 계약/데이터 무결성으로 배치해 2라운드 검증을 수행했다
+- QA 지적을 반영해 learner action 노출을 `StructuredLearningExplanation`의 `validated`/`learnerSafe`/`hasGroundedAction` 상태로 게이트하고, `needs_review`/`blocked` 상태에서는 raw scenario action을 숨기도록 고정했다
+- `/live-lab`에서 빈 `MediaStream` 화면공유를 running 상태로 받던 문제를 막고, `getDisplayMedia` 미지원 브라우저에서는 beta 확인 후에도 시작 버튼을 비활성화하도록 보강했다
+- 로컬 `web-preview-server`에 mp4 byte range 응답을 추가해 `/scenario` 장면 이동 시 video seek가 0초로 되돌아가지 않게 수정했다
+- `/scenario/earthquake-review-flow` 호환 alias를 추가하고, 다음 장면 재생이 해당 segment 시작점에서 시작하도록 재생 예약 로직을 안정화했다
+- 학습자 영상은 `object-contain` 16:9로 바꿔 모바일에서 자막/수어 inset이 잘리지 않게 했고, Shadow Player 장면 설명은 영상 위 overlay가 아니라 아래 caption으로 내려 텍스트 충돌을 제거했다
+- 위험한 오답 선택지는 `엘리베이터는 타지 않아요`, `바로 뛰지 않아요`, `가스 밸브는 만지지 않아요`처럼 do-not 문장으로 바꾸고, `왜요?` 버튼은 `이유 보기`로 명확히 했다
 
 ### 검증
 
@@ -27,6 +34,7 @@
 - `pnpm lint`
 - `pnpm --filter desktop-ui test:e2e`
 - Browser preview check: `/teacher` structured panel and `/qa?internal=qa` LRS panel render with no console errors
+- 분야별 QA 에이전트 2라운드: learner flow, live-lab fallback, cognitive accessibility, visual responsive QA, teacher/QA, contract/data integrity 재검증 완료
 
 ### 다음
 

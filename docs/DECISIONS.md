@@ -17,6 +17,21 @@
 - 이유: suppressed candidate, visual/OCR/ASR/rule evidence, validation status는 안전 감사와 교사용 설명에는 필요하지만 학습자에게는 인지부하가 된다.
 - 영향: `/scenario/:id`는 쉬운말, 행동 카드, teach-back 중심을 유지한다. `/teacher`와 `/qa`에서만 action card rule id, evidence source, suppressed candidates, LRS 검수 항목을 확인한다.
 
+### D-060 학습자 행동 카드는 structured validation을 통과한 경우에만 노출한다
+
+- 이유: 수동 scenario seed에 `actionSteps`가 남아 있어도 structured status가 `needs_review` 또는 `blocked`이면 학습자에게 행동 지시처럼 보이면 안 된다.
+- 영향: `/scenario/:id`는 `StructuredLearningExplanation`의 `validated`, `learnerSafe`, `hasGroundedAction`, `requiresHumanReview=false` 조건을 통과한 action card만 보여 준다. 검토 상태에서는 공식 안내 확인 fallback만 보이고 teach-back action 선택도 숨긴다.
+
+### D-061 로컬 웹 시현 서버도 media range 요청을 지원한다
+
+- 이유: 브라우저 video seek는 mp4 byte range 응답에 의존한다. 로컬 preview 서버가 range를 지원하지 않으면 장면 전환이 0초부터 다시 재생되어 실제 학습 흐름 검증이 왜곡된다.
+- 영향: `pnpm web:preview`는 `Range` 요청에 `206 Partial Content`를 반환하고 `.mp4` content type을 명시한다. `/scenario` 장면 이동과 `/demo` 호환 경로는 로컬에서도 실제 segment start time으로 이동한다.
+
+### D-062 학습자 UI의 오답 선택지도 안전 문장으로 쓴다
+
+- 이유: 느린학습자에게 `엘리베이터`, `바로 뛰기`, `가스 밸브` 같은 선택지는 피해야 할 행동인데도 정상 행동처럼 읽힐 수 있다.
+- 영향: 오답 선택지는 가능하면 `타지 않아요`, `뛰지 않아요`, `만지지 않아요`처럼 do-not 문장으로 표현한다. 어려운 이유 문장은 learner-facing UI에서 더 쉬운 말로 변환한다.
+
 ## 2026-04-14
 
 ### D-001 macOS 단일 경로 우선

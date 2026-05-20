@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { structuredLearningExplanationSchema } from '@ansimtrack/shared-types'
 
 import { learningScenarios } from './demo-theater-content'
+import { getLearnerActionCards } from './learner-action-visibility'
 
 describe('learningScenarios', () => {
   it('keeps every segment ready for learner practice and teacher guidance', () => {
@@ -17,6 +18,9 @@ describe('learningScenarios', () => {
         expect(segment.learnerPrompt).toBeTruthy()
         expect(segment.actionSteps.length).toBeGreaterThanOrEqual(1)
         expect(segment.actionSteps.length).toBeLessThanOrEqual(3)
+        expect(
+          getLearnerActionCards(segment).map((card) => card.label),
+        ).toEqual(segment.actionSteps)
         expect(segment.checkQuestion).toBeTruthy()
         expect(segment.answerOptions.length).toBeGreaterThanOrEqual(2)
         expect(
@@ -53,5 +57,26 @@ describe('learningScenarios', () => {
         segment?.structuredExplanation.evidence.ruleEvidence.length,
       ).toBeGreaterThan(0)
     }
+  })
+
+  it('hides learner action cards when structured status requires review', () => {
+    const [segment] = learningScenarios[0]!.segments
+    const reviewSegment = {
+      ...segment,
+      structuredExplanation: {
+        ...segment.structuredExplanation,
+        segment: {
+          ...segment.structuredExplanation.segment,
+          status: 'needs_review' as const,
+        },
+        validation: {
+          ...segment.structuredExplanation.validation,
+          learnerSafe: false,
+          requiresHumanReview: true,
+        },
+      },
+    }
+
+    expect(getLearnerActionCards(reviewSegment)).toEqual([])
   })
 })

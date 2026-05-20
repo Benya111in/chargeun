@@ -105,7 +105,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 엘리베이터보다 계단과 출구를 찾아요.',
             id: 'use-elevator',
-            label: '엘리베이터',
+            label: '엘리베이터는 타지 않아요',
           },
         ],
         packet: createPacket({
@@ -158,7 +158,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 화재 때 엘리베이터는 멈출 수 있어요.',
             id: 'elevator',
-            label: '엘리베이터',
+            label: '엘리베이터는 타지 않아요',
           },
         ],
         packet: createPacket({
@@ -187,30 +187,30 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '못 나가면 다른 대피공간으로 가요.',
+        description: '못 나가면 안전한 곳으로 가요.',
         endMs: 28_028,
         id: 'fire-grounded-refuge',
-        label: '다른 대피공간으로 가요',
+        label: '안전한 곳으로 가요',
         learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
         learnerPrompt: '문 밖으로 나가기 어려울 수 있어요.',
         actionSteps: [
           '억지로 나가지 않아요',
-          '대피공간으로 가요',
+          '안전한 곳으로 가요',
           '어른이나 119에 알려요',
         ],
         checkQuestion: '밖으로 나가기 어려우면 어떻게 할까요?',
         answerOptions: [
           {
             correct: true,
-            feedback: '맞아요. 무리하지 말고 대피공간과 도움 요청을 떠올려요.',
+            feedback: '맞아요. 무리하지 말고 안전한 곳에서 도움을 불러요.',
             id: 'refuge',
-            label: '대피공간으로 가요',
+            label: '안전한 곳으로 가요',
           },
           {
             correct: false,
             feedback: '괜찮아요. 연기가 많으면 무리해서 지나가지 않아요.',
             id: 'force-exit',
-            label: '연기가 많은 길',
+            label: '연기가 많은 길은 가지 않아요',
           },
         ],
         packet: createPacket({
@@ -274,7 +274,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 흔들리는 동안 뛰어나가면 다칠 수 있어요.',
             id: 'run-out',
-            label: '밖으로 바로 나가기',
+            label: '바로 밖으로 나가지 않아요',
           },
         ],
         packet: createPacket({
@@ -327,7 +327,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 먼저 뛰지 말고 선생님 안내를 들어요.',
             id: 'run-hall',
-            label: '복도로 바로 나가기',
+            label: '바로 복도로 나가지 않아요',
           },
         ],
         packet: createPacket({
@@ -382,7 +382,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 흔들릴 때는 물건보다 머리와 몸이 먼저예요.',
             id: 'protect-bag',
-            label: '가방만 챙겨요',
+            label: '가방만 챙기지 않아요',
           },
         ],
         packet: createPacket({
@@ -441,7 +441,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 소리가 없어도 화면 단서를 볼 수 있어요.',
             id: 'wait-audio',
-            label: '소리가 날 때까지 기다려요',
+            label: '소리만 기다리지 않아요',
           },
         ],
         packet: createPacket({
@@ -493,7 +493,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 화재 연습에서는 계단 표시를 찾아요.',
             id: 'elevator-sign',
-            label: '엘리베이터 표시',
+            label: '엘리베이터 표시는 따라가지 않아요',
           },
         ],
         packet: createPacket({
@@ -524,27 +524,27 @@ export const learningScenarios: TheaterShow[] = [
         description: '못 나가면 다른 대피공간으로 가요.',
         endMs: 24_023,
         id: 'fire-visual-refuge',
-        label: '다른 대피공간으로 가요',
+        label: '안전한 곳으로 가요',
         learnerExplanation: '길이 막히면 안전한 곳에서 도움을 불러요.',
         learnerPrompt: '길이 막혔을 때 다른 안전한 곳을 찾아요.',
         actionSteps: [
           '무리해서 지나가지 않아요',
-          '대피공간을 찾아요',
+          '안전한 곳을 찾아요',
           '도움을 요청해요',
         ],
         checkQuestion: '길이 막히면 무엇을 할까요?',
         answerOptions: [
           {
             correct: true,
-            feedback: '맞아요. 무리하지 않고 대피공간과 도움 요청을 기억해요.',
+            feedback: '맞아요. 무리하지 않고 안전한 곳에서 도움을 불러요.',
             id: 'visual-refuge',
-            label: '대피공간을 찾아요',
+            label: '안전한 곳을 찾아요',
           },
           {
             correct: false,
             feedback: '괜찮아요. 위험한 길로 억지로 가지 않아요.',
             id: 'visual-force',
-            label: '막힌 길',
+            label: '막힌 길은 가지 않아요',
           },
         ],
         packet: createPacket({
@@ -607,7 +607,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 바로 뛰지 말고 출구와 안내를 확인해요.',
             id: 'run-fast',
-            label: '바로 뛰기',
+            label: '바로 뛰지 않아요',
           },
         ],
         packet: createPacket({
@@ -659,7 +659,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 혼자 만지지 말고 어른에게 알려요.',
             id: 'touch-gas',
-            label: '가스 밸브',
+            label: '가스 밸브는 만지지 않아요',
           },
         ],
         packet: createPacket({
@@ -711,7 +711,7 @@ export const learningScenarios: TheaterShow[] = [
             correct: false,
             feedback: '괜찮아요. 위험하면 혼자 숨기지 말고 도움을 요청해요.',
             id: 'hide-alone',
-            label: '혼자 조용히 있어요',
+            label: '혼자 숨기지 않아요',
           },
         ],
         packet: createPacket({
@@ -791,6 +791,7 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     decisionPoint: seed.checkQuestion ?? '먼저 무엇을 할까요?',
     evidence: seed.packet,
     explanation: safetyView.explanation,
+    learnerActionSteps: seed.actionSteps,
     ruleMatches,
     rules: seed.rules,
     segment,
