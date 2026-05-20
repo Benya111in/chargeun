@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
   CheckCircle2,
   HelpCircle,
@@ -19,8 +19,18 @@ import { cn } from './lib/utils'
 type PracticeStage = 'explanation' | 'playback' | 'ready' | 'rest'
 
 const defaultScenarioId = 'fire-grounded-flow'
+const framePrecisionSec = 0.1
+const segmentStartGuardSec = 0.02
 const scenarioAliases: Record<string, string> = {
   'earthquake-review-flow': 'earthquake-protect-flow',
+}
+
+type PlaybackWindow = {
+  clampSec: number
+  index: number
+  requestId: number
+  segmentId: string
+  startSec: number
 }
 
 export default function ScenarioPracticePage() {
@@ -55,6 +65,10 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const explanationHeadingRef = useRef<HTMLHeadingElement | null>(null)
   const autoPauseSegmentRef = useRef<string | null>(null)
   const pendingPlaybackIndexRef = useRef<number | null>(null)
+  const playbackRequestIdRef = useRef(0)
+  const playbackWindowRef = useRef<PlaybackWindow | null>(null)
+  const stageRef = useRef<PracticeStage>('ready')
+  const boundaryMonitorRef = useRef<number | null>(null)
   const [playRequestId, setPlayRequestId] = useState(0)
   const segment = scenario.segments[segmentIndex]
   const learnerActionCards = getLearnerActionCards(segment)
@@ -63,6 +77,66 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const selectedAnswer = segment.answerOptions.find(
     (option) => option.id === selectedAnswerId,
   )
+
+  const clearBoundaryMonitor = useCallback(() => {
+    if (boundaryMonitorRef.current === null) {
+      return
+    }
+
+    window.cancelAnimationFrame(boundaryMonitorRef.current)
+    boundaryMonitorRef.current = null
+  }, [])
+
+  const clampSegmentPlayback = useCallback((video: HTMLVideoElement) => {
+    const playbackWindow = playbackWindowRef.current
+
+    if (!playbackWindow || stageRef.current !== 'playback') {
+      return false
+    }
+
+    if (video.currentTime < playbackWindow.clampSec) {
+      return false
+    }
+
+    video.pause()
+    video.currentTime = playbackWindow.clampSec
+    autoPauseSegmentRef.current = playbackWindow.segmentId
+    pendingPlaybackIndexRef.current = null
+    playbackWindowRef.current = null
+    setStage('explanation')
+
+    return true
+  }, [])
+
+  const startBoundaryMonitor = useCallback(() => {
+    clearBoundaryMonitor()
+
+    const tick = () => {
+      const video = videoRef.current
+
+      if (
+        !video ||
+        stageRef.current !== 'playback' ||
+        !playbackWindowRef.current
+      ) {
+        boundaryMonitorRef.current = null
+        return
+      }
+
+      if (clampSegmentPlayback(video)) {
+        boundaryMonitorRef.current = null
+        return
+      }
+
+      boundaryMonitorRef.current = window.requestAnimationFrame(tick)
+    }
+
+    boundaryMonitorRef.current = window.requestAnimationFrame(tick)
+  }, [clampSegmentPlayback, clearBoundaryMonitor])
+
+  useEffect(() => {
+    stageRef.current = stage
+  }, [stage])
 
   useEffect(() => {
     if (
@@ -73,29 +147,50 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     }
 
     const targetSegment = scenario.segments[segmentIndex]
+    const playbackWindow = playbackWindowRef.current
     const video = videoRef.current
     let cancelled = false
 
-    if (!video) {
+    if (
+      !video ||
+      !playbackWindow ||
+      playbackWindow.index !== segmentIndex ||
+      playbackWindow.requestId !== playRequestId ||
+      playbackWindow.segmentId !== targetSegment.id
+    ) {
       return
     }
 
     video.pause()
-    video.currentTime = targetSegment.startMs / 1000
+    video.currentTime = playbackWindow.startSec
 
-    void video.play().catch((error: unknown) => {
-      if (cancelled || isExpectedPlaybackInterruption(error)) {
-        return
-      }
+    void video
+      .play()
+      .then(() => {
+        if (!cancelled) {
+          startBoundaryMonitor()
+        }
+      })
+      .catch((error: unknown) => {
+        if (cancelled || isExpectedPlaybackInterruption(error)) {
+          return
+        }
 
-      setPlaybackNotice('영상을 바로 재생하지 못했습니다. 다시 눌러 주세요.')
-      setStage('ready')
-    })
+        playbackWindowRef.current = null
+        setPlaybackNotice('영상을 바로 재생하지 못했습니다. 다시 눌러 주세요.')
+        setStage('ready')
+      })
 
     return () => {
       cancelled = true
     }
-  }, [playRequestId, scenario.segments, segmentIndex, stage])
+  }, [
+    playRequestId,
+    scenario.segments,
+    segmentIndex,
+    stage,
+    startBoundaryMonitor,
+  ])
 
   useEffect(() => {
     if (stage !== 'ready') {
@@ -110,7 +205,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     }
 
     video.pause()
-    video.currentTime = targetSegment.startMs / 1000
+    video.currentTime = getSegmentStartSec(targetSegment)
   }, [scenario.segments, segmentIndex, stage])
 
   useEffect(() => {
@@ -125,7 +220,20 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     return () => window.clearTimeout(focusTimer)
   }, [segment.id, stage])
 
+  useEffect(() => {
+    return () => clearBoundaryMonitor()
+  }, [clearBoundaryMonitor])
+
   const playSegment = (nextIndex: number) => {
+    const targetSegment = scenario.segments[nextIndex]
+    const nextRequestId = playbackRequestIdRef.current + 1
+
+    playbackRequestIdRef.current = nextRequestId
+    playbackWindowRef.current = buildPlaybackWindow({
+      index: nextIndex,
+      requestId: nextRequestId,
+      segment: targetSegment,
+    })
     setSegmentIndex(nextIndex)
     setStage('playback')
     setShowReason(false)
@@ -133,30 +241,36 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     setPlaybackNotice('')
     pendingPlaybackIndexRef.current = nextIndex
     autoPauseSegmentRef.current = null
-    setPlayRequestId((current) => current + 1)
+    setPlayRequestId(nextRequestId)
   }
 
   const loadSegment = (nextIndex: number) => {
     const targetSegment = scenario.segments[nextIndex]
     const video = videoRef.current
 
+    clearBoundaryMonitor()
     setSegmentIndex(nextIndex)
     setStage('ready')
     setShowReason(false)
     setSelectedAnswerId(null)
     setPlaybackNotice('')
     autoPauseSegmentRef.current = null
+    pendingPlaybackIndexRef.current = null
+    playbackWindowRef.current = null
 
     if (!video) {
       return
     }
 
     video.pause()
-    video.currentTime = targetSegment.startMs / 1000
+    video.currentTime = getSegmentStartSec(targetSegment)
   }
 
   const rest = () => {
+    clearBoundaryMonitor()
     videoRef.current?.pause()
+    playbackWindowRef.current = null
+    pendingPlaybackIndexRef.current = null
     setStage('rest')
     setPlaybackNotice('')
   }
@@ -191,22 +305,23 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
                 key={scenario.id}
                 ref={videoRef}
                 className="h-full w-full object-contain"
-                onEnded={() => setStage('explanation')}
+                onEnded={(event) => {
+                  if (!clampSegmentPlayback(event.currentTarget)) {
+                    playbackWindowRef.current = null
+                    pendingPlaybackIndexRef.current = null
+                    setStage('explanation')
+                  }
+                }}
                 onLoadedMetadata={(event) => {
-                  event.currentTarget.currentTime = segment.startMs / 1000
+                  event.currentTarget.currentTime = getSegmentStartSec(segment)
                 }}
                 onTimeUpdate={(event) => {
-                  const nextMs = event.currentTarget.currentTime * 1000
-
                   if (
                     stage === 'playback' &&
-                    autoPauseSegmentRef.current !== segment.id &&
-                    nextMs >= segment.endMs - 120
+                    autoPauseSegmentRef.current !==
+                      playbackWindowRef.current?.segmentId
                   ) {
-                    autoPauseSegmentRef.current = segment.id
-                    event.currentTarget.pause()
-                    event.currentTarget.currentTime = segment.endMs / 1000
-                    setStage('explanation')
+                    clampSegmentPlayback(event.currentTarget)
                   }
                 }}
                 playsInline
@@ -668,6 +783,38 @@ function getLearnerReasonText(reason: string) {
     .replace('여진', '또 흔들림')
     .replace('확보', '찾기')
     .replace('대비', '준비')
+}
+
+function buildPlaybackWindow({
+  index,
+  requestId,
+  segment,
+}: {
+  index: number
+  requestId: number
+  segment: TheaterSegment
+}): PlaybackWindow {
+  const startSec = getSegmentStartSec(segment)
+  const rawEndSec = segment.endMs / 1000
+  const clampSec = Math.max(startSec, rawEndSec - framePrecisionSec)
+
+  return {
+    clampSec,
+    index,
+    requestId,
+    segmentId: segment.id,
+    startSec,
+  }
+}
+
+function getSegmentStartSec(segment: TheaterSegment) {
+  const rawStartSec = segment.startMs / 1000
+
+  if (rawStartSec === 0) {
+    return 0
+  }
+
+  return rawStartSec + segmentStartGuardSec
 }
 
 function getLearnerPreservedCandidates(segment: TheaterSegment) {

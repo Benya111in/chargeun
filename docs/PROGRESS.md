@@ -80,6 +80,10 @@
 - Browser preview check: `/scenario/earthquake-after-flow` 마지막 장면이 화재로 순환하지 않고 course complete 상태로 끝남
 - Browser preview check: `/teacher` 지진 후 공식 근거에 `가스와 전깃불을 끄고`가 더 이상 노출되지 않음
 - Mobile Playwright audit: 390px에서 수평 overflow 없음, 설명 heading 포커스 이동, 모바일 멀티트랙 요약 숨김, 긴 금지문 미노출 확인
+- `/scenario` video boundary가 다음 장면 첫 프레임을 잠깐 보여 주는 문제를 0.1초 clamp와 `requestAnimationFrame` boundary monitor로 수정했다. E2E에 `currentTime < endSec` 회귀 검증을 추가했다.
+- 화재 연습은 안전한TV 원본 60초 전체를 압축한 `fire-full-practice-001.mp4`와 6개 장면으로 재구성했다. 오프닝/알림, 현관문 닫기, 계단, 대피공간, 문틈 막기, 대피 후 확인까지 이어진다.
+- 지진 연습은 오프닝과 핵심 행동요령 구간을 이어 붙인 `earthquake-full-practice-001.mp4`와 11개 장면으로 재구성했다. 기존 `흔들릴 때`/`멈춘 뒤` 분리를 기본 흐름에서 없애고 하나의 연속 연습으로 만들었다.
+- Browser preview check: 홈에서 화재 6개 장면, 지진 11개 장면이 표시되고 `소리가 없어도 볼 수 있어요` 보조 카드가 기본 홈에 노출되지 않음을 확인했다.
 
 ### 다음
 

@@ -85,9 +85,7 @@ export default function LearningHomePage() {
                     )}
                   />
                   <span className="text-sm font-semibold text-[#596257]">
-                    {scenario.id === 'earthquake-protect-flow'
-                      ? '이어지는 연습'
-                      : `${scenario.segments.length}개 장면`}
+                    {`${scenario.segments.length}개 장면`}
                   </span>
                 </div>
                 <h3 className="mt-4 text-2xl font-semibold tracking-tight">
@@ -96,16 +94,6 @@ export default function LearningHomePage() {
                 <p className="mt-3 min-h-12 text-sm leading-6 text-[#596257]">
                   {scenario.homeNote ?? scenario.note}
                 </p>
-                {scenario.id === 'earthquake-protect-flow' ? (
-                  <div className="mt-4 grid gap-2 text-sm font-semibold text-[#151713] sm:grid-cols-2">
-                    <span className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
-                      1. 흔들릴 때
-                    </span>
-                    <span className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
-                      2. 멈춘 뒤
-                    </span>
-                  </div>
-                ) : null}
                 <div className="mt-5 flex items-center gap-2 text-sm font-semibold">
                   연습 시작
                   <ArrowRight className="size-4 transition group-hover:translate-x-1" />

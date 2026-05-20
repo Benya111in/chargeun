@@ -73,9 +73,9 @@ describe('learningScenarios', () => {
 
   it('keeps key fire and earthquake scenarios grounded with rule evidence', () => {
     const requiredSegments = [
-      'fire-grounded-door-control',
-      'earthquake-review-office-desk',
-      'earthquake-after-exit',
+      'fire-full-door-control',
+      'earthquake-full-table-protect',
+      'earthquake-full-door-gas',
     ]
 
     for (const segmentId of requiredSegments) {
