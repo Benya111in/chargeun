@@ -43,11 +43,10 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(page.getByText('순서대로 따라해요')).toBeVisible()
   await expect(page.getByText('음성 설명')).toHaveCount(0)
   await expect(page.getByText('화면 글자')).toHaveCount(0)
-  await expect(
-    page.getByText(
-      '매년 약 2,800건이 발생하는 아파트 화재. 사상자의 약 40%는 대피 중 발생했습니다. 아파트에 화재가 발생했을 때 다음과 같이 행동합시다.',
-    ),
-  ).toBeVisible()
+  await expect(page.getByText('짧은 문장만 보고 따라해요.')).toBeVisible()
+  await expect(page.getByText('아파트에서 불이 날 수 있어요.')).toBeVisible()
+  await expect(page.getByText('나갈 때 다칠 수 있어요.')).toBeVisible()
+  await expect(page.getByText('매년 약 2,800건')).toHaveCount(0)
   await expect(page.getByText('지금 장면')).toBeVisible()
   await expect(
     page.getByText(
@@ -66,15 +65,15 @@ test('runs the scenario practice loop', async ({ page }) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
   await expect(page.getByText('지금 할 일')).toBeVisible()
-  await expect(
-    page.getByRole('listitem').filter({ hasText: '문을 닫아요' }),
-  ).toBeVisible()
+  await expect(page.getByText('2번문을 닫아요')).toBeVisible()
   await expect(page.getByText('현관문을 닫고 계단으로 나가요.')).toBeVisible()
+  await expect(page.getByText('우리 집에서 불이 났어요.').first()).toBeVisible()
+  await expect(page.getByText('계단으로 나가요').first()).toBeVisible()
   await expect(
     page.getByText(
       '우리 집 화재로 대피할 때는 연기와 화염을 차단하기 위해 반드시 현관문을 닫고 계단을 이용해 외부로 빠져나와야 합니다.',
     ),
-  ).toBeVisible()
+  ).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeDisabled()
@@ -131,7 +130,9 @@ test('offers next practice and restart controls after the final scene', async ({
   })
 
   await expect(
-    page.getByText('무조건 나가기보다 상황에 맞게 행동해요.'),
+    page.getByRole('heading', {
+      name: '무조건 나가기보다 상황에 맞게 행동해요.',
+    }),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),

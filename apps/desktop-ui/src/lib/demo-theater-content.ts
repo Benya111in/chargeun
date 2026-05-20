@@ -33,6 +33,7 @@ export type TheaterSegment = {
   label: string
   learnerExplanation: string
   learnerPrompt: string
+  learnerSequence: string[]
   narration: TimedNarrationCue[]
   packet: PerceptionPacket
   practiceMode: SegmentPracticeMode
@@ -87,6 +88,7 @@ type SegmentSeed = {
   label: string
   learnerExplanation?: string
   learnerPrompt?: string
+  learnerSequence?: string[]
   narration?: TimedNarrationCue[]
   packet: PerceptionPacket
   practiceMode?: SegmentPracticeMode
@@ -114,6 +116,11 @@ export const learningScenarios: TheaterShow[] = [
         label: '화재 연습을 시작해요',
         learnerExplanation: '아파트 화재 연습을 시작해요.',
         learnerPrompt: '숫자와 제목을 보고 있어요.',
+        learnerSequence: [
+          '아파트에서 불이 날 수 있어요.',
+          '나갈 때 다칠 수 있어요.',
+          '이제 행동을 연습해요.',
+        ],
         actionSteps: [],
         narration: [
           {
@@ -191,8 +198,8 @@ export const learningScenarios: TheaterShow[] = [
         id: 'fire-full-door-control',
         label: '문 닫고 계단으로 가요',
         learnerExplanation: '현관문을 닫고 계단으로 나가요.',
-        learnerPrompt: '우리 집에서 불이 나 대피하고 있어요.',
-        actionSteps: ['문을 닫아요', '계단 쪽을 봐요'],
+        learnerPrompt: '우리 집에서 불이 났어요.',
+        actionSteps: ['문을 닫아요', '계단으로 나가요'],
         narration: [
           {
             endMs: 22_500,
@@ -1021,7 +1028,7 @@ export const learningScenarios: TheaterShow[] = [
         id: 'earthquake-full-school-desk',
         label: '사무실에서도 머리를 보호해요',
         learnerExplanation: '사무실에서도 책상 아래에서 머리를 지켜요.',
-        learnerPrompt: '장소가 바뀌어도 먼저 머리를 보호해요.',
+        learnerPrompt: '장소가 바뀌어도 머리를 보호해요.',
         actionSteps: ['책상 아래로 들어가요', '책상 다리를 잡아요', '기다려요'],
         narration: [
           {
@@ -1033,7 +1040,7 @@ export const learningScenarios: TheaterShow[] = [
         ],
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 복도로 뛰기보다 먼저 책상 아래로 가요.',
+            feedback: '괜찮아요. 복도로 뛰기보다 책상 아래로 가요.',
             id: 'run-hall',
             label: '복도 뛰기',
           },
@@ -1445,7 +1452,7 @@ export const learningScenarios: TheaterShow[] = [
             label: '문과 계단 방향',
           },
           kind: 'signal',
-          prompt: '소리가 없어도 무엇을 먼저 볼까요?',
+          prompt: '소리가 없어도 무엇을 볼까요?',
           ruleIds: ['KR_FIRE_04'],
         }),
         packet: createPacket({
@@ -1586,7 +1593,7 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 7_200,
         id: 'earthquake-after-exit',
         label: '나갈 길을 봐요',
-        learnerExplanation: '나갈 길을 먼저 봐요.',
+        learnerExplanation: '나갈 길을 확인해요.',
         learnerPrompt: '흔들림이 멈췄어요. 천천히 확인해요.',
         actionSteps: ['천천히 일어나요', '나갈 길을 봐요', '어른과 움직여요'],
         teachBack: createTeachBack({
@@ -1601,7 +1608,7 @@ export const learningScenarios: TheaterShow[] = [
             label: '나갈 길',
           },
           kind: 'object',
-          prompt: '흔들림이 멈춘 뒤 무엇을 먼저 볼까요?',
+          prompt: '흔들림이 멈춘 뒤 무엇을 볼까요?',
           ruleIds: ['KR_EQ_05'],
         }),
         packet: createPacket({
@@ -1818,6 +1825,8 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
           safetyView.explanation.tracks.action ??
             safetyView.explanation.tracks.easy,
         ])
+  const learnerExplanation = seed.learnerExplanation ?? seed.description
+  const learnerPrompt = seed.learnerPrompt ?? seed.description
 
   return {
     actionSteps,
@@ -1826,16 +1835,21 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
         ? []
         : toPracticeAnswerOptions(teachBack),
     checkQuestion:
-      practiceMode === 'intro'
-        ? ''
-        : (teachBack?.prompt ?? '먼저 무엇을 할까요?'),
+      practiceMode === 'intro' ? '' : (teachBack?.prompt ?? '무엇을 할까요?'),
     description: seed.description,
     endMs: seed.endMs,
     explanation: safetyView.explanation,
     id: seed.id,
     label: seed.label,
-    learnerExplanation: seed.learnerExplanation ?? seed.description,
-    learnerPrompt: seed.learnerPrompt ?? seed.description,
+    learnerExplanation,
+    learnerPrompt,
+    learnerSequence: buildLearnerSequence({
+      actionSteps,
+      learnerExplanation,
+      learnerPrompt,
+      practiceMode,
+      seed,
+    }),
     narration: seed.narration ?? [
       {
         endMs: seed.endMs,
@@ -1856,6 +1870,31 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     teachBack,
     teacherGuide,
   }
+}
+
+function buildLearnerSequence({
+  actionSteps,
+  learnerExplanation,
+  learnerPrompt,
+  practiceMode,
+  seed,
+}: {
+  actionSteps: string[]
+  learnerExplanation: string
+  learnerPrompt: string
+  practiceMode: SegmentPracticeMode
+  seed: SegmentSeed
+}) {
+  const fallbackSteps =
+    practiceMode === 'intro'
+      ? [learnerPrompt, learnerExplanation, '다음 장면에서 행동을 연습해요.']
+      : [learnerPrompt, ...actionSteps]
+
+  const normalized = (seed.learnerSequence ?? fallbackSteps)
+    .map((step) => step.trim())
+    .filter(Boolean)
+
+  return Array.from(new Set(normalized))
 }
 
 function createTeachBack(input: {

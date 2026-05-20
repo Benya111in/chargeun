@@ -16,6 +16,14 @@ describe('learningScenarios', () => {
         expect(segment.learnerExplanation).toBeTruthy()
         expect(segment.learnerExplanation.length).toBeLessThanOrEqual(35)
         expect(segment.learnerPrompt).toBeTruthy()
+        expect(segment.learnerSequence.length).toBeGreaterThan(0)
+        expect(segment.learnerSequence.length).toBeLessThanOrEqual(4)
+        for (const learnerStep of segment.learnerSequence) {
+          expect(learnerStep.length).toBeLessThanOrEqual(35)
+          expect(learnerStep).not.toMatch(
+            /차단|화염|반드시|이용해|외부로 빠져나와야|발생했습니다|사상자/,
+          )
+        }
         expect(segment.narration.length).toBeGreaterThan(0)
         expect(segment.narration[0]?.startMs).toBe(segment.startMs)
         expect(segment.narration.at(-1)?.endMs).toBe(segment.endMs)

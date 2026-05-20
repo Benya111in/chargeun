@@ -686,27 +686,25 @@ function PracticePanel({
 }
 
 function SceneNarrationList({ segment }: { segment: TheaterSegment }) {
-  const cues = [...segment.narration].sort(
-    (left, right) => left.startMs - right.startMs || left.endMs - right.endMs,
-  )
+  const steps = segment.learnerSequence
 
   return (
     <section className="mt-6 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
       <h2 className="text-lg font-semibold">순서대로 따라해요</h2>
       <p className="mt-2 text-sm leading-6 text-[#596257]">
-        영상에서 나온 설명을 하나씩 읽어요.
+        짧은 문장만 보고 따라해요.
       </p>
       <ol className="mt-3 grid gap-2">
-        {cues.map((cue, index) => (
+        {steps.map((step, index) => (
           <li
-            key={`${cue.startMs}-${cue.endMs}-${cue.source}-${cue.text}`}
+            key={`${index}-${step}`}
             className="rounded-md border border-[#dfe4da] bg-white px-4 py-3"
           >
             <p className="text-xs font-semibold text-[#596257]">
               {index + 1}번
             </p>
             <p className="mt-1 text-base font-semibold leading-7 text-[#151713]">
-              {cue.text}
+              {step}
             </p>
           </li>
         ))}
