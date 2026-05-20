@@ -1154,7 +1154,7 @@ export const learningScenarios: TheaterShow[] = [
         id: 'earthquake-full-office-desk',
         label: '책상 아래로 가요',
         learnerExplanation: '책상 아래에서 다리를 잡아요.',
-        learnerPrompt: '모니터가 떨어질 수 있어요.',
+        learnerPrompt: '사무실에서 지진이 났어요.',
         actionSteps: [
           '책상 아래로 가요',
           '책상 다리를 잡아요',
@@ -1217,7 +1217,7 @@ export const learningScenarios: TheaterShow[] = [
         id: 'earthquake-full-school-evacuation',
         label: '선생님 말을 들어요',
         learnerExplanation: '선생님 말을 듣고 창문에서 떨어져요.',
-        learnerPrompt: '복도에 창문 유리가 있어요.',
+        learnerPrompt: '학교에서 지진이 났어요.',
         actionSteps: [
           '선생님 말을 들어요',
           '창문에서 떨어져요',

@@ -300,6 +300,23 @@ describe('learningScenarios', () => {
     )
   })
 
+  it('uses the situation card for the main setting, not a stray detail', () => {
+    const earthquakeScenario = learningScenarios.find(
+      (scenario) => scenario.id === 'earthquake-protect-flow',
+    )!
+
+    expect(
+      earthquakeScenario.segments.find(
+        (segment) => segment.id === 'earthquake-full-office-desk',
+      )?.learnerPrompt,
+    ).toBe('사무실에서 지진이 났어요.')
+    expect(
+      earthquakeScenario.segments.find(
+        (segment) => segment.id === 'earthquake-full-school-evacuation',
+      )?.learnerPrompt,
+    ).toBe('학교에서 지진이 났어요.')
+  })
+
   it('hides learner action cards when structured status requires review', () => {
     const [segment] = learningScenarios[0]!.segments
     const reviewSegment = {
