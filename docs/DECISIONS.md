@@ -37,6 +37,11 @@
 - 이유: `answerOptions`를 자유 텍스트로 두면 LLM 또는 사람이 다시 정답 같은 오답, 고정 `잘 모르겠어요`, 행동 지시형 오답을 만들 수 있다.
 - 영향: `StructuredLearningExplanation v1`에 `tracks.teachBack`을 추가하고, validated segment는 teach-back을 반드시 포함해야 한다. 선택지는 `correct | contrast` role, `object | person | place | signal | state` kind, `correctOptionId`, 공식 rule id를 가진다. schema는 정답 1개, 동일 kind, `잘 모르겠어요` 금지, 행동 지시형 label 금지, 행동 카드 label 중복 금지, 정답 option과 행동 카드의 rule id 연결을 강제한다. UI는 검증된 structured teach-back에서만 질문과 선택지를 파생한다.
 
+### D-064 마지막 장면은 다음 장면으로 순환하지 않는다
+
+- 이유: 마지막 장면에서 `다음 장면 보기`가 첫 장면으로 돌아가면 학습자가 한 연습이 끝났다는 신호를 받지 못한다.
+- 영향: 마지막 장면에서는 정답 선택 후 `다음 연습 보기`, 다음 연습 제목/설명 링크, `처음부터 다시 보기`를 노출한다. 정답 전에는 다음 연습 이동을 비활성화하고, 일반 장면에서만 `다음 장면 보기`를 유지한다.
+
 ## 2026-04-14
 
 ### D-001 macOS 단일 경로 우선

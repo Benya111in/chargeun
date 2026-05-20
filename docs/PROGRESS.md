@@ -24,6 +24,7 @@
 - `learningScenarios` 테스트에 “정답은 정확히 1개, `잘 모르겠어요` 고정 선택지 금지, 오답은 행동 카드/do-not/명령형 문장과 중복 금지” invariant를 추가해 같은 콘텐츠 회귀를 막았다
 - `StructuredLearningExplanation v1`에 `tracks.teachBack` 계약을 추가해 validated segment가 정답 1개, semantic kind 일치, 공식 rule id 연결, 행동 카드와 선택지 분리, 고정/명령형 오답 금지를 통과해야만 학습자 질문을 노출하도록 바꿨다
 - `/scenario`는 더 이상 seed의 자유 텍스트 answer option을 직접 신뢰하지 않고, schema를 통과한 `structuredExplanation.tracks.teachBack`에서 질문과 선택지를 파생한다
+- 마지막 장면에서는 `다음 장면 보기`가 첫 장면으로 순환하지 않도록 막고, 정답 선택 후 `다음 연습 보기`, 다음 연습 제목/설명 링크, `처음부터 다시 보기`를 제공하도록 바꿨다
 
 ### 검증
 
@@ -39,6 +40,7 @@
 - `pnpm --filter desktop-ui test:e2e`
 - `pnpm --filter @ansimtrack/shared-types test`
 - `pnpm --filter @ansimtrack/llm-orchestrator test`
+- `pnpm --filter desktop-ui test:e2e -- app.spec.ts`
 - Browser preview check: `/teacher` structured panel and `/qa?internal=qa` LRS panel render with no console errors
 - Browser preview check: `/scenario/fire-grounded-flow` 첫 장면과 두 번째 장면의 teach-back 선택지가 행동 카드와 충돌하지 않는지 확인
 - 분야별 QA 에이전트 2라운드: learner flow, live-lab fallback, cognitive accessibility, visual responsive QA, teacher/QA, contract/data integrity 재검증 완료

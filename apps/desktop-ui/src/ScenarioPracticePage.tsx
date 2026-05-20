@@ -56,6 +56,8 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const [playRequestId, setPlayRequestId] = useState(0)
   const segment = scenario.segments[segmentIndex]
   const learnerActionCards = getLearnerActionCards(segment)
+  const nextPractice = getNextScenario(scenario)
+  const isFinalSegment = segmentIndex === scenario.segments.length - 1
   const selectedAnswer = segment.answerOptions.find(
     (option) => option.id === selectedAnswerId,
   )
@@ -146,12 +148,9 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   }
 
   const nextSegment = () => {
-    if (segmentIndex >= scenario.segments.length - 1) {
-      playSegment(0)
-      return
+    if (!isFinalSegment) {
+      playSegment(segmentIndex + 1)
     }
-
-    playSegment(segmentIndex + 1)
   }
 
   return (
@@ -259,8 +258,11 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
           </div>
 
           <PracticePanel
+            isFinalSegment={isFinalSegment}
+            nextPractice={nextPractice}
             onNext={nextSegment}
             onReplay={() => playSegment(segmentIndex)}
+            onRestart={() => playSegment(0)}
             onRest={rest}
             onToggleReason={() => setShowReason((value) => !value)}
             playbackNotice={playbackNotice}
@@ -307,8 +309,11 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 }
 
 function PracticePanel({
+  isFinalSegment,
+  nextPractice,
   onNext,
   onReplay,
+  onRestart,
   onRest,
   onToggleReason,
   playbackNotice,
@@ -319,8 +324,11 @@ function PracticePanel({
   showReason,
   stage,
 }: {
+  isFinalSegment: boolean
+  nextPractice: TheaterShow
   onNext: () => void
   onReplay: () => void
+  onRestart: () => void
   onRest: () => void
   onToggleReason: () => void
   playbackNotice: string
@@ -493,19 +501,78 @@ function PracticePanel({
           <PauseCircle className="size-4" />
           쉬기
         </button>
-        <button
-          className={cn(
-            'inline-flex items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white',
-            !canContinue && 'cursor-not-allowed opacity-50',
-          )}
-          disabled={!canContinue}
-          onClick={onNext}
-          type="button"
-        >
-          다음 장면 보기
-        </button>
+        {isFinalSegment ? (
+          <FinalPracticeActions
+            canContinue={canContinue}
+            nextPractice={nextPractice}
+            onRestart={onRestart}
+          />
+        ) : (
+          <button
+            className={cn(
+              'inline-flex items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white',
+              !canContinue && 'cursor-not-allowed opacity-50',
+            )}
+            disabled={!canContinue}
+            onClick={onNext}
+            type="button"
+          >
+            다음 장면 보기
+          </button>
+        )}
       </div>
     </section>
+  )
+}
+
+function FinalPracticeActions({
+  canContinue,
+  nextPractice,
+  onRestart,
+}: {
+  canContinue: boolean
+  nextPractice: TheaterShow
+  onRestart: () => void
+}) {
+  const nextHref = `/scenario/${nextPractice.id}`
+
+  return (
+    <>
+      {canContinue ? (
+        <a
+          className="inline-flex items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white"
+          href={nextHref}
+        >
+          다음 연습 보기
+        </a>
+      ) : (
+        <button
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-4 py-3 text-sm font-semibold text-white opacity-50"
+          disabled
+          type="button"
+        >
+          답을 고르면 다음 연습 보기
+        </button>
+      )}
+      <a
+        aria-label={`다음 연습 ${nextPractice.title} ${nextPractice.note}`}
+        className={cn(
+          'inline-flex max-w-full flex-col items-start gap-1 rounded-md border border-[#dfe4da] bg-white px-4 py-3 text-left text-[#151713]',
+          !canContinue && 'pointer-events-none opacity-55',
+        )}
+        href={nextHref}
+      >
+        <span className="text-xs font-semibold text-[#596257]">다음 연습</span>
+        <span className="text-sm font-semibold">{nextPractice.title}</span>
+        <span className="text-xs leading-5 text-[#596257]">
+          {nextPractice.note}
+        </span>
+      </a>
+      <button className="link-button" onClick={onRestart} type="button">
+        <RotateCcw className="size-4" />
+        처음부터 다시 보기
+      </button>
+    </>
   )
 }
 
@@ -550,6 +617,18 @@ function selectScenarioFromPath() {
   return (
     learningScenarios.find((scenario) => scenario.id === canonicalId) ?? null
   )
+}
+
+function getNextScenario(currentScenario: TheaterShow) {
+  const index = learningScenarios.findIndex(
+    (scenario) => scenario.id === currentScenario.id,
+  )
+
+  if (index === -1) {
+    return learningScenarios[0]!
+  }
+
+  return learningScenarios[(index + 1) % learningScenarios.length]!
 }
 
 function isExpectedPlaybackInterruption(error: unknown) {

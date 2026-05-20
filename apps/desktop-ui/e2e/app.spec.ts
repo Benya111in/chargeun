@@ -73,6 +73,46 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(page.getByText('잠깐 쉬어도 괜찮아요.')).toBeVisible()
 })
 
+test('offers next practice and restart controls after the final scene', async ({
+  page,
+}) => {
+  await page.goto('/scenario/fire-grounded-flow')
+
+  await page.getByRole('button', { name: '3번째 장면' }).click()
+  await expect(page.getByText('3 / 3')).toBeVisible()
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
+  })
+
+  await expect(
+    page.getByText('길이 막히면 안전한 곳에서 도움을 불러요.'),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '다음 장면 보기' }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: '답을 고르면 다음 연습 보기' }),
+  ).toBeDisabled()
+
+  await page.getByRole('button', { name: '안전한 곳' }).click()
+  await expect(
+    page.getByRole('link', { name: '다음 연습 보기' }),
+  ).toHaveAttribute('href', '/scenario/earthquake-protect-flow')
+  await expect(
+    page.getByRole('link', {
+      name: '다음 연습 지진이 흔들릴 때 흔들릴 때 책상 아래에서 머리를 보호해요',
+    }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '처음부터 다시 보기' }).click()
+  await expect(page.getByText('1 / 3')).toBeVisible()
+  await expect
+    .poll(async () =>
+      page.locator('video').evaluate((video) => video.currentTime),
+    )
+    .toBeLessThan(1)
+})
+
 test('keeps earthquake review scenario route as a compatibility alias', async ({
   page,
 }) => {
