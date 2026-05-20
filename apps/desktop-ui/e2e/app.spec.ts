@@ -40,6 +40,11 @@ test('runs the scenario practice loop', async ({ page }) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
   await expect(page.getByText('아파트 화재 연습을 시작해요.')).toBeVisible()
+  await expect(page.locator('button[aria-label="1번째 장면"]')).toHaveText('1')
+  await expect(page.locator('button[aria-label="2번째 장면"]')).toHaveText('2')
+  await expect(
+    page.locator('button[aria-label="1번째 장면"] span'),
+  ).toHaveCount(0)
   await expect(page.getByText('연습 전에 기억해요')).toBeVisible()
   await expect(page.getByText('오늘 기억할 순서')).toHaveCount(0)
   await expect(page.getByText('어른용 안내')).toHaveCount(0)
@@ -65,6 +70,12 @@ test('runs the scenario practice loop', async ({ page }) => {
 
   await page.getByRole('button', { name: '다음 장면 보기' }).click()
   await expect(page.getByText('2 / 7')).toBeVisible()
+  await expect(page.locator('button[aria-label="1번째 장면"]')).toHaveClass(
+    /bg-emerald-100/,
+  )
+  await expect(page.locator('button[aria-label="2번째 장면"]')).toHaveClass(
+    /bg-\[#151713\]/,
+  )
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })

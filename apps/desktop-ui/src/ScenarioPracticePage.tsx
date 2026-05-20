@@ -378,28 +378,23 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
               </div>
             </section>
 
-            <div className="flex gap-2">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(2.35rem,1fr))] gap-2">
               {scenario.segments.map((item, index) => (
                 <button
                   key={item.id}
                   aria-label={`${index + 1}번째 장면`}
-                  className="flex min-h-10 flex-1 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-2"
+                  className={cn(
+                    'flex min-h-10 items-center justify-center rounded-md border px-2 text-sm font-semibold transition',
+                    index < segmentIndex
+                      ? 'border-emerald-300 bg-emerald-100 text-emerald-950'
+                      : index === segmentIndex
+                        ? 'border-[#151713] bg-[#151713] text-white'
+                        : 'border-[#dfe4da] bg-white text-[#596257] hover:border-[#151713]/40',
+                  )}
                   onClick={() => loadSegment(index)}
                   type="button"
                 >
-                  <span
-                    className={cn(
-                      'h-2 flex-1 rounded-full transition',
-                      index < segmentIndex
-                        ? 'bg-emerald-500'
-                        : index === segmentIndex
-                          ? 'bg-[#151713]'
-                          : 'bg-[#dfe4da]',
-                    )}
-                  />
-                  <span className="text-xs font-semibold text-[#596257]">
-                    {index + 1}번
-                  </span>
+                  {index + 1}
                 </button>
               ))}
             </div>
