@@ -25,7 +25,7 @@ import { cn } from './lib/utils'
 type PracticeStage = 'explanation' | 'playback' | 'ready' | 'rest'
 
 const defaultScenarioId = 'fire-grounded-flow'
-const framePrecisionSec = 0.1
+const framePrecisionSec = 0.45
 const segmentStartGuardSec = 0.02
 const scenarioAliases: Record<string, string> = {
   'earthquake-review-flow': 'earthquake-protect-flow',
@@ -1043,7 +1043,7 @@ function buildPlaybackWindow({
   segment: TheaterSegment
 }): PlaybackWindow {
   const startSec = getSegmentStartSec(segment)
-  const rawEndSec = segment.endMs / 1000
+  const rawEndSec = (segment.pauseMs ?? segment.endMs) / 1000
   const clampSec = Math.max(startSec, rawEndSec - framePrecisionSec)
 
   return {

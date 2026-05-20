@@ -197,7 +197,7 @@ test('offers next practice and restart controls after the final scene', async ({
   ).toHaveAttribute('href', '/scenario/earthquake-protect-flow')
   await expect(
     page.getByRole('link', {
-      name: '다음 연습 지진이 났을 때 흔들릴 때, 멈춘 뒤, 가스와 전기를 보는 것까지 이어서 연습해요',
+      name: '다음 연습 지진이 났을 때 흔들릴 때, 밖으로 나갈 때, 집에 돌아온 뒤까지 이어서 연습해요',
     }),
   ).toBeVisible()
 
@@ -213,8 +213,8 @@ test('offers next practice and restart controls after the final scene', async ({
 test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await page.goto('/scenario/earthquake-protect-flow')
 
-  await page.getByRole('button', { name: '9번째 장면' }).click()
-  await expect(page.getByText('9 / 9')).toBeVisible()
+  await page.getByRole('button', { name: '14번째 장면' }).click()
+  await expect(page.getByText('14 / 14')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
