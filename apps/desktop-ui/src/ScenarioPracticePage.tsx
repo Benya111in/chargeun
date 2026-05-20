@@ -504,6 +504,8 @@ function PracticePanel({
   const isReviewSegment = isFinalSegment && reviewGroups.length > 0
   const canAskQuestion = !isIntroSegment && learnerActionCards.length > 0
   const canContinue = canAskQuestion ? selectedAnswer?.correct === true : true
+  const shouldEmphasizeNextButton =
+    canContinue && (canAskQuestion || isIntroSegment)
   const learnerDoNotText = canAskQuestion ? getLearnerDoNotText(segment) : null
   const safeReviewIndex = Math.min(
     reviewIndex,
@@ -725,14 +727,14 @@ function PracticePanel({
             }
             className={cn(
               'inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white',
-              canContinue && canAskQuestion && 'next-ready-attention',
+              shouldEmphasizeNextButton && 'next-ready-attention',
               !canContinue && 'cursor-not-allowed opacity-50',
             )}
             disabled={!canContinue}
             onClick={onNext}
             type="button"
           >
-            {canContinue && canAskQuestion ? (
+            {shouldEmphasizeNextButton ? (
               <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
                 이제 눌러요
               </span>

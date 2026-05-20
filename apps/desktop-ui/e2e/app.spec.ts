@@ -67,6 +67,8 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeEnabled()
+  await expect(page.locator('.next-ready-attention')).toHaveCount(1)
+  await expect(page.getByText('이제 눌러요')).toBeVisible()
 
   await page.getByRole('button', { name: '다음 장면 보기' }).click()
   await expect(page.getByText('2 / 7')).toBeVisible()
@@ -223,6 +225,14 @@ test('offers next practice and restart controls after the final scene', async ({
 
 test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await page.goto('/scenario/earthquake-protect-flow')
+
+  await page.getByRole('button', { name: '영상 시작하기' }).click()
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
+  })
+  await expect(page.getByText('지진 때 어떻게 할지 배워요.')).toBeVisible()
+  await expect(page.locator('.next-ready-attention')).toHaveCount(1)
+  await expect(page.getByText('이제 눌러요')).toBeVisible()
 
   await page.getByRole('button', { name: '17번째 장면' }).click()
   await expect(page.getByText('17 / 17')).toBeVisible()
