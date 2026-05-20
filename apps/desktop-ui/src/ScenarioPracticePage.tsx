@@ -508,6 +508,9 @@ function PracticePanel({
   const shouldEmphasizeNextButton =
     canContinue && (canAskQuestion || isIntroSegment)
   const learnerDoNotText = canAskQuestion ? getLearnerDoNotText(segment) : null
+  const learnerReasonText = canAskQuestion
+    ? getLearnerReasonText(segment.explanation.tracks.reason)
+    : null
   const safeReviewIndex = Math.min(
     reviewIndex,
     Math.max(reviewGroups.length - 1, 0),
@@ -589,32 +592,13 @@ function PracticePanel({
           </section>
         ) : (
           <>
-            <h2 className="text-lg font-semibold">지금 할 일</h2>
             {canAskQuestion ? (
-              <div className="grid gap-2 sm:grid-cols-3">
-                {learnerActionCards.map((card) => (
-                  <div
-                    key={`${card.order}-${card.label}`}
-                    className="rounded-md border border-[#151713] bg-[#151713] px-3 py-2 text-white"
-                  >
-                    <p className="text-xs font-semibold text-white/70">
-                      {getActionStepLabel(
-                        card.order,
-                        learnerActionCards.length,
-                      )}
-                    </p>
-                    <p className="mt-1 text-base font-semibold leading-6">
-                      {card.label}
-                    </p>
-                    {card.reason ? (
-                      <p className="mt-1 text-sm font-semibold leading-5 text-white/72">
-                        {card.reason}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
+              <div className="grid gap-2">
                 {learnerDoNotText ? (
                   <DoNotCard text={learnerDoNotText} />
+                ) : null}
+                {learnerReasonText ? (
+                  <ReasonCard text={learnerReasonText} />
                 ) : null}
               </div>
             ) : (
@@ -689,12 +673,6 @@ function PracticePanel({
                 )}
                 {selectedAnswer.feedback}
               </p>
-              <div className="rounded-md border border-[#dfe4da] bg-white px-3 py-1">
-                <p className="text-sm font-semibold leading-6">
-                  <span className="mr-2 text-[#596257]">이유</span>
-                  {getLearnerReasonText(segment.explanation.tracks.reason)}
-                </p>
-              </div>
             </div>
           ) : (
             <p className="mt-2 text-sm font-semibold leading-6 text-[#596257]">
@@ -755,12 +733,21 @@ function PracticePanel({
 
 function DoNotCard({ text }: { text: string }) {
   return (
-    <div className="rounded-md border border-rose-400 bg-rose-50 px-3 py-2 text-rose-950">
+    <div className="rounded-md border border-rose-400 bg-rose-50 px-4 py-3 text-rose-950">
       <div className="flex items-center gap-1.5 text-xs font-semibold">
         <TriangleAlert className="size-4 shrink-0" />
         하지 말아요
       </div>
-      <p className="mt-1 text-base font-semibold leading-6">{text}</p>
+      <p className="mt-1 text-lg font-semibold leading-7">{text}</p>
+    </div>
+  )
+}
+
+function ReasonCard({ text }: { text: string }) {
+  return (
+    <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950">
+      <h2 className="text-base font-semibold">왜 이렇게 해야 할까요?</h2>
+      <p className="mt-1 text-lg font-semibold leading-7">{text}</p>
     </div>
   )
 }
@@ -1081,11 +1068,6 @@ function getSegmentPreviewSec(segment: TheaterSegment) {
   }
 
   return Math.min(segment.endMs / 1000, previewMs / 1000)
-}
-
-function getActionStepLabel(order: number, total: number) {
-  void total
-  return `${order}번`
 }
 
 function buildScenarioReviewGroups(

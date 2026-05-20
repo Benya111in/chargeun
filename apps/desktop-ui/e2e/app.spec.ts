@@ -81,7 +81,7 @@ test('runs the scenario practice loop', async ({ page }) => {
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
-  await expect(page.getByText('지금 할 일')).toBeVisible()
+  await expect(page.getByText('지금 할 일')).toHaveCount(0)
   await expect(page.getByText('1번상황')).toBeVisible()
   await expect(page.getByText('2번해야 할 일')).toBeVisible()
   await expect(page.getByText('3번해야 할 일')).toBeVisible()
@@ -91,6 +91,8 @@ test('runs the scenario practice loop', async ({ page }) => {
   await expect(page.getByText('계단으로 나가요').first()).toBeVisible()
   await expect(page.getByText('하지 말아요')).toBeVisible()
   await expect(page.getByText('문 열어 두지 않아요.')).toBeVisible()
+  await expect(page.getByText('왜 이렇게 해야 할까요?')).toBeVisible()
+  await expect(page.getByText('문을 닫으면 연기가 덜 퍼져요.')).toBeVisible()
   await expect(page.getByText('여기를 골라요')).toBeVisible()
   await expect(page.locator('.question-attention')).toHaveCount(1)
   await expect(
@@ -108,8 +110,7 @@ test('runs the scenario practice loop', async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByText('답을 골랐어요')).toBeVisible()
   await expect(page.locator('.question-attention')).toHaveCount(0)
-  await expect(page.getByText('이유', { exact: true })).toBeVisible()
-  await expect(page.getByText('문을 닫으면 연기가 덜 퍼져요.')).toBeVisible()
+  await expect(page.getByText('이유', { exact: true })).toHaveCount(0)
   await expect(
     page.getByText('닫힌 문은 불길과 연기의 이동을 줄이는 데 도움이 됩니다.'),
   ).toHaveCount(0)
@@ -127,7 +128,7 @@ test('runs the scenario practice loop', async ({ page }) => {
   ).toBeEnabled()
   await expect(page.locator('.next-ready-attention')).toHaveCount(1)
   await expect(page.getByRole('button', { name: '열어 두기' })).toBeDisabled()
-  await expect(page.getByText('이유', { exact: true })).toBeVisible()
+  await expect(page.getByText('이유', { exact: true })).toHaveCount(0)
 
   await page.getByRole('button', { name: '다음 장면 보기' }).click()
   await expect(page.getByText('3 / 7')).toBeVisible()
@@ -244,15 +245,15 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
     page.getByText('안전디딤돌 앱에서 지진 대피소를 찾아요', {
       exact: true,
     }),
-  ).toHaveCount(2)
-  await expect(page.getByText('가까운 갈 곳을 볼 수 있어요')).toBeVisible()
+  ).toHaveCount(1)
+  await expect(page.getByText('지금 할 일')).toHaveCount(0)
+  await expect(page.getByText('왜 이렇게 해야 할까요?')).toBeVisible()
   await expect(
     page.getByText('넓은 공원으로 걸어가요', { exact: true }),
-  ).toHaveCount(2)
+  ).toHaveCount(1)
   await expect(
     page.getByText('넓은 운동장으로 걸어가요', { exact: true }),
-  ).toHaveCount(2)
-  await expect(page.getByText('넓어서 건물에서 떨어져요')).toHaveCount(2)
+  ).toHaveCount(1)
 
   await page.getByRole('button', { name: '16번째 장면' }).click()
   await expect(page.getByText('16 / 16')).toBeVisible()
