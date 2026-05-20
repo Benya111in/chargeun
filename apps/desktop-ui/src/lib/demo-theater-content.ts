@@ -1233,7 +1233,7 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '학교에서는 선생님 말을 들어요.',
-        endMs: 177_000,
+        endMs: 175_400,
         id: 'earthquake-full-school-evacuation',
         label: '선생님 말을 들어요',
         learnerExplanation: '선생님 말을 듣고 창문에서 떨어져요.',
@@ -1257,7 +1257,7 @@ export const learningScenarios: TheaterShow[] = [
             text: '복도에서는 창문 유리가 깨질 우려가 크므로 창문과 떨어져 이동합니다.',
           },
           {
-            endMs: 177_000,
+            endMs: 175_400,
             source: 'audio',
             startMs: 168_760,
             text: '운동장이 건물과 너무 가까이 있다면 주변의 넓은 공원을 찾아서 대피합니다.',
@@ -1285,7 +1285,7 @@ export const learningScenarios: TheaterShow[] = [
           ocrTokens: ['선생님의 안내', '창문 주의', '운동장'],
           sessionId: 'demo-earthquake-full-school-evacuation',
           startMs: 145_600,
-          endMs: 177_000,
+          endMs: 175_400,
           uiElements: ['선생님 안내에 따라 대피'],
         }),
         rules: earthquakeRuleCatalog,
@@ -1316,7 +1316,7 @@ export const learningScenarios: TheaterShow[] = [
           {
             endMs: 185_600,
             source: 'audio',
-            startMs: 177_000,
+            startMs: 175_400,
             text: '엘리베이터를 타고 있다면 멈췄다고 해서 서둘러 출구로 뛰어가는 것은 위험하므로 안내에 따라 안전하게 행동합니다.',
           },
         ],
@@ -1341,7 +1341,7 @@ export const learningScenarios: TheaterShow[] = [
           objectHints: ['엘리베이터', '출구', '도움 버튼', '대기'],
           ocrTokens: ['엘리베이터', '안전하게 행동'],
           sessionId: 'demo-earthquake-full-elevator-wait',
-          startMs: 177_000,
+          startMs: 175_400,
           endMs: 185_600,
           uiElements: ['엘리베이터 안'],
         }),
@@ -1352,7 +1352,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_15'],
           phase: 'after_shaking',
         },
-        startMs: 177_000,
+        startMs: 175_400,
         teacherGuide: {
           correction:
             '엘리베이터 장면은 뛰어나가기보다 도움 버튼, 인터폰, 안내 따르기로 정리합니다.',

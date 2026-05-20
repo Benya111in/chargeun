@@ -342,8 +342,8 @@ describe('learningScenarios', () => {
       (segment) => segment.id === 'earthquake-full-after-report',
     )
 
-    expect(school?.endMs).toBe(177_000)
-    expect(elevator?.startMs).toBe(177_000)
+    expect(school?.endMs).toBe(175_400)
+    expect(elevator?.startMs).toBe(175_400)
     expect(elevator?.endMs).toBe(185_600)
     expect(afterReport?.startMs).toBe(194_500)
   })
