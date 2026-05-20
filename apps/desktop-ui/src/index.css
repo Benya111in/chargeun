@@ -70,12 +70,12 @@
   .question-attention {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(120deg, #fffdf4 0%, #ecfdf5 48%, #e0f2fe 100%);
-    background-size: 220% 220%;
-    animation: question-attention-pulse 2.4s ease-in-out infinite;
+    background: linear-gradient(120deg, #fff7ed 0%, #d1fae5 48%, #bae6fd 100%);
+    background-size: 260% 260%;
+    animation: question-attention-pulse 1.15s ease-in-out infinite;
     box-shadow:
-      0 0 0 3px rgba(16, 185, 129, 0.14),
-      0 12px 30px rgba(16, 185, 129, 0.12);
+      0 0 0 4px rgba(16, 185, 129, 0.26),
+      0 14px 34px rgba(16, 185, 129, 0.18);
   }
 
   .question-attention::before {
@@ -86,15 +86,22 @@
     background: linear-gradient(
       100deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.62) 46%,
+      rgba(255, 255, 255, 0.82) 46%,
       transparent 72%
     );
     transform: translateX(-120%);
-    animation: question-attention-sweep 2.4s ease-in-out infinite;
+    animation: question-attention-sweep 1.15s ease-in-out infinite;
   }
 
   .question-attention > * {
     position: relative;
+  }
+
+  .next-ready-attention {
+    animation: next-ready-pulse 1.15s ease-in-out infinite;
+    box-shadow:
+      0 0 0 4px rgba(21, 23, 19, 0.16),
+      0 12px 28px rgba(21, 23, 19, 0.2);
   }
 }
 
@@ -103,15 +110,15 @@
   100% {
     background-position: 0% 50%;
     box-shadow:
-      0 0 0 3px rgba(16, 185, 129, 0.12),
-      0 12px 28px rgba(16, 185, 129, 0.1);
+      0 0 0 4px rgba(16, 185, 129, 0.2),
+      0 12px 30px rgba(16, 185, 129, 0.12);
   }
 
   50% {
     background-position: 100% 50%;
     box-shadow:
-      0 0 0 5px rgba(16, 185, 129, 0.24),
-      0 18px 38px rgba(16, 185, 129, 0.18);
+      0 0 0 8px rgba(16, 185, 129, 0.38),
+      0 20px 46px rgba(16, 185, 129, 0.26);
   }
 }
 
@@ -127,9 +134,25 @@
   }
 }
 
+@keyframes next-ready-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(21, 23, 19, 0.14),
+      0 10px 24px rgba(21, 23, 19, 0.18);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 7px rgba(21, 23, 19, 0.24),
+      0 18px 36px rgba(21, 23, 19, 0.26);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .question-attention,
-  .question-attention::before {
+  .question-attention::before,
+  .next-ready-attention {
     animation: none;
   }
 }

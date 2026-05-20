@@ -40,6 +40,7 @@ type PlaybackWindow = {
 }
 
 type ScenarioReviewGroup = {
+  doNotText: string | null
   segmentId: string
   steps: string[]
   title: string
@@ -501,12 +502,17 @@ function PracticePanel({
   setSelectedAnswerId: (value: string) => void
   stage: PracticeStage
 }) {
+  const [reviewIndex, setReviewIndex] = useState(0)
   const learnerActionCards = getLearnerActionCards(segment)
   const isIntroSegment = segment.practiceMode === 'intro'
   const isReviewSegment = isFinalSegment && reviewGroups.length > 0
   const canAskQuestion = !isIntroSegment && learnerActionCards.length > 0
   const canContinue = canAskQuestion ? selectedAnswer?.correct === true : true
   const learnerDoNotText = canAskQuestion ? getLearnerDoNotText(segment) : null
+  const safeReviewIndex = Math.min(
+    reviewIndex,
+    Math.max(reviewGroups.length - 1, 0),
+  )
 
   if (stage === 'rest') {
     return (
@@ -558,7 +564,11 @@ function PracticePanel({
   return (
     <section className="rounded-md border border-[#dfe4da] bg-white p-3">
       {isReviewSegment ? (
-        <ScenarioReviewList groups={reviewGroups} />
+        <ScenarioReviewCarousel
+          groups={reviewGroups}
+          reviewIndex={safeReviewIndex}
+          setReviewIndex={setReviewIndex}
+        />
       ) : (
         <SceneNarrationList segment={segment} />
       )}
@@ -631,7 +641,7 @@ function PracticePanel({
                   : 'bg-emerald-700 text-white',
               )}
             >
-              {selectedAnswer ? '답을 골랐어요' : '답을 골라요'}
+              {selectedAnswer ? '답을 골랐어요' : '여기를 골라요'}
             </span>
           </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -684,7 +694,7 @@ function PracticePanel({
             </div>
           ) : (
             <p className="mt-2 text-sm font-semibold leading-6 text-[#596257]">
-              헷갈리면 다시 볼 수 있어요. 맞는 답을 고르면 다음 장면으로 가요.
+              답을 하나 고르면 다음으로 갈 수 있어요.
             </p>
           )}
         </section>
@@ -714,15 +724,24 @@ function PracticePanel({
           />
         ) : (
           <button
+            aria-label={
+              canContinue ? '다음 장면 보기' : '답을 고르면 다음 장면으로 가요'
+            }
             className={cn(
               'inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white',
+              canContinue && canAskQuestion && 'next-ready-attention',
               !canContinue && 'cursor-not-allowed opacity-50',
             )}
             disabled={!canContinue}
             onClick={onNext}
             type="button"
           >
-            다음 장면 보기
+            {canContinue && canAskQuestion ? (
+              <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
+                이제 눌러요
+              </span>
+            ) : null}
+            {canContinue ? '다음 장면 보기' : '답을 고르면 다음으로 가요'}
           </button>
         )}
       </div>
@@ -742,41 +761,100 @@ function DoNotCard({ text }: { text: string }) {
   )
 }
 
-function ScenarioReviewList({ groups }: { groups: ScenarioReviewGroup[] }) {
+function ScenarioReviewCarousel({
+  groups,
+  reviewIndex,
+  setReviewIndex,
+}: {
+  groups: ScenarioReviewGroup[]
+  reviewIndex: number
+  setReviewIndex: (value: number) => void
+}) {
+  const group = groups[reviewIndex]
+  const canGoPrevious = reviewIndex > 0
+  const canGoNext = reviewIndex < groups.length - 1
+
+  if (!group) {
+    return null
+  }
+
   return (
     <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-2">
-      <h2 className="text-lg font-semibold">한 번 더 복습해요</h2>
-      <p className="mt-1 text-sm leading-6 text-[#596257]">
-        장면별로 기억할 행동을 순서대로 봐요.
-      </p>
-      <ol className="mt-2 grid gap-1.5">
-        {groups.map((group, index) => (
-          <li
-            key={group.segmentId}
-            className="rounded-md border border-[#dfe4da] bg-white px-3 py-2"
-          >
-            <p className="text-xs font-semibold text-[#596257]">
-              {index + 1}번 장면
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">한 장씩 복습해요</h2>
+          <p className="mt-1 text-sm leading-6 text-[#596257]">
+            해야 할 일과 하지 말 일을 같이 봐요.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-md bg-[#151713] px-2 py-1 text-sm font-semibold text-white">
+          {reviewIndex + 1} / {groups.length}
+        </span>
+      </div>
+
+      <article className="mt-2 rounded-md border border-[#dfe4da] bg-white p-3">
+        <h3 className="text-2xl font-semibold leading-8">{group.title}</h3>
+
+        <section className="mt-3">
+          <p className="text-sm font-semibold text-emerald-900">해야 할 일</p>
+          <ol className="mt-2 grid gap-2">
+            {group.steps.map((step, stepIndex) => (
+              <li
+                key={`${group.segmentId}-${step}`}
+                className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2"
+              >
+                <span className="text-xs font-semibold text-emerald-900">
+                  {stepIndex + 1}번
+                </span>
+                <p className="mt-1 text-lg font-semibold leading-7">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {group.doNotText ? (
+          <section className="mt-3 rounded-md border border-rose-400 bg-rose-50 px-3 py-2 text-rose-950">
+            <div className="flex items-center gap-1.5 text-sm font-semibold">
+              <TriangleAlert className="size-4 shrink-0" />
+              하지 말아요
+            </div>
+            <p className="mt-1 text-lg font-semibold leading-7">
+              {group.doNotText}
             </p>
-            <h3 className="mt-1 text-lg font-semibold">{group.title}</h3>
-            <ol className="mt-2 grid gap-2 sm:grid-cols-2">
-              {group.steps.map((step, stepIndex) => (
-                <li
-                  key={`${group.segmentId}-${step}`}
-                  className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2"
-                >
-                  <span className="text-xs font-semibold text-[#596257]">
-                    {stepIndex + 1}번
-                  </span>
-                  <p className="mt-1 text-base font-semibold leading-7">
-                    {step}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </li>
-        ))}
-      </ol>
+          </section>
+        ) : null}
+      </article>
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <button
+          className="inline-flex min-h-9 items-center rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-semibold text-[#151713] disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={!canGoPrevious}
+          onClick={() => setReviewIndex(reviewIndex - 1)}
+          type="button"
+        >
+          이전 복습
+        </button>
+        <div className="flex gap-1">
+          {groups.map((item, index) => (
+            <span
+              key={item.segmentId}
+              aria-label={`복습 ${index + 1}`}
+              className={cn(
+                'size-2 rounded-full',
+                index === reviewIndex ? 'bg-[#151713]' : 'bg-[#cfd6cc]',
+              )}
+            />
+          ))}
+        </div>
+        <button
+          className="inline-flex min-h-9 items-center rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:border-[#dfe4da] disabled:bg-white disabled:text-[#596257]"
+          disabled={!canGoNext}
+          onClick={() => setReviewIndex(reviewIndex + 1)}
+          type="button"
+        >
+          다음 복습
+        </button>
+      </div>
     </section>
   )
 }
@@ -991,6 +1069,7 @@ function buildScenarioReviewGroups(
   return scenario.segments
     .slice(0, currentIndex + 1)
     .map((item) => ({
+      doNotText: getLearnerDoNotText(item),
       segmentId: item.id,
       steps: getLearnerActionCards(item).map((card) => card.label),
       title: item.label,
