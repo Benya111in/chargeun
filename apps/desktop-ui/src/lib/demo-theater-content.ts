@@ -24,6 +24,7 @@ import {
 import { simplifyLearnerCopy, simplifyTeachBack } from './learner-copy'
 
 export type TheaterSegment = {
+  actionReasons: string[]
   actionSteps: string[]
   answerOptions: PracticeAnswerOption[]
   checkQuestion: string
@@ -90,6 +91,7 @@ export type TheaterShow = {
 }
 
 type SegmentSeed = {
+  actionReasons?: string[]
   actionSteps?: string[]
   description: string
   endMs: number
@@ -956,8 +958,17 @@ export const learningScenarios: TheaterShow[] = [
         label: '밖에서 머리를 가려요',
         learnerExplanation: '가방으로 머리를 가리고 멀어져요.',
         learnerPrompt: '밖에도 유리와 간판이 떨어져요.',
-        actionSteps: ['가방을 들어요', '머리를 가려요', '건물에서 멀어져요'],
-        pauseMs: 101_000,
+        actionSteps: [
+          '가방으로 머리를 가려요',
+          '건물에서 멀어져요',
+          '담장에서 멀어져요',
+        ],
+        actionReasons: [
+          '유리와 간판이 떨어질 수 있어요',
+          '벽에서 물건이 떨어질 수 있어요',
+          '담장이 무너질 수 있어요',
+        ],
+        pauseMs: 102_640,
         narration: [
           {
             endMs: 89_840,
@@ -1015,13 +1026,22 @@ export const learningScenarios: TheaterShow[] = [
         },
       }),
       createSegment({
-        description: '앱을 못 보면 공원이나 운동장으로 가요.',
+        description: '안전한 곳을 찾아 걸어가요.',
         endMs: 121_240,
         id: 'earthquake-full-open-space',
-        label: '공원이나 운동장으로 가요',
-        learnerExplanation: '공원이나 운동장으로 걸어가요.',
-        learnerPrompt: '안전디딤돌 앱을 볼 수 있어요.',
-        actionSteps: ['앱을 봐요', '공원으로 가요', '운동장으로 가요'],
+        label: '안전한 곳으로 걸어가요',
+        learnerExplanation: '안전디딤돌 앱을 보고 넓은 곳으로 가요.',
+        learnerPrompt: '밖으로 나온 뒤 갈 곳을 찾아요.',
+        actionSteps: [
+          '안전디딤돌 앱에서 찾아요',
+          '넓은 공원으로 걸어가요',
+          '넓은 운동장으로 걸어가요',
+        ],
+        actionReasons: [
+          '가까운 갈 곳을 볼 수 있어요',
+          '넓어서 건물에서 떨어져요',
+          '넓어서 건물에서 떨어져요',
+        ],
         narration: [
           {
             endMs: 108_960,
@@ -1054,7 +1074,7 @@ export const learningScenarios: TheaterShow[] = [
             label: '공원이나 운동장',
           },
           kind: 'place',
-          prompt: '앱을 못 보면 어디로 갈까요?',
+          prompt: '안전디딤돌을 못 보면 어디로 갈까요?',
           ruleIds: ['KR_EQ_09'],
         }),
         packet: createPacket({
@@ -2148,6 +2168,10 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
               safetyView.explanation.tracks.easy,
           ]
         ).map(simplifyLearnerCopy)
+  const actionReasons =
+    practiceMode === 'intro'
+      ? []
+      : (seed.actionReasons ?? []).map(simplifyLearnerCopy)
   const learnerTeachBack = simplifyTeachBack(seed.teachBack)
   const structuredExplanation = buildStructuredLearningExplanation({
     decisionPoint: learnerTeachBack.prompt,
@@ -2174,6 +2198,7 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
   )
 
   return {
+    actionReasons,
     actionSteps,
     answerOptions:
       practiceMode === 'intro' || !teachBack

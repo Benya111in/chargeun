@@ -605,6 +605,11 @@ function PracticePanel({
                     <p className="mt-1 text-base font-semibold leading-6">
                       {card.label}
                     </p>
+                    {card.reason ? (
+                      <p className="mt-1 text-sm font-semibold leading-5 text-white/72">
+                        {card.reason}
+                      </p>
+                    ) : null}
                   </div>
                 ))}
                 {learnerDoNotText ? (
@@ -1040,8 +1045,12 @@ function buildPlaybackWindow({
   segment: TheaterSegment
 }): PlaybackWindow {
   const startSec = getSegmentStartSec(segment)
+  const hasExplicitPause = segment.pauseMs !== undefined
   const rawEndSec = (segment.pauseMs ?? segment.endMs) / 1000
-  const clampSec = Math.max(startSec, rawEndSec - framePrecisionSec)
+  const clampSec = Math.max(
+    startSec,
+    rawEndSec - (hasExplicitPause ? 0 : framePrecisionSec),
+  )
 
   return {
     clampSec,

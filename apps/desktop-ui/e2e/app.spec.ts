@@ -153,7 +153,7 @@ test('offers next practice and restart controls after the final scene', async ({
 }) => {
   await page.goto('/scenario/fire-grounded-flow')
 
-  await page.getByRole('button', { name: '7번째 장면' }).click()
+  await page.getByRole('button', { name: '7번째 장면', exact: true }).click()
   await expect(page.getByText('7 / 7')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
@@ -233,6 +233,24 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await expect(page.getByText('지진 때 어떻게 할지 배워요.')).toBeVisible()
   await expect(page.locator('.next-ready-attention')).toHaveCount(1)
   await expect(page.getByText('이제 눌러요')).toBeVisible()
+
+  await page.getByRole('button', { name: '7번째 장면', exact: true }).click()
+  await expect(page.getByText('7 / 17')).toBeVisible()
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
+  })
+  await expect(page.getByText('밖으로 나온 뒤 갈 곳을 찾아요.')).toHaveCount(2)
+  await expect(
+    page.getByText('안전디딤돌 앱에서 찾아요', { exact: true }),
+  ).toHaveCount(2)
+  await expect(page.getByText('가까운 갈 곳을 볼 수 있어요')).toBeVisible()
+  await expect(
+    page.getByText('넓은 공원으로 걸어가요', { exact: true }),
+  ).toHaveCount(2)
+  await expect(
+    page.getByText('넓은 운동장으로 걸어가요', { exact: true }),
+  ).toHaveCount(2)
+  await expect(page.getByText('넓어서 건물에서 떨어져요')).toHaveCount(2)
 
   await page.getByRole('button', { name: '17번째 장면' }).click()
   await expect(page.getByText('17 / 17')).toBeVisible()

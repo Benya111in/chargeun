@@ -25,6 +25,7 @@ function getLearnerVisibleTexts(
     segment.learnerPrompt,
     segment.learnerExplanation,
     ...segment.actionSteps,
+    ...segment.actionReasons,
     ...segment.learnerSequence.map((step) => step.text),
     segment.checkQuestion,
     ...segment.answerOptions.flatMap((option) => [
@@ -91,6 +92,12 @@ describe('learningScenarios', () => {
           ).toEqual(segment.actionSteps.map(() => 'action'))
           expect(segment.actionSteps.length).toBeGreaterThanOrEqual(1)
           expect(segment.actionSteps.length).toBeLessThanOrEqual(3)
+          expect(segment.actionReasons.length).toBeLessThanOrEqual(
+            segment.actionSteps.length,
+          )
+          for (const actionReason of segment.actionReasons) {
+            expect(actionReason.length).toBeLessThanOrEqual(35)
+          }
           expect(
             getLearnerActionCards(segment).map((card) => card.label),
           ).toEqual(segment.actionSteps)
@@ -278,10 +285,13 @@ describe('learningScenarios', () => {
       expect.stringContaining('안전디딤돌'),
     )
     expect(visibleText('earthquake-full-open-space')).toEqual(
-      expect.stringContaining('공원'),
+      expect.stringContaining('넓은 공원'),
     )
     expect(visibleText('earthquake-full-open-space')).toEqual(
-      expect.stringContaining('운동장'),
+      expect.stringContaining('넓은 운동장'),
+    )
+    expect(visibleText('earthquake-full-open-space')).toEqual(
+      expect.stringContaining('넓어서 건물에서 떨어져요'),
     )
     expect(visibleText('earthquake-full-sturdy-building')).toEqual(
       expect.stringContaining('튼튼한 건물'),
@@ -336,6 +346,18 @@ describe('learningScenarios', () => {
     expect(elevator?.startMs).toBe(177_000)
     expect(elevator?.endMs).toBe(185_600)
     expect(afterReport?.startMs).toBe(194_500)
+  })
+
+  it('does not pause the outdoor earthquake narration before the sentence ends', () => {
+    const earthquakeScenario = learningScenarios.find(
+      (scenario) => scenario.id === 'earthquake-protect-flow',
+    )!
+    const outdoor = earthquakeScenario.segments.find(
+      (segment) => segment.id === 'earthquake-full-outside-head',
+    )!
+
+    expect(outdoor.pauseMs).toBe(outdoor.endMs)
+    expect(outdoor.pauseMs).toBe(outdoor.narration.at(-1)?.endMs)
   })
 
   it('hides learner action cards when structured status requires review', () => {

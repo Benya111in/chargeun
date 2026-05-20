@@ -4,6 +4,7 @@ export type LearnerActionCard = {
   label: string
   officialRuleIds: string[]
   order: number
+  reason?: string
 }
 
 export function getLearnerActionCards(
@@ -24,5 +25,8 @@ export function getLearnerActionCards(
     return []
   }
 
-  return (structured.tracks.action?.cards ?? []).slice(0, 3)
+  return (structured.tracks.action?.cards ?? []).slice(0, 3).map((card) => ({
+    ...card,
+    reason: segment.actionReasons[card.order - 1],
+  }))
 }
