@@ -72,7 +72,7 @@ export default function TeacherGuidePage() {
               <p className="text-sm font-semibold">진행 원칙</p>
               <p className="mt-2 text-xl font-semibold leading-8">
                 이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른,
-                현장 안내를 먼저 따르세요.
+                현장 안내를 우선 따르세요.
               </p>
             </div>
 

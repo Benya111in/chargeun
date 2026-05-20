@@ -11,7 +11,7 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByText(
-      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.',
+      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.',
     ),
   ).toBeVisible()
   await expect(page.getByText('화면 공유 시작')).toHaveCount(0)
@@ -40,7 +40,9 @@ test('runs the scenario practice loop', async ({ page }) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
   await expect(page.getByText('아파트 화재 연습을 시작해요.')).toBeVisible()
-  await expect(page.getByText('장면에서 나온 내용')).toBeVisible()
+  await expect(page.getByText('순서대로 따라해요')).toBeVisible()
+  await expect(page.getByText('음성 설명')).toHaveCount(0)
+  await expect(page.getByText('화면 글자')).toHaveCount(0)
   await expect(
     page.getByText(
       '매년 약 2,800건이 발생하는 아파트 화재. 사상자의 약 40%는 대피 중 발생했습니다. 아파트에 화재가 발생했을 때 다음과 같이 행동합시다.',
@@ -240,7 +242,7 @@ test('keeps earthquake review scenario route as a compatibility alias', async ({
   ).toBeVisible()
   await expect(
     page.getByText(
-      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.',
+      '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.',
     ),
   ).toBeVisible()
 })

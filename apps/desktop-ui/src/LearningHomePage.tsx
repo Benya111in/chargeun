@@ -10,7 +10,7 @@ import { homeLearningScenarios } from './lib/demo-theater-content'
 import { cn } from './lib/utils'
 
 const safetyNotice =
-  '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
+  '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.'
 
 export default function LearningHomePage() {
   return (
@@ -38,7 +38,7 @@ export default function LearningHomePage() {
           </div>
 
           <aside className="rounded-md border border-amber-300 bg-amber-50 p-5 text-amber-950">
-            <p className="text-sm font-semibold">먼저 기억해요</p>
+            <p className="text-sm font-semibold">연습 전에 기억해요</p>
             <p className="mt-3 text-2xl font-semibold leading-9">
               {safetyNotice}
             </p>

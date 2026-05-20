@@ -98,7 +98,7 @@ type SegmentSeed = {
 }
 
 const defaultSafetyNotice =
-  '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
+  '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.'
 
 export const learningScenarios: TheaterShow[] = [
   {
@@ -113,7 +113,7 @@ export const learningScenarios: TheaterShow[] = [
         id: 'fire-full-alert',
         label: '화재 연습을 시작해요',
         learnerExplanation: '아파트 화재 연습을 시작해요.',
-        learnerPrompt: '먼저 숫자와 제목을 보고 있어요.',
+        learnerPrompt: '숫자와 제목을 보고 있어요.',
         actionSteps: [],
         narration: [
           {
@@ -149,7 +149,7 @@ export const learningScenarios: TheaterShow[] = [
             label: '지금 바로 행동 고르기',
           },
           correct: {
-            feedback: '맞아요. 먼저 화재 연습이 시작되는 장면이에요.',
+            feedback: '맞아요. 화재 연습이 시작되는 장면이에요.',
             id: 'watch-intro',
             label: '연습 시작 보기',
           },
