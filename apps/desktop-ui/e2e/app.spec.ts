@@ -82,7 +82,11 @@ test('renders the teacher guide with hidden tracks and official evidence', async
   await expect(page.getByText('진행자 설명').first()).toBeVisible()
   await expect(page.getByText('오해 교정').first()).toBeVisible()
   await expect(page.getByText('공식 근거').first()).toBeVisible()
-  await expect(page.getByText('KR_FIRE_04')).toBeVisible()
+  await expect(page.getByText('구조적 멀티트랙').first()).toBeVisible()
+  await expect(page.getByText('억제 후보').first()).toBeVisible()
+  await expect(
+    page.getByText('KR_FIRE_04 · 국민재난안전포털 - 화재 발생시 행동요령'),
+  ).toBeVisible()
 })
 
 test('keeps live screen-share analysis isolated under /live-lab', async ({
@@ -168,6 +172,7 @@ test('keeps the operator workspace behind the internal QA flag', async ({
   await expect(
     page.getByRole('button', { name: '현재 모니터 읽기 시작' }),
   ).toBeVisible()
+  await expect(page.getByText('LRS 초안').first()).toBeVisible()
 })
 
 test('renders a clear not-found state for unknown routes', async ({ page }) => {

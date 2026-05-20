@@ -1,6 +1,8 @@
 import {
+  evidenceBundleSchema,
   perceptionPacketSchema,
   type CaptureFrameSample,
+  type EvidenceBundle,
   type PerceptionPacket,
 } from '@ansimtrack/shared-types'
 
@@ -214,6 +216,46 @@ export const buildPerceptionCacheKey = (
     hashCachePart(packet.keyframes.join('|')),
   ].join(':')
 
+export const normalizeEvidenceBundleFromPacket = (input: {
+  modelInference?: EvidenceBundle['modelInference']
+  packet: PerceptionPacket
+  ruleEvidence?: EvidenceBundle['ruleEvidence']
+}) => {
+  const bundle: EvidenceBundle = {
+    visualEvidence: input.packet.objectHints.map((hint) => ({
+      bbox: toNormalizedBbox(hint.bbox),
+      frameTimeMs: input.packet.tStartMs,
+      observation: hint.label,
+    })),
+    ocrEvidence: [
+      ...input.packet.ocrTokens.map((text) => ({
+        confidence: 0.7,
+        text,
+        timeMs: input.packet.tStartMs,
+      })),
+      ...input.packet.uiElements.map((element) => ({
+        confidence: element.conf,
+        text: element.label,
+        timeMs: input.packet.tStartMs,
+      })),
+    ],
+    asrEvidence: input.packet.asrText.trim()
+      ? [
+          {
+            confidence: 0.72,
+            endMs: input.packet.tEndMs,
+            startMs: input.packet.tStartMs,
+            text: input.packet.asrText.trim(),
+          },
+        ]
+      : [],
+    modelInference: input.modelInference ?? [],
+    ruleEvidence: input.ruleEvidence ?? [],
+  }
+
+  return evidenceBundleSchema.parse(bundle)
+}
+
 const hashCachePart = (value: string) => {
   let hash = 5381
 
@@ -242,3 +284,15 @@ const dedupeByLabel = <T extends { label: string }>(items: T[]) => {
     return true
   })
 }
+
+function toNormalizedBbox(bbox: number[]): [number, number, number, number] {
+  return [
+    clampNumber(bbox[0] ?? 0.08, 0, 1),
+    clampNumber(bbox[1] ?? 0.08, 0, 1),
+    clampNumber(bbox[2] ?? 0.2, 0.01, 1),
+    clampNumber(bbox[3] ?? 0.12, 0.01, 1),
+  ]
+}
+
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value))

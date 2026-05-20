@@ -56,6 +56,126 @@ export type SegmentExplanation = {
   overlayTargets: OverlayTarget[]
 }
 
+export type LearningSegmentStatus =
+  | 'draft'
+  | 'validated'
+  | 'needs_review'
+  | 'blocked'
+
+export type LearningReadingLevel = 'very_easy' | 'easy' | 'standard'
+
+export type LearningSegment = {
+  segmentId: string
+  sessionId: string
+  sourceId: string
+  hazard: HazardType
+  phase: string
+  decisionPoint: string
+  startMs: number
+  endMs: number
+  confidence: number
+  status: LearningSegmentStatus
+}
+
+export type LearningActionCard = {
+  label: string
+  order: number
+  officialRuleIds: string[]
+}
+
+export type LearningTrackSet = {
+  easy: {
+    text: string
+    maxReadingLevel: LearningReadingLevel
+  }
+  action?: {
+    cards: LearningActionCard[]
+  }
+  reason: {
+    text: string
+    officialRuleIds: string[]
+  }
+  doNot?: {
+    text: string
+    officialRuleIds: string[]
+  }
+  caregiver?: {
+    script: string
+    correctionHint: string
+  }
+  report?: {
+    text: string
+    emergencyNumbers: string[]
+    condition: string
+  }
+}
+
+export type EvidenceBundle = {
+  visualEvidence: Array<{
+    frameTimeMs: number
+    observation: string
+    bbox?: [number, number, number, number]
+  }>
+  ocrEvidence: Array<{
+    text: string
+    timeMs: number
+    confidence: number
+  }>
+  asrEvidence: Array<{
+    text: string
+    startMs: number
+    endMs: number
+    confidence: number
+  }>
+  ruleEvidence: Array<{
+    ruleId: string
+    title: string
+    matchedText: string
+    sourceName: string
+  }>
+  modelInference: Array<{
+    claim: string
+    basedOn: Array<'visual' | 'ocr' | 'asr' | 'rule'>
+  }>
+}
+
+export type SuppressedCandidate = {
+  candidate: string
+  category:
+    | 'unsafe_action'
+    | 'unsupported_action'
+    | 'too_many_actions'
+    | 'unclear_evidence'
+    | 'not_for_learner'
+  reason: string
+  evidenceRefs: string[]
+}
+
+export type StructuredLearningExplanation = {
+  version: 'slowlearner_multitrack_v1'
+  segment: LearningSegment
+  tracks: LearningTrackSet
+  evidence: EvidenceBundle
+  suppressedCandidates: SuppressedCandidate[]
+  validation: {
+    schemaValid: boolean
+    hasGroundedAction: boolean
+    learnerSafe: boolean
+    requiresHumanReview: boolean
+    warnings: string[]
+  }
+}
+
+export type LearningReviewSubmission = {
+  reviewerId: string
+  segmentId: string
+  submittedAt: string
+  lrsAnswers: Record<string, 'yes' | 'no' | 'na'>
+  learnerSimulationNotes?: string
+  blockedReason?: string
+  approvedForLearner: boolean
+}
+
 export type PerceptionPacket = {
   sessionId: string
   tStartMs: number

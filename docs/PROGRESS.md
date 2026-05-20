@@ -7,17 +7,33 @@
 - `/live-lab` 화면공유 직후 흰 화면으로 보일 수 있는 live sampler 경로를 점검하고, browser frame timestamp를 epoch 시간이 아니라 세션 시작 후 경과 시간으로 정규화했다
 - canvas draw/toDataURL 샘플링 예외가 발생해도 앱 전체 렌더링을 깨지 않도록 sampler 내부에서 1회 경고 후 해당 frame만 건너뛰게 했다
 - 실제 사용자 화면을 외부로 보내지 않는 합성 `getDisplayMedia` E2E를 추가해, beta code 확인 -> 화면공유 시작 -> Shadow replay frame 표시 -> mocked perception 분석 반영 흐름을 회귀 테스트로 고정했다
+- V2A 멀티트랙 제안서의 1차 적용 범위를 계약 우선으로 정하고, `StructuredLearningExplanation v1` 타입/schema를 `shared-types`에 추가했다
+- 기존 `SegmentExplanation`을 제거하지 않고 `StructuredLearningExplanation -> SegmentExplanation` adapter를 둬 학습자 UI를 복잡하게 만들지 않는 병행 구조로 전환했다
+- `buildStructuredLearningExplanation`, `validateLearningExplanation`, `buildSuppressedCandidates`, `toLegacySegmentExplanation` deterministic path를 `llm-orchestrator`에 추가했다
+- `PerceptionPacket`에서 visual/OCR/ASR/rule evidence를 분리하는 normalization helper를 `perception-pipeline`에 추가했다
+- 현재 `learningScenarios` 모든 segment가 새 structured schema를 통과하도록 adapter를 붙이고, `/teacher`에는 segment status, 행동 카드별 rule id, 분리 근거, 억제 후보를 표시했다
+- `/qa`에는 LRS 초안 체크리스트를 추가해 공식 근거, 한 판단 지점, 쉬운말, 근거 출처 분리, 학습자 공개 가능 여부를 수동 검수할 수 있게 했다
 
 ### 검증
 
 - `pnpm --filter desktop-ui test`
 - `pnpm --filter desktop-ui typecheck`
 - `pnpm --filter desktop-ui test:e2e`
+- `pnpm --filter @ansimtrack/shared-types test`
+- `pnpm --filter @ansimtrack/llm-orchestrator test`
+- `pnpm --filter @ansimtrack/perception-pipeline test`
+- `pnpm typecheck`
+- `pnpm --filter desktop-ui lint`
+- `pnpm lint`
+- `pnpm --filter desktop-ui test:e2e`
+- Browser preview check: `/teacher` structured panel and `/qa?internal=qa` LRS panel render with no console errors
 
 ### 다음
 
 1. 민감정보가 없는 테스트 탭으로 실제 Chrome 화면공유 + OpenAI perception 호출을 수동 rehearsal
 2. `/live-lab`이 실제 API 지연/오류 시 마지막 안정 설명을 유지하는지 장시간 확인
+3. `LearningReviewSubmission`을 실제 QA 저장 구조에 연결하고 LRS/LAS 분석을 분리
+4. structured output LLM 생성은 내부 QA 경로에서만 schema/validation/fallback을 통과시킨 뒤 실험
 
 ## 2026-05-11
 

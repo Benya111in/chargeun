@@ -7,6 +7,7 @@ import {
   buildPerceptionFoundation,
   buildPerceptionPacket,
   deriveObjectHints,
+  normalizeEvidenceBundleFromPacket,
   selectFrameSamplingPlan,
 } from './index'
 
@@ -78,6 +79,38 @@ describe('buildPerceptionFoundation', () => {
     })
 
     expect(first).not.toBe(second)
+  })
+})
+
+describe('normalizeEvidenceBundleFromPacket', () => {
+  it('separates visual, OCR, ASR, and rule evidence', () => {
+    const packet = buildPerceptionPacket({
+      asrText: '현관문을 닫고 계단으로 대피합니다.',
+      frames: createFrames(['frame-a']),
+      objectHints: [
+        { label: '현관문', bbox: [0.1, 0.2, 0.2, 0.3], conf: 0.88 },
+      ],
+      ocrTokens: ['현관문', '계단'],
+      uiElements: [
+        { label: '대피 안내', bbox: [0.5, 0.1, 0.3, 0.1], conf: 0.9 },
+      ],
+    })
+    const bundle = normalizeEvidenceBundleFromPacket({
+      packet,
+      ruleEvidence: [
+        {
+          matchedText: '나갈 때 출입문을 닫아 연기와 불길의 확산을 늦춥니다.',
+          ruleId: 'KR_FIRE_04',
+          sourceName: '국민재난안전포털',
+          title: 'door_control',
+        },
+      ],
+    })
+
+    expect(bundle.visualEvidence[0]?.observation).toBe('현관문')
+    expect(bundle.ocrEvidence.map((item) => item.text)).toContain('계단')
+    expect(bundle.asrEvidence[0]?.text).toContain('현관문')
+    expect(bundle.ruleEvidence[0]?.ruleId).toBe('KR_FIRE_04')
   })
 })
 

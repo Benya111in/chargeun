@@ -6,12 +6,15 @@ import type { RuleRecord } from '@ansimtrack/shared-types'
 
 import {
   applySafetyGuardrails,
+  buildStructuredLearningExplanation,
   buildSegmentFromPerception,
   buildGroundedExplanation,
+  buildSuppressedCandidates,
   buildVoiceReply,
   classifyHazard,
   detectSegmentBoundary,
   matchGroundedRules,
+  toLegacySegmentExplanation,
 } from './index'
 
 const fireRules = loadRules('../../../data/rules/fire_rules.json')
@@ -165,6 +168,113 @@ describe('buildGroundedExplanation', () => {
     })
 
     expect(reply.text).toContain('탁자')
+  })
+})
+
+describe('buildStructuredLearningExplanation', () => {
+  it('builds validated structured explanations with separated evidence', () => {
+    const packet = {
+      asrText: '우리 집 화재 시 현관문을 닫고 계단으로 대피합니다.',
+      keyframes: ['frame-a'],
+      objectHints: [
+        { label: '현관문', bbox: [0.1, 0.2, 0.2, 0.3], conf: 0.9 },
+        { label: '엘리베이터', bbox: [0.4, 0.2, 0.2, 0.3], conf: 0.8 },
+      ],
+      ocrTokens: ['현관문', '계단', '대피'],
+      sessionId: 'demo-fire',
+      tEndMs: 7_800,
+      tStartMs: 0,
+      uiElements: [],
+    }
+    const segment = buildSegmentFromPerception({
+      packet,
+      rules: fireRules,
+    })
+    const structured = buildStructuredLearningExplanation({
+      decisionPoint: '나갈 때 문을 닫아야 하는가',
+      evidence: packet,
+      rules: fireRules,
+      segment,
+      sourceId: 'fire-grounded-flow',
+    })
+
+    expect(structured.version).toBe('slowlearner_multitrack_v1')
+    expect(structured.segment.status).toBe('validated')
+    expect(structured.tracks.action?.cards[0]?.officialRuleIds).toContain(
+      'KR_FIRE_04',
+    )
+    expect(structured.evidence.visualEvidence.length).toBeGreaterThan(0)
+    expect(structured.evidence.ocrEvidence.length).toBeGreaterThan(0)
+    expect(structured.evidence.asrEvidence.length).toBe(1)
+    expect(structured.evidence.ruleEvidence[0]?.ruleId).toBe('KR_FIRE_04')
+    expect(
+      structured.suppressedCandidates.some(
+        (candidate) => candidate.candidate === '엘리베이터 타기',
+      ),
+    ).toBe(true)
+  })
+
+  it('hides learner action when official rules are not grounded', () => {
+    const packet = {
+      asrText: '',
+      keyframes: ['frame-a'],
+      objectHints: [],
+      ocrTokens: [],
+      sessionId: 'demo-review',
+      tEndMs: 3_000,
+      tStartMs: 0,
+      uiElements: [],
+    }
+    const structured = buildStructuredLearningExplanation({
+      evidence: packet,
+      rules: fireRules,
+      segment: {
+        confidence: 0.92,
+        endMs: 3_000,
+        hazard: 'fire',
+        id: 'seg-review',
+        officialRuleIds: ['KR_FIRE_03'],
+        phase: 'stair_evacuation',
+        sessionId: 'demo-review',
+        startMs: 0,
+      },
+      sourceId: 'review',
+    })
+    const legacy = toLegacySegmentExplanation(structured)
+
+    expect(structured.segment.status).toBe('needs_review')
+    expect(structured.tracks.action).toBeUndefined()
+    expect(legacy.safetyMode).toBe('review_official')
+    expect(legacy.tracks.action).toBeUndefined()
+  })
+})
+
+describe('buildSuppressedCandidates', () => {
+  it('records unsafe and overflow candidates deterministically', () => {
+    const candidates = buildSuppressedCandidates({
+      actionRuleIds: ['KR_FIRE_03'],
+      evidence: {
+        asrText: '엘리베이터로 뛰어가요',
+        objectHints: [],
+        ocrTokens: [],
+        uiElements: [],
+      },
+      ruleMatches: fireRules.slice(0, 4).map((rule, index) => ({
+        matchedSignals: [`when:${rule.when[0]}`],
+        rule,
+        score: 10 - index,
+      })),
+      segment: {
+        hazard: 'fire',
+      },
+    })
+
+    expect(
+      candidates.some((candidate) => candidate.category === 'unsafe_action'),
+    ).toBe(true)
+    expect(
+      candidates.some((candidate) => candidate.category === 'too_many_actions'),
+    ).toBe(true)
   })
 })
 

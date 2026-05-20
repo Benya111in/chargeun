@@ -193,6 +193,25 @@ export function QaReviewPanel({
                 </p>
               </div>
 
+              <div className="grid gap-2 rounded-md border border-[var(--line)] bg-[var(--soft)] px-3 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                    LRS 초안
+                  </p>
+                  <SummaryBadge tone="review">review required</SummaryBadge>
+                </div>
+                <div className="grid gap-2">
+                  {buildLrsChecklist(selectedFixture).map((item) => (
+                    <ChecklistRow
+                      detail={item.detail}
+                      key={item.id}
+                      label={item.label}
+                      status={item.status}
+                    />
+                  ))}
+                </div>
+              </div>
+
               {selectedFixture.sourceReference ? (
                 <div className="grid gap-2 rounded-md border border-[var(--line)] bg-[var(--soft)] px-3 py-3">
                   <div>
@@ -549,6 +568,51 @@ export function QaReviewPanel({
       </div>
     </section>
   )
+}
+
+function buildLrsChecklist(fixture: {
+  expectedRuleIds: string[]
+  phase: string
+}) {
+  return [
+    {
+      detail: fixture.expectedRuleIds.length
+        ? `expected ${fixture.expectedRuleIds.join(', ')}`
+        : '공식 rule 없는 review fixture',
+      id: 'grounded-action',
+      label: '행동 카드가 공식 규칙에 근거',
+      status: fixture.expectedRuleIds.length ? 'ready' : 'pending',
+    },
+    {
+      detail: `phase ${fixture.phase}`,
+      id: 'single-decision',
+      label: '한 세그먼트 한 판단 지점',
+      status: 'pending',
+    },
+    {
+      detail: '쉬운말 1-2문장, 행동어 중심으로 사람 검수',
+      id: 'easy-language',
+      label: '쉬운말이 짧고 구체적',
+      status: 'pending',
+    },
+    {
+      detail: 'visual/OCR/ASR/rule evidence 분리 확인',
+      id: 'evidence-split',
+      label: '근거 출처 분리',
+      status: 'pending',
+    },
+    {
+      detail: '불안 유발, 과잉 지시, 실제 응급 오해 여부 확인',
+      id: 'learner-release',
+      label: '학습자 공개 가능',
+      status: 'pending',
+    },
+  ] satisfies Array<{
+    detail: string
+    id: string
+    label: string
+    status: 'pending' | 'ready'
+  }>
 }
 
 function LabeledInput({

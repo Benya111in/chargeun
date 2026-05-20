@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { structuredLearningExplanationSchema } from '@ansimtrack/shared-types'
+
 import { learningScenarios } from './demo-theater-content'
 
 describe('learningScenarios', () => {
@@ -25,7 +27,31 @@ describe('learningScenarios', () => {
         expect(segment.teacherGuide.observe).toBeTruthy()
         expect(segment.safetyNotice).toContain('연습용')
         expect(segment.safetyNotice).toContain('119')
+        expect(
+          structuredLearningExplanationSchema.safeParse(
+            segment.structuredExplanation,
+          ).success,
+        ).toBe(true)
       }
+    }
+  })
+
+  it('keeps key fire and earthquake scenarios grounded with rule evidence', () => {
+    const requiredSegments = [
+      'fire-grounded-door-control',
+      'fire-grounded-stairs',
+      'earthquake-review-office-desk',
+      'earthquake-after-exit',
+    ]
+
+    for (const segmentId of requiredSegments) {
+      const segment = learningScenarios
+        .flatMap((scenario) => scenario.segments)
+        .find((item) => item.id === segmentId)
+
+      expect(
+        segment?.structuredExplanation.evidence.ruleEvidence.length,
+      ).toBeGreaterThan(0)
     }
   })
 })

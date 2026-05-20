@@ -7,6 +7,16 @@
 - 이유: 브라우저 화면공유 sample에 `Date.now()` epoch timestamp가 들어가면 Shadow buffer marker, frame window, perception window가 같은 시간축을 공유하지 못한다.
 - 영향: browser sampler는 `performance.now()` 기준 세션 경과 시간을 `tsMs`로 기록한다. canvas 샘플링 실패는 live-lab 전체 렌더링 실패가 아니라 해당 frame drop으로 처리하고, 합성 화면공유 E2E가 이 경로를 계속 검증한다.
 
+### D-058 구조적 멀티트랙은 계약 우선으로 병행 도입한다
+
+- 이유: V2A식 멀티트랙 생성 기술을 바로 LLM 호출로 붙이면 학습자 행동 지시 안전성이 흔들릴 수 있다.
+- 영향: `StructuredLearningExplanation v1`을 새 표준 계약으로 추가하되, 기존 `SegmentExplanation`과 학습자 UI는 유지한다. 현재 단계에서는 deterministic adapter로 기존 시나리오를 새 계약에 투영하고, LLM structured output은 QA 실험 단계로 미룬다.
+
+### D-059 억제 후보와 근거 출처는 진행자/QA 화면에만 노출한다
+
+- 이유: suppressed candidate, visual/OCR/ASR/rule evidence, validation status는 안전 감사와 교사용 설명에는 필요하지만 학습자에게는 인지부하가 된다.
+- 영향: `/scenario/:id`는 쉬운말, 행동 카드, teach-back 중심을 유지한다. `/teacher`와 `/qa`에서만 action card rule id, evidence source, suppressed candidates, LRS 검수 항목을 확인한다.
+
 ## 2026-04-14
 
 ### D-001 macOS 단일 경로 우선

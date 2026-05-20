@@ -2,6 +2,7 @@ import {
   applySafetyGuardrails,
   buildGroundedExplanation,
   buildSegmentFromPerception,
+  buildStructuredLearningExplanation,
   matchGroundedRules,
   type GroundedRuleMatch,
 } from '@ansimtrack/llm-orchestrator'
@@ -10,6 +11,7 @@ import type {
   RuleRecord,
   Segment,
   SegmentExplanation,
+  StructuredLearningExplanation,
 } from '@ansimtrack/shared-types'
 
 import { earthquakeRuleCatalog, fireRuleCatalog } from './rule-catalog'
@@ -37,6 +39,7 @@ export type TheaterSegment = {
   safetyNotice: string
   segment: Segment
   startMs: number
+  structuredExplanation: StructuredLearningExplanation
   teacherGuide: {
     correction: string
     observe: string
@@ -774,6 +777,29 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     privacyConsent: true,
     segment,
   })
+  const teacherGuide = seed.teacherGuide ?? {
+    correction:
+      '오답이 나오면 장면을 다시 보고 공식 행동요령을 한 문장으로 반복합니다.',
+    observe:
+      '학습자가 첫 행동을 고르고, 다시 보기와 다음 장면을 사용할 수 있는지 확인합니다.',
+    prompt: seed.checkQuestion ?? '먼저 무엇을 할까요?',
+    script:
+      safetyView.explanation.tracks.caregiver ??
+      '장면을 짧게 멈추고 쉬운말과 행동 카드를 함께 확인합니다.',
+  }
+  const structuredExplanation = buildStructuredLearningExplanation({
+    decisionPoint: seed.checkQuestion ?? '먼저 무엇을 할까요?',
+    evidence: seed.packet,
+    explanation: safetyView.explanation,
+    ruleMatches,
+    rules: seed.rules,
+    segment,
+    sourceId: seed.packet.sessionId,
+    teacherGuide: {
+      correctionHint: teacherGuide.correction,
+      script: teacherGuide.script,
+    },
+  })
 
   return {
     actionSteps: seed.actionSteps ?? [
@@ -803,16 +829,8 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     safetyNotice: defaultSafetyNotice,
     segment,
     startMs: seed.startMs,
-    teacherGuide: seed.teacherGuide ?? {
-      correction:
-        '오답이 나오면 장면을 다시 보고 공식 행동요령을 한 문장으로 반복합니다.',
-      observe:
-        '학습자가 첫 행동을 고르고, 다시 보기와 다음 장면을 사용할 수 있는지 확인합니다.',
-      prompt: seed.checkQuestion ?? '먼저 무엇을 할까요?',
-      script:
-        safetyView.explanation.tracks.caregiver ??
-        '장면을 짧게 멈추고 쉬운말과 행동 카드를 함께 확인합니다.',
-    },
+    structuredExplanation,
+    teacherGuide,
   }
 }
 

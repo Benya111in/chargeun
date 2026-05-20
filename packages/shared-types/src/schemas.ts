@@ -129,6 +129,206 @@ export const segmentExplanationSchema = z
     }
   })
 
+export const learningSegmentStatusSchema = z.enum([
+  'draft',
+  'validated',
+  'needs_review',
+  'blocked',
+])
+
+export const learningReadingLevelSchema = z.enum([
+  'very_easy',
+  'easy',
+  'standard',
+])
+
+export const learningSegmentSchema = z
+  .object({
+    segmentId: z.string().min(1),
+    sessionId: z.string().min(1),
+    sourceId: z.string().min(1),
+    hazard: hazardTypeSchema,
+    phase: z.string().min(1),
+    decisionPoint: z.string().min(1),
+    startMs: z.number(),
+    endMs: z.number(),
+    confidence: z.number().min(0).max(1),
+    status: learningSegmentStatusSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (value.endMs < value.startMs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'learning segment endMs must be greater than or equal to startMs',
+        path: ['endMs'],
+      })
+    }
+  })
+
+export const learningActionCardSchema = z.object({
+  label: z.string().min(1),
+  order: z.number().int().positive(),
+  officialRuleIds: z.array(z.string().min(1)).min(1),
+})
+
+export const learningTrackSetSchema = z.object({
+  easy: z.object({
+    text: z.string().min(1).max(140),
+    maxReadingLevel: learningReadingLevelSchema,
+  }),
+  action: z
+    .object({
+      cards: z.array(learningActionCardSchema).min(1).max(3),
+    })
+    .optional(),
+  reason: z.object({
+    text: z.string().min(1).max(180),
+    officialRuleIds: z.array(z.string().min(1)),
+  }),
+  doNot: z
+    .object({
+      text: z.string().min(1).max(180),
+      officialRuleIds: z.array(z.string().min(1)).min(1),
+    })
+    .optional(),
+  caregiver: z
+    .object({
+      script: z.string().min(1),
+      correctionHint: z.string().min(1),
+    })
+    .optional(),
+  report: z
+    .object({
+      text: z.string().min(1).max(180),
+      emergencyNumbers: z.array(z.string().min(1)),
+      condition: z.string().min(1),
+    })
+    .optional(),
+})
+
+export const evidenceBundleSchema = z.object({
+  visualEvidence: z.array(
+    z.object({
+      frameTimeMs: z.number(),
+      observation: z.string().min(1),
+      bbox: bboxSchema.optional(),
+    }),
+  ),
+  ocrEvidence: z.array(
+    z.object({
+      text: z.string().min(1),
+      timeMs: z.number(),
+      confidence: z.number().min(0).max(1),
+    }),
+  ),
+  asrEvidence: z.array(
+    z.object({
+      text: z.string().min(1),
+      startMs: z.number(),
+      endMs: z.number(),
+      confidence: z.number().min(0).max(1),
+    }),
+  ),
+  ruleEvidence: z.array(
+    z.object({
+      ruleId: z.string().min(1),
+      title: z.string().min(1),
+      matchedText: z.string().min(1),
+      sourceName: z.string().min(1),
+    }),
+  ),
+  modelInference: z.array(
+    z.object({
+      claim: z.string().min(1),
+      basedOn: z.array(z.enum(['visual', 'ocr', 'asr', 'rule'])).min(1),
+    }),
+  ),
+})
+
+export const suppressedCandidateSchema = z.object({
+  candidate: z.string().min(1),
+  category: z.enum([
+    'unsafe_action',
+    'unsupported_action',
+    'too_many_actions',
+    'unclear_evidence',
+    'not_for_learner',
+  ]),
+  reason: z.string().min(1),
+  evidenceRefs: z.array(z.string().min(1)),
+})
+
+export const structuredLearningExplanationSchema = z
+  .object({
+    version: z.literal('slowlearner_multitrack_v1'),
+    segment: learningSegmentSchema,
+    tracks: learningTrackSetSchema,
+    evidence: evidenceBundleSchema,
+    suppressedCandidates: z.array(suppressedCandidateSchema),
+    validation: z.object({
+      schemaValid: z.boolean(),
+      hasGroundedAction: z.boolean(),
+      learnerSafe: z.boolean(),
+      requiresHumanReview: z.boolean(),
+      warnings: z.array(z.string()),
+    }),
+  })
+  .superRefine((value, ctx) => {
+    const hasActionCards = Boolean(value.tracks.action?.cards.length)
+
+    if (value.segment.status === 'validated' && !hasActionCards) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'validated learning segments must include grounded action cards',
+        path: ['tracks', 'action'],
+      })
+    }
+
+    if (
+      ['needs_review', 'blocked'].includes(value.segment.status) &&
+      hasActionCards
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'review or blocked learning segments cannot expose action cards',
+        path: ['tracks', 'action'],
+      })
+    }
+
+    if (hasActionCards && !value.validation.hasGroundedAction) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'action cards require hasGroundedAction validation',
+        path: ['validation', 'hasGroundedAction'],
+      })
+    }
+
+    if (
+      value.segment.status === 'validated' &&
+      (value.validation.requiresHumanReview || !value.validation.learnerSafe)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'validated segments must be learner safe without required review',
+        path: ['validation'],
+      })
+    }
+  })
+
+export const learningReviewSubmissionSchema = z.object({
+  reviewerId: z.string().min(1),
+  segmentId: z.string().min(1),
+  submittedAt: z.string().min(1),
+  lrsAnswers: z.record(z.string(), z.enum(['yes', 'no', 'na'])),
+  learnerSimulationNotes: z.string().optional(),
+  blockedReason: z.string().optional(),
+  approvedForLearner: z.boolean(),
+})
+
 export const perceptionPacketSchema = z
   .object({
     sessionId: z.string(),

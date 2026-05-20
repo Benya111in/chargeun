@@ -1,9 +1,12 @@
 import {
   segmentExplanationSchema,
+  structuredLearningExplanationSchema,
   type PerceptionPacket,
   type RuleRecord,
   type Segment,
   type SegmentExplanation,
+  type StructuredLearningExplanation,
+  type SuppressedCandidate,
   type VoiceIntent,
   type VoiceReply,
 } from '@ansimtrack/shared-types'
@@ -84,6 +87,425 @@ export type HazardClassification = {
 export type SafetyGuardrailResult = {
   explanation: SegmentExplanation
   warnings: string[]
+}
+
+export type BuildStructuredLearningExplanationInput = {
+  decisionPoint?: string
+  evidence: PerceptionPacket
+  explanation?: SegmentExplanation
+  ruleMatches?: GroundedRuleMatch[]
+  rules: RuleRecord[]
+  segment: Segment
+  sourceId?: string
+  teacherGuide?: {
+    correctionHint?: string
+    script?: string
+  }
+}
+
+export const validateLearningExplanation = (input: unknown) =>
+  structuredLearningExplanationSchema.safeParse(input)
+
+export const buildStructuredLearningExplanation = (
+  input: BuildStructuredLearningExplanationInput,
+): StructuredLearningExplanation => {
+  const ruleMatches =
+    input.ruleMatches ??
+    matchGroundedRules({
+      evidence: input.evidence,
+      rules: input.rules,
+      segment: input.segment,
+    })
+  const groundedRules = selectGroundedActionRules({
+    ruleMatches,
+    segment: input.segment,
+  })
+  const status = getLearningSegmentStatus({
+    groundedRules,
+    segment: input.segment,
+  })
+  const legacyExplanation =
+    input.explanation ??
+    buildGroundedExplanation({
+      evidence: input.evidence,
+      rules: input.rules,
+      segment: input.segment,
+    })
+  const primaryRule = groundedRules[0]
+  const actionCards =
+    status === 'validated'
+      ? groundedRules.slice(0, 3).map((rule, index) => ({
+          label: toLearnerActionLabel(rule.action),
+          officialRuleIds: [rule.rule_id],
+          order: index + 1,
+        }))
+      : undefined
+  const hasGroundedAction = Boolean(actionCards?.length)
+  const requiresHumanReview = status !== 'validated'
+  const structured: StructuredLearningExplanation = {
+    version: 'slowlearner_multitrack_v1',
+    segment: {
+      confidence: input.segment.confidence,
+      decisionPoint:
+        input.decisionPoint ??
+        buildDecisionPoint(primaryRule, input.segment.hazard),
+      endMs: input.segment.endMs,
+      hazard: input.segment.hazard,
+      phase: input.segment.phase,
+      segmentId: input.segment.id,
+      sessionId: input.segment.sessionId,
+      sourceId: input.sourceId ?? input.evidence.sessionId,
+      startMs: input.segment.startMs,
+      status,
+    },
+    tracks: {
+      easy: {
+        maxReadingLevel: 'very_easy',
+        text: limitText(legacyExplanation.tracks.easy, 140),
+      },
+      ...(actionCards
+        ? {
+            action: {
+              cards: actionCards,
+            },
+          }
+        : {}),
+      reason: {
+        officialRuleIds: groundedRules.map((rule) => rule.rule_id),
+        text: limitText(legacyExplanation.tracks.reason, 180),
+      },
+      ...(status === 'validated' && primaryRule?.do_not
+        ? {
+            doNot: {
+              officialRuleIds: [primaryRule.rule_id],
+              text: limitText(primaryRule.do_not, 180),
+            },
+          }
+        : {}),
+      ...(primaryRule?.caregiver || input.teacherGuide?.script
+        ? {
+            caregiver: {
+              correctionHint:
+                input.teacherGuide?.correctionHint ??
+                primaryRule?.caregiver ??
+                '오답이 나오면 장면을 다시 보고 쉬운말로 한 번 더 확인합니다.',
+              script:
+                input.teacherGuide?.script ??
+                primaryRule?.caregiver ??
+                '장면을 짧게 멈추고 행동 카드를 함께 확인합니다.',
+            },
+          }
+        : {}),
+      ...(status === 'validated' && primaryRule?.report_script
+        ? {
+            report: {
+              condition: '실제 위험하거나 도움이 필요할 때',
+              emergencyNumbers: ['119', '112'],
+              text: limitText(primaryRule.report_script, 180),
+            },
+          }
+        : {}),
+    },
+    evidence: buildEvidenceBundle({
+      packet: input.evidence,
+      ruleMatches,
+    }),
+    suppressedCandidates: buildSuppressedCandidates({
+      actionRuleIds: groundedRules.map((rule) => rule.rule_id),
+      evidence: input.evidence,
+      ruleMatches,
+      segment: input.segment,
+    }),
+    validation: {
+      hasGroundedAction,
+      learnerSafe: status === 'validated',
+      requiresHumanReview,
+      schemaValid: true,
+      warnings:
+        status === 'validated'
+          ? []
+          : ['공식 근거가 충분하지 않아 학습자 행동 카드를 숨깁니다.'],
+    },
+  }
+
+  return structuredLearningExplanationSchema.parse(structured)
+}
+
+export const toLegacySegmentExplanation = (
+  structured: StructuredLearningExplanation,
+): SegmentExplanation => {
+  const canExposeAction =
+    structured.segment.status === 'validated' &&
+    Boolean(structured.tracks.action?.cards.length)
+
+  return segmentExplanationSchema.parse({
+    segmentId: structured.segment.segmentId,
+    safetyMode: canExposeAction ? 'grounded' : 'review_official',
+    doNot: canExposeAction ? structured.tracks.doNot?.text : undefined,
+    tracks: {
+      basic: structured.tracks.easy.text,
+      easy: structured.tracks.easy.text,
+      action: canExposeAction
+        ? structured.tracks.action?.cards.map((card) => card.label).join('. ')
+        : undefined,
+      reason: structured.tracks.reason.text,
+      caregiver: structured.tracks.caregiver?.script,
+      report: canExposeAction ? structured.tracks.report?.text : undefined,
+    },
+    overlayTargets: structured.evidence.visualEvidence
+      .slice(0, 8)
+      .map((item) => ({
+        bbox: item.bbox ?? [0.08, 0.08, 0.2, 0.12],
+        frameRange: [structured.segment.startMs, structured.segment.endMs] as [
+          number,
+          number,
+        ],
+        label: item.observation,
+      })),
+  })
+}
+
+export const buildSuppressedCandidates = (input: {
+  actionRuleIds: string[]
+  evidence: MatchableEvidence
+  ruleMatches: GroundedRuleMatch[]
+  segment: Pick<Segment, 'hazard'>
+}): SuppressedCandidate[] => {
+  const candidates: SuppressedCandidate[] = []
+  const actionRuleIds = new Set(input.actionRuleIds)
+
+  for (const [index, match] of input.ruleMatches.entries()) {
+    const rule = match.rule
+
+    if (rule.do_not) {
+      candidates.push({
+        candidate: rule.do_not,
+        category: 'unsafe_action',
+        evidenceRefs: [rule.rule_id],
+        reason:
+          '공식 행동요령의 금지 또는 주의 문장이므로 행동 카드에서 제외합니다.',
+      })
+    }
+
+    if (index >= 3) {
+      candidates.push({
+        candidate: rule.action,
+        category: 'too_many_actions',
+        evidenceRefs: [rule.rule_id],
+        reason: '한 세그먼트에는 최대 3개 행동 카드만 보여 줍니다.',
+      })
+    } else if (!actionRuleIds.has(rule.rule_id)) {
+      candidates.push({
+        candidate: rule.action,
+        category: 'unsupported_action',
+        evidenceRefs: [rule.rule_id],
+        reason: '현재 세그먼트의 핵심 판단 지점으로 선택되지 않았습니다.',
+      })
+    }
+  }
+
+  const evidenceTokens = Array.from(collectEvidenceTokens(input.evidence))
+
+  if (
+    input.segment.hazard === 'fire' &&
+    hasAnyToken(evidenceTokens, ['엘리베이터', 'elevator'])
+  ) {
+    candidates.push({
+      candidate: '엘리베이터 타기',
+      category: 'unsafe_action',
+      evidenceRefs: ['KR_FIRE_03'],
+      reason: '화재 상황에서는 엘리베이터 이용이 공식 행동요령과 충돌합니다.',
+    })
+  }
+
+  if (hasAnyToken(evidenceTokens, ['뛰기', '뛰어', '달리기'])) {
+    candidates.push({
+      candidate: '뛰어서 이동하기',
+      category: 'not_for_learner',
+      evidenceRefs: [],
+      reason:
+        '따라 하라고 지시하지 않고 천천히 안전하게 이동하도록 교정합니다.',
+    })
+  }
+
+  if (input.ruleMatches.length === 0 && evidenceTokens.length > 0) {
+    candidates.push({
+      candidate: evidenceTokens.slice(0, 3).join(', '),
+      category: 'unclear_evidence',
+      evidenceRefs: [],
+      reason: '화면 단서는 있지만 공식 행동 카드로 연결할 근거가 부족합니다.',
+    })
+  }
+
+  return dedupeSuppressedCandidates(candidates)
+}
+
+function selectGroundedActionRules(input: {
+  ruleMatches: GroundedRuleMatch[]
+  segment: Pick<Segment, 'officialRuleIds'>
+}) {
+  const segmentRuleIds = new Set(input.segment.officialRuleIds)
+
+  if (segmentRuleIds.size === 0) {
+    return input.ruleMatches.map((match) => match.rule)
+  }
+
+  return input.ruleMatches
+    .filter((match) => segmentRuleIds.has(match.rule.rule_id))
+    .map((match) => match.rule)
+}
+
+function getLearningSegmentStatus(input: {
+  groundedRules: RuleRecord[]
+  segment: Pick<Segment, 'confidence' | 'hazard'>
+}): StructuredLearningExplanation['segment']['status'] {
+  if (input.segment.hazard === 'unknown') {
+    return 'needs_review'
+  }
+
+  if (
+    input.groundedRules.length === 0 ||
+    input.segment.confidence < lowConfidenceThreshold
+  ) {
+    return 'needs_review'
+  }
+
+  return 'validated'
+}
+
+function buildEvidenceBundle(input: {
+  packet: PerceptionPacket
+  ruleMatches: GroundedRuleMatch[]
+}): StructuredLearningExplanation['evidence'] {
+  const basedOn: Array<'visual' | 'ocr' | 'asr' | 'rule'> = []
+
+  if (input.packet.objectHints.length > 0) {
+    basedOn.push('visual')
+  }
+
+  if (input.packet.ocrTokens.length > 0 || input.packet.uiElements.length > 0) {
+    basedOn.push('ocr')
+  }
+
+  if (input.packet.asrText.trim()) {
+    basedOn.push('asr')
+  }
+
+  if (input.ruleMatches.length > 0) {
+    basedOn.push('rule')
+  }
+
+  return {
+    visualEvidence: input.packet.objectHints.map((hint) => ({
+      bbox: toNormalizedBbox(hint.bbox),
+      frameTimeMs: input.packet.tStartMs,
+      observation: hint.label,
+    })),
+    ocrEvidence: [
+      ...input.packet.ocrTokens.map((text) => ({
+        confidence: 0.7,
+        text,
+        timeMs: input.packet.tStartMs,
+      })),
+      ...input.packet.uiElements.map((element) => ({
+        confidence: element.conf,
+        text: element.label,
+        timeMs: input.packet.tStartMs,
+      })),
+    ],
+    asrEvidence: input.packet.asrText.trim()
+      ? [
+          {
+            confidence: 0.72,
+            endMs: input.packet.tEndMs,
+            startMs: input.packet.tStartMs,
+            text: input.packet.asrText.trim(),
+          },
+        ]
+      : [],
+    ruleEvidence: input.ruleMatches.map((match) => ({
+      matchedText: match.rule.action,
+      ruleId: match.rule.rule_id,
+      sourceName: match.rule.source_title,
+      title: match.rule.phase,
+    })),
+    modelInference:
+      input.ruleMatches.length > 0 && basedOn.length > 0
+        ? [
+            {
+              basedOn,
+              claim: `현재 세그먼트는 ${input.ruleMatches[0].rule.rule_id} 공식 규칙과 연결됩니다.`,
+            },
+          ]
+        : [],
+  }
+}
+
+function buildDecisionPoint(
+  rule: RuleRecord | undefined,
+  hazard: Segment['hazard'],
+) {
+  if (!rule) {
+    return hazard === 'unknown'
+      ? '공식 안내를 더 확인해야 하는가'
+      : '지금 행동 카드를 보여도 되는가'
+  }
+
+  return `${toLearnerActionLabel(rule.action).replace(/[.!?。]+$/u, '')}?`
+}
+
+function toLearnerActionLabel(action: string) {
+  if (action.includes('출입문') || action.includes('문을 닫')) {
+    return '문을 닫아요'
+  }
+
+  if (action.includes('계단')) {
+    return '계단으로 가요'
+  }
+
+  if (action.includes('탁자')) {
+    return '탁자 아래로 들어가요'
+  }
+
+  if (action.includes('머리') || action.includes('몸을 보호')) {
+    return '머리를 보호해요'
+  }
+
+  if (action.includes('대피공간') || action.includes('피난')) {
+    return '대피공간으로 가요'
+  }
+
+  if (action.includes('가스') || action.includes('전깃불')) {
+    return '가스와 전기를 확인해요'
+  }
+
+  return (
+    simplify(action).split(/[.。]/u)[0]?.slice(0, 24) || action.slice(0, 24)
+  )
+}
+
+function toNormalizedBbox(bbox: number[]): [number, number, number, number] {
+  return [
+    clampNumber(bbox[0] ?? 0.08, 0, 1),
+    clampNumber(bbox[1] ?? 0.08, 0, 1),
+    clampNumber(bbox[2] ?? 0.2, 0.01, 1),
+    clampNumber(bbox[3] ?? 0.12, 0.01, 1),
+  ]
+}
+
+function dedupeSuppressedCandidates(candidates: SuppressedCandidate[]) {
+  const seen = new Set<string>()
+
+  return candidates.filter((candidate) => {
+    const key = `${candidate.category}:${candidate.candidate}`
+
+    if (seen.has(key)) {
+      return false
+    }
+
+    seen.add(key)
+    return true
+  })
 }
 
 export const buildExplanation = (input: {
@@ -606,6 +1028,11 @@ const humanizeHazard = (hazard: Segment['hazard']) => {
 const simplify = (text: string) =>
   text.replaceAll('합니다.', '하세요.').replaceAll('하십시오.', '하세요.')
 
+const limitText = (text: string, maxLength: number) =>
+  text.length <= maxLength
+    ? text
+    : `${text.slice(0, Math.max(1, maxLength - 1))}…`
+
 const tokenize = (text: string) =>
   text
     .toLowerCase()
@@ -681,5 +1108,8 @@ const hasAnyToken = (tokens: string[], candidates: string[]) =>
   candidates.some((candidate) =>
     tokens.some((token) => token.includes(candidate)),
   )
+
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value))
 
 const clampConfidence = (value: number) => Math.min(0.99, Math.max(0, value))

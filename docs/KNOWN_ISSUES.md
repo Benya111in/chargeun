@@ -1,6 +1,10 @@
 # KNOWN_ISSUES
 
 - 새 학습 MVP는 실제 느린학습자/보호자/교사 대상 사용성 검증 전이다. 현재는 리서치 기반 제품 방향과 구현된 학습 흐름까지만 갖췄다.
+- `StructuredLearningExplanation v1`은 deterministic adapter와 schema 검증까지 연결됐지만, 실제 LLM structured output 생성 경로는 아직 내부 QA 실험 단계로 남아 있다.
+- `LearningReviewSubmission` 타입은 추가됐지만, LRS 결과를 QA JSON/persistence에 저장하고 LAS와 분리 분석하는 화면은 아직 없다.
+- `/teacher`와 `/qa`는 evidence source와 suppressed candidates를 표시하지만, QA가 start/end time이나 decision point를 직접 수정하는 편집 UI는 아직 없다.
+- 공식 rule catalog의 `learnerActionLabel`, `easyReason`, `unsafeConfusions` 같은 교육용 확장 필드는 아직 P1 범위다. 현재는 기존 `action`, `do_not`, `why`, `caregiver`, `report_script`에서 구조화 데이터를 만든다.
 - 행동 카드는 현재 텍스트 카드 중심이다. 실제 Easy Read 품질을 위해서는 연령과 문해력에 맞는 그림/아이콘 검증이 필요하다.
 - `/teacher`는 진행자 문구와 공식 근거를 보여 주지만, 학습 기록·세션 저장·인쇄 카드 출력은 아직 없다.
 - `/live-lab`는 실험 기능으로 격리되고 beta code 확인 전에는 비활성화된다. 다만 실제 배포에서는 Vercel `BETA_ACCESS_CODES` 설정과 durable rate limit이 필요하다.

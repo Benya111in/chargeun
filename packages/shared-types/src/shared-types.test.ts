@@ -6,6 +6,7 @@ import {
   perceptionPacketSchema,
   segmentSchema,
   segmentExplanationSchema,
+  structuredLearningExplanationSchema,
 } from './schemas'
 
 describe('segmentExplanationSchema', () => {
@@ -118,3 +119,154 @@ describe('perceptionPacketSchema', () => {
     expect(result.success).toBe(false)
   })
 })
+
+describe('structuredLearningExplanationSchema', () => {
+  it('accepts validated structured learning explanations', () => {
+    const result = structuredLearningExplanationSchema.safeParse(
+      validStructuredExplanation(),
+    )
+
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects action cards without official rule ids', () => {
+    const input = validStructuredExplanation()
+    input.tracks.action!.cards[0].officialRuleIds = []
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects more than three action cards', () => {
+    const input = validStructuredExplanation()
+    input.tracks.action!.cards = [
+      { label: '문을 닫아요', officialRuleIds: ['KR_FIRE_04'], order: 1 },
+      { label: '계단으로 가요', officialRuleIds: ['KR_FIRE_03'], order: 2 },
+      { label: '몸을 낮춰요', officialRuleIds: ['KR_FIRE_03'], order: 3 },
+      { label: '도움을 불러요', officialRuleIds: ['KR_FIRE_05'], order: 4 },
+    ]
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects validated segments without grounded action cards', () => {
+    const input = validStructuredExplanation() as any
+    delete input.tracks.action
+    input.validation.hasGroundedAction = false
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects review segments that expose learner action cards', () => {
+    const input = validStructuredExplanation()
+    input.segment.status = 'needs_review'
+    input.validation.requiresHumanReview = true
+
+    const result = structuredLearningExplanationSchema.safeParse(input)
+
+    expect(result.success).toBe(false)
+  })
+})
+
+function validStructuredExplanation() {
+  return {
+    version: 'slowlearner_multitrack_v1',
+    segment: {
+      segmentId: 'fire-door-control',
+      sessionId: 'demo-fire',
+      sourceId: 'fire-grounded-flow',
+      hazard: 'fire',
+      phase: 'door_control',
+      decisionPoint: '나갈 때 문을 닫아야 하는가',
+      startMs: 0,
+      endMs: 7_800,
+      confidence: 0.93,
+      status: 'validated',
+    },
+    tracks: {
+      easy: {
+        text: '나갈 때는 문을 닫아요.',
+        maxReadingLevel: 'very_easy',
+      },
+      action: {
+        cards: [
+          {
+            label: '문을 닫아요',
+            order: 1,
+            officialRuleIds: ['KR_FIRE_04'],
+          },
+        ],
+      },
+      reason: {
+        text: '문을 닫으면 연기가 천천히 퍼져요.',
+        officialRuleIds: ['KR_FIRE_04'],
+      },
+      doNot: {
+        text: '문을 열어 둔 채 나가지 않아요.',
+        officialRuleIds: ['KR_FIRE_04'],
+      },
+      caregiver: {
+        script: '문 닫기는 연기 확산을 늦추기 위한 행동입니다.',
+        correctionHint: '문을 열어 둔다고 답하면 짧게 다시 설명합니다.',
+      },
+    },
+    evidence: {
+      visualEvidence: [
+        {
+          frameTimeMs: 1_200,
+          observation: '현관문과 대피 장면이 보임',
+          bbox: [0.12, 0.18, 0.28, 0.22],
+        },
+      ],
+      ocrEvidence: [
+        {
+          text: '현관문을 닫고 대피',
+          timeMs: 900,
+          confidence: 0.86,
+        },
+      ],
+      asrEvidence: [
+        {
+          text: '현관문을 닫고 계단으로 대피합니다.',
+          startMs: 0,
+          endMs: 3_000,
+          confidence: 0.9,
+        },
+      ],
+      ruleEvidence: [
+        {
+          ruleId: 'KR_FIRE_04',
+          title: '문을 닫고 대피',
+          matchedText: '나갈 때 출입문을 닫아 연기와 불길의 확산을 늦춥니다.',
+          sourceName: '국민재난안전포털 - 화재 발생시 행동요령',
+        },
+      ],
+      modelInference: [
+        {
+          claim: '현재 세그먼트의 핵심 판단은 문을 닫고 대피하는 행동이다.',
+          basedOn: ['ocr', 'asr', 'rule'],
+        },
+      ],
+    },
+    suppressedCandidates: [
+      {
+        candidate: '문을 열어 둔 채 나가기',
+        category: 'unsafe_action',
+        reason: '공식 행동요령의 금지 행동이므로 행동 카드에서 제외',
+        evidenceRefs: ['KR_FIRE_04'],
+      },
+    ],
+    validation: {
+      schemaValid: true,
+      hasGroundedAction: true,
+      learnerSafe: true,
+      requiresHumanReview: false,
+      warnings: [],
+    },
+  }
+}

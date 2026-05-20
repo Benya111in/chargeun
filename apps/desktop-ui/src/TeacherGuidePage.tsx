@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { BookOpenCheck, ShieldAlert } from 'lucide-react'
 import type { RuleRecord } from '@ansimtrack/shared-types'
 
-import { learningScenarios } from './lib/demo-theater-content'
+import {
+  learningScenarios,
+  type TheaterSegment,
+} from './lib/demo-theater-content'
 import { liveRuleCatalog } from './lib/rule-catalog'
 import { cn } from './lib/utils'
 
@@ -121,6 +124,8 @@ export default function TeacherGuidePage() {
                   />
                 </div>
 
+                <StructuredLearningBlock segment={segment} />
+
                 <div className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
                   <p className="text-sm font-semibold text-[#596257]">
                     Teach-back
@@ -150,6 +155,78 @@ export default function TeacherGuidePage() {
         </section>
       </div>
     </main>
+  )
+}
+
+function StructuredLearningBlock({ segment }: { segment: TheaterSegment }) {
+  const structured = segment.structuredExplanation
+
+  return (
+    <section className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#596257]">
+          구조적 멀티트랙
+        </p>
+        <span className="rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-xs font-semibold">
+          {structured.segment.status}
+        </span>
+      </div>
+      <p className="mt-2 text-base font-semibold leading-7">
+        판단 지점: {structured.segment.decisionPoint}
+      </p>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <StructuredList
+          items={
+            structured.tracks.action?.cards.map(
+              (card) =>
+                `${card.order}. ${card.label} · ${card.officialRuleIds.join(', ')}`,
+            ) ?? ['학습자 행동 카드는 review 상태입니다.']
+          }
+          title="행동 카드 근거"
+        />
+        <StructuredList
+          items={[
+            ...structured.evidence.visualEvidence.map(
+              (item) => `화면: ${item.observation}`,
+            ),
+            ...structured.evidence.ocrEvidence.map(
+              (item) => `글자: ${item.text}`,
+            ),
+            ...structured.evidence.asrEvidence.map(
+              (item) => `음성: ${item.text}`,
+            ),
+          ].slice(0, 5)}
+          title="분리된 근거"
+        />
+        <StructuredList
+          items={
+            structured.suppressedCandidates.length
+              ? structured.suppressedCandidates.map(
+                  (candidate) =>
+                    `${candidate.candidate} · ${candidate.category}`,
+                )
+              : ['제외된 위험 후보 없음']
+          }
+          title="억제 후보"
+        />
+      </div>
+    </section>
+  )
+}
+
+function StructuredList({ items, title }: { items: string[]; title: string }) {
+  return (
+    <div className="rounded-md border border-[#dfe4da] bg-white p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#596257]">
+        {title}
+      </p>
+      <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#596257]">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
