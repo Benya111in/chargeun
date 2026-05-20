@@ -98,10 +98,10 @@ const cards = [
     eyebrow: '영상이 연습 자료로 바뀌어요',
     title: '영상 하나가 연습 자료가 돼요',
     body: [
-      '재난안전 영상을 올리면 장면별 연습으로 바꿉니다.',
-      '목표는 10분 안에 사람이 검토할 수 있는 연습본을 만드는 것입니다.',
+      '원하는 재난안전 영상을 올리면 장면별 학습 자료로 변환됩니다.',
     ],
     note: '지금은 화재와 지진 예시로 먼저 보여드립니다.',
+    noteLines: ['테스트 결과 새로운 영상도 10분 안에 학습 가능 형태로 만들어져요.'],
     visual: 'upload',
     theme: 'sky',
   },
@@ -299,7 +299,10 @@ function renderCard(card, index) {
         <p>${escapeHtml(card.note)}</p>
         <ul>${card.sources.map((source) => `<li>${escapeHtml(source)}</li>`).join('')}</ul>
       </footer>`
-    : `<footer><p>${escapeHtml(card.note)}</p></footer>`
+    : `<footer>
+        <p>${escapeHtml(card.note)}</p>
+        ${card.noteLines?.map((line) => `<p>${escapeHtml(line)}</p>`).join('') ?? ''}
+      </footer>`
 
   return `
     <section class="card theme-${card.theme}">
@@ -514,7 +517,11 @@ function renderHtml() {
       }
 
       footer p {
-        margin: 0;
+        margin: 0 0 8px;
+      }
+
+      footer p:last-child {
+        margin-bottom: 0;
       }
 
       footer ul {
