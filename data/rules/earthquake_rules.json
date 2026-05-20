@@ -214,5 +214,127 @@
     "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
     "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
     "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_EQ_13",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": [
+      "수도관에 피해가 있음",
+      "수도꼭지나 화장실 물 사용을 고민함",
+      "집 안 설비 이상을 확인해야 함"
+    ],
+    "action": "수도관에 피해가 의심되면 물을 바로 사용하지 말고 어른이나 관리기관에 알립니다.",
+    "do_not": "수도관이 고장 난 것 같으면 물을 바로 쓰지 않습니다.",
+    "why": "수도관이 깨졌을 수 있어 물을 쓰기 전에 안전한지 살펴야 합니다.",
+    "caregiver": "학습자가 수도꼭지나 화장실을 바로 쓰지 않도록 하고 어른에게 먼저 말하게 합니다.",
+    "report_script": "수도관 피해가 보이면 어른이나 살고 있는 곳의 담당 기관에 알립니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-05-21"
+  },
+  {
+    "rule_id": "KR_EQ_14",
+    "hazard": "earthquake",
+    "phase": "evacuation_route",
+    "when": [
+      "학교에서 흔들림이 멈춤",
+      "선생님 지시에 따라 이동함",
+      "복도 창문 유리가 위험함"
+    ],
+    "action": "학교에서는 선생님 말을 듣고 줄 서서 이동하며, 복도에서는 창문에서 떨어집니다.",
+    "do_not": "혼자 뛰거나 창문 가까이 걷지 않습니다.",
+    "why": "창문 유리가 깨질 수 있어 선생님과 함께 차례대로 이동해야 합니다.",
+    "caregiver": "교사는 짧은 지시로 줄 서기, 창문에서 떨어지기, 운동장이나 넓은 곳으로 가기를 반복합니다.",
+    "report_script": "학교에서는 다친 사람이나 위험한 곳을 선생님에게 말합니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-05-21"
+  },
+  {
+    "rule_id": "KR_EQ_15",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": [
+      "엘리베이터 안에 있음",
+      "엘리베이터가 멈춤",
+      "도움 버튼이나 인터폰이 필요함"
+    ],
+    "action": "엘리베이터가 멈추면 도움 버튼이나 인터폰으로 알리고 문에서 떨어져 기다립니다.",
+    "do_not": "문을 억지로 열거나 뛰어나가지 않습니다.",
+    "why": "문을 억지로 열면 다칠 수 있고 도움을 받기 어려워질 수 있습니다.",
+    "caregiver": "엘리베이터 안에서는 문을 열려고 하지 말고 버튼이나 인터폰으로 도움을 부르게 합니다.",
+    "report_script": "갇히면 인터폰이나 휴대전화로 위치를 알리고 구조를 기다립니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-05-21"
+  },
+  {
+    "rule_id": "KR_EQ_16",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": [
+      "가스 냄새가 남",
+      "가스 새는 소리가 들림",
+      "가스를 다시 써도 되는지 확인해야 함"
+    ],
+    "action": "가스 냄새나 새는 소리가 나면 어른에게 알리고 밖으로 나간 뒤, 다시 쓰기 전에 조치를 기다립니다.",
+    "do_not": "가스를 혼자 만지거나 바로 다시 쓰지 않습니다.",
+    "why": "가스는 불이 붙을 수 있어 안전한 곳에서 어른의 도움을 받아야 합니다.",
+    "caregiver": "성인이 밸브와 창문을 맡고, 학습자는 냄새와 소리를 말한 뒤 밖으로 이동하게 합니다.",
+    "report_script": "가스 냄새나 새는 소리가 나면 어른, 119, 가스 담당 기관에 알립니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-05-21"
+  },
+  {
+    "rule_id": "KR_EQ_17",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": ["전기 이상이 있음", "정전이 됨", "전선이나 차단기 주변이 위험함"],
+    "action": "전기 이상이나 정전이 있으면 전선에서 떨어지고 손전등을 쓰며 어른에게 알립니다.",
+    "do_not": "전선을 혼자 만지거나 엘리베이터를 쓰지 않습니다.",
+    "why": "전선은 다칠 수 있고 엘리베이터는 멈출 수 있습니다.",
+    "caregiver": "전기 문제는 성인이 살피고, 학습자에게는 손전등과 어른에게 말하기만 맡깁니다.",
+    "report_script": "전기 이상이 보이면 어른이나 관리 담당자에게 알리고 전선에서 떨어집니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-05-21"
+  },
+  {
+    "rule_id": "KR_EQ_18",
+    "hazard": "earthquake",
+    "phase": "after_shaking",
+    "when": [
+      "집이나 사무실로 돌아옴",
+      "문 뒤 물건이 쏟아질 수 있음",
+      "가스 전기 수도관을 살펴야 함"
+    ],
+    "action": "집에 돌아오면 문 주변 물건을 살피고 문을 천천히 연 뒤, 가스와 전기와 수도관은 어른과 봅니다.",
+    "do_not": "문을 확 열거나 가스와 전기와 물을 혼자 만지지 않습니다.",
+    "why": "문 뒤 물건이 쏟아질 수 있고 가스와 전기와 물이 고장 났을 수 있습니다.",
+    "caregiver": "문을 천천히 열게 하고, 설비 점검은 어른이 하도록 역할을 나눕니다.",
+    "report_script": "집 안 피해가 보이면 어른이나 담당 기관에 알리고 안전한 곳에서 기다립니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-05-21"
+  },
+  {
+    "rule_id": "KR_EQ_19",
+    "hazard": "earthquake",
+    "phase": "open_space",
+    "when": [
+      "공원이나 운동장이 없음",
+      "넓은 곳을 찾기 어려움",
+      "최근에 지은 튼튼한 건물이 보임"
+    ],
+    "action": "공원이나 운동장이 없으면 최근에 지은 튼튼한 건물 안으로 들어가 몸을 보호합니다.",
+    "do_not": "건물 벽 바로 옆에 서 있지 않습니다.",
+    "why": "넓은 곳이 없을 때는 튼튼한 건물 안이 더 안전할 수 있습니다.",
+    "caregiver": "넓은 곳이 없다면 건물 바로 옆에서 머무르지 말고 튼튼한 건물 안에서 몸을 보호하게 합니다.",
+    "report_script": "넓은 곳이나 튼튼한 건물 안에서 어른 말이나 방송을 기다립니다.",
+    "source_title": "국민재난안전포털 - 지진 발생시 행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/emp_m/eq/emergency_eqm.html",
+    "updated_at": "2026-05-21"
   }
 ]

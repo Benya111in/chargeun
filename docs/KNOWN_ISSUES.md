@@ -6,7 +6,7 @@
 - `LearningReviewSubmission` 타입은 추가됐지만, LRS 결과를 QA JSON/persistence에 저장하고 LAS와 분리 분석하는 화면은 아직 없다.
 - `/teacher`와 `/qa`는 evidence source와 suppressed candidates를 표시하지만, QA가 start/end time이나 decision point를 직접 수정하는 편집 UI는 아직 없다.
 - 공식 rule catalog의 `learnerActionLabel`, `easyReason`, `unsafeConfusions` 같은 교육용 확장 필드는 아직 P1 범위다. 현재는 기존 `action`, `do_not`, `why`, `caregiver`, `report_script`와 scenario override에서 구조화 데이터를 만든다.
-- 공식 source RAG는 현재 화재/지진 핵심 청크 7개만 갖고 있다. SafeTV, 국민안전24, 한국장애인개발원 자료를 더 넓게 수집하되 원문/영상 전체를 저장하지 않고 paraphrase chunk와 출처 URL 중심으로 확장해야 한다.
+- 공식 source RAG는 현재 화재/지진 핵심 청크 13개만 갖고 있다. SafeTV, 국민안전24, 한국장애인개발원 자료를 더 넓게 수집하되 원문/영상 전체를 저장하지 않고 paraphrase chunk와 출처 URL 중심으로 확장해야 한다.
 - official RAG는 행동 카드의 근거를 보강하지만, 새 행동을 자동 생성하거나 검수 없이 허가하지 않는다. LLM structured output을 붙이더라도 `schema parse -> rule grounding -> review/blocked routing`을 통과해야 한다.
 - 공식 영상 원본은 라이선스 검토 전까지 tracked 배포 자산으로 넣지 않는다. 현재 public demo mp4는 로컬 데모 자산이며, 실제 배포용 SafeTV/공공 영상 사용은 출처 표기와 2차 이용 조건 확인이 필요하다.
 - 행동 카드는 현재 텍스트 카드 중심이다. 실제 Easy Read 품질을 위해서는 연령과 문해력에 맞는 그림/아이콘 검증이 필요하다.
@@ -56,4 +56,5 @@
 - `/demo`는 이제 멀티트랙/grounded 정보를 함께 보여 주지만, 현재 cue timeline은 실제 segment detector 결과가 아니라 영상 길이를 track 수로 균등 분할한 발표용 cue 스케줄이다.
 - `/demo` scene-stepper의 장면 window는 현재 수동으로 정의한 presentation metadata라서, 실제 라이브 segment detector 결과와 자동 동기화되지는 않는다.
 - `/demo`는 발표 호환 경로로 `/scenario/fire-grounded-flow` 학습 플레이어를 연다. grounding 근거, 관찰 신호, 운영자 제어가 필요하면 `/teacher` 또는 `/qa`를 사용해야 한다.
+- 지진 학습 시나리오는 음성/자막의 핵심 단서를 더 많이 보존하도록 17개 장면으로 보강했지만, 실제 느린학습자가 정보량을 과하다고 느끼는지 또는 여전히 부족하다고 느끼는지는 사용자 테스트가 필요하다.
 - `/qa` 검증 화면에는 아직 일부 운영자용 영어/내부 용어가 남아 있다. 기본 학습자 경로에서는 숨겼지만, 내부 QA 배포 전에는 접근 통제와 용어 정리가 더 필요하다.

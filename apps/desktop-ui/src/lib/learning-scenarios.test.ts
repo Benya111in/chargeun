@@ -75,7 +75,7 @@ describe('learningScenarios', () => {
         for (const text of getLearnerVisibleTexts(segment, scenario)) {
           expect(text).not.toMatch(hardLearnerCopyPattern)
           expect(text).not.toMatch(
-            /어디로 어디로|말를|보기하기|때을|찾기해야|계단으로 안전한 곳|다친 사람과 방송/,
+            /어디로 어디로|말를|보기하기|때을|찾기해야|가기해야|계단으로 안전한 곳|다친 사람과 방송/,
           )
         }
 
@@ -180,6 +180,9 @@ describe('learningScenarios', () => {
       simplifyLearnerCopy('전기 이상은 어른에게 말하고 공식 안내를 기다려요.'),
     ).toBe('전기가 고장 난 것 같으면 어른에게 말하고 방송을 기다려요.')
     expect(simplifyLearnerCopy('어디로 대피할까요?')).toBe('어디로 갈까요?')
+    expect(simplifyLearnerCopy('차례대로 이동해야 합니다.')).toBe(
+      '차례대로 가야 해요.',
+    )
   })
 
   it('keeps core spoken and onscreen education points in narration coverage', () => {
@@ -241,6 +244,59 @@ describe('learningScenarios', () => {
     )
     expect(narrationText('earthquake-protect-flow')).toEqual(
       expect.stringContaining('여진이 발생할 수 있으므로'),
+    )
+  })
+
+  it('keeps concrete earthquake details visible in learner cards', () => {
+    const earthquakeScenario = learningScenarios.find(
+      (scenario) => scenario.id === 'earthquake-protect-flow',
+    )!
+    const visibleText = (segmentId: string) =>
+      getLearnerVisibleTexts(
+        earthquakeScenario.segments.find(
+          (segment) => segment.id === segmentId,
+        )!,
+        earthquakeScenario,
+      ).join(' ')
+
+    expect(visibleText('earthquake-full-table-protect')).toEqual(
+      expect.stringContaining('탁자 다리'),
+    )
+    expect(visibleText('earthquake-full-cushion-glass')).toEqual(
+      expect.stringContaining('방석'),
+    )
+    expect(visibleText('earthquake-full-cushion-glass')).toEqual(
+      expect.stringContaining('유리에 등을 돌려요'),
+    )
+    expect(visibleText('earthquake-full-outside-head')).toEqual(
+      expect.stringContaining('유리와 간판'),
+    )
+    expect(visibleText('earthquake-full-outside-head')).toEqual(
+      expect.stringContaining('가방'),
+    )
+    expect(visibleText('earthquake-full-open-space')).toEqual(
+      expect.stringContaining('안전디딤돌'),
+    )
+    expect(visibleText('earthquake-full-open-space')).toEqual(
+      expect.stringContaining('공원'),
+    )
+    expect(visibleText('earthquake-full-open-space')).toEqual(
+      expect.stringContaining('운동장'),
+    )
+    expect(visibleText('earthquake-full-sturdy-building')).toEqual(
+      expect.stringContaining('튼튼한 건물'),
+    )
+    expect(visibleText('earthquake-full-electric-water')).toEqual(
+      expect.stringContaining('손전등'),
+    )
+    expect(visibleText('earthquake-full-electric-water')).toEqual(
+      expect.stringContaining('전선'),
+    )
+    expect(visibleText('earthquake-full-water-report')).toEqual(
+      expect.stringContaining('수도관'),
+    )
+    expect(visibleText('earthquake-full-water-report')).toEqual(
+      expect.stringContaining('물 쓰기'),
     )
   })
 

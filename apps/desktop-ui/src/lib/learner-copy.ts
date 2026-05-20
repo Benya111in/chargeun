@@ -17,6 +17,8 @@ export function simplifyLearnerCopy(text: string) {
   return output
     .replace(/찾기해야/gu, '찾아야')
     .replace(/찾기해야 해요/gu, '찾아야 해요')
+    .replace(/가기해야/gu, '가야')
+    .replace(/가기해야 해요/gu, '가야 해요')
     .replace(/보기하기/gu, '보기')
     .replace(/어디로 어디로/gu, '어디로')
     .replace(/말를/gu, '말을')
@@ -109,6 +111,10 @@ const exactReasonReplacements: Array<[string, string]> = [
     '밖으로 뛰면 떨어지는 물건에 다칠 수 있어요.',
   ],
   [
+    '낙하물과 유리 파편을 줄이려면 몸을 보호하는 것이 우선입니다.',
+    '떨어지는 물건과 유리 조각에서 몸을 지켜요.',
+  ],
+  [
     '또 흔들릴 수 있고 불이 날 수 있어, 나갈 길과 주변 위험을 확인해야 합니다.',
     '또 흔들릴 수 있어요. 나갈 길과 주변을 봐요.',
   ],
@@ -153,6 +159,10 @@ const exactWarningReplacements: Array<[string, string]> = [
   [
     '흔들리는 동안 서둘러 밖으로 뛰어나가지 않습니다.',
     '흔들릴 때 바로 밖으로 뛰어나가지 않아요.',
+  ],
+  [
+    '유리창이나 무거운 가구 근처로 이동하지 않습니다.',
+    '유리창이나 무거운 가구 가까이 가지 않아요.',
   ],
   [
     '흔들림이 끝나자마자 무작정 이동하지 않습니다.',

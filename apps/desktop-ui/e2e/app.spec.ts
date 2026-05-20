@@ -213,8 +213,8 @@ test('offers next practice and restart controls after the final scene', async ({
 test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await page.goto('/scenario/earthquake-protect-flow')
 
-  await page.getByRole('button', { name: '14번째 장면' }).click()
-  await expect(page.getByText('14 / 14')).toBeVisible()
+  await page.getByRole('button', { name: '17번째 장면' }).click()
+  await expect(page.getByText('17 / 17')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
