@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readdir, unlink } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -50,36 +50,47 @@ const cards = [
     theme: 'yellow',
   },
   {
-    eyebrow: '첫 번째 도움',
-    title: 'AI가 긴 영상을 작게 나눠요',
+    eyebrow: '첫 번째 AI: 영상 전문',
+    title: '영상 분석 AI가 장면 설명을 만들어요',
     body: [
-      '긴 영상을 한 번에 보지 않아요.',
-      '중요한 순간마다 잠깐 멈추게 만들어요.',
+      '이 AI는 영상의 흐름을 보는 전문가입니다.',
+      '장면을 나누고, 각 장면에 필요한 설명을 먼저 씁니다.',
     ],
-    note: '장면을 작게 나누면 무엇을 볼지 더 분명해집니다.',
+    note: '긴 영상을 작은 학습 장면으로 나누면 무엇을 볼지 더 분명해집니다.',
     visual: 'split',
     theme: 'mint',
   },
   {
-    eyebrow: '두 번째 도움',
-    title: '안전한 내용인지 다시 확인해요',
+    eyebrow: '두 번째 AI: 재난안전 전문',
+    title: '재난안전 AI가 내용을 검사해요',
     body: [
-      '재난 행동요령과 맞는 설명인지 봅니다.',
-      '애매한 행동은 학습자에게 보여주지 않아요.',
+      '이 AI는 공식 재난 행동요령을 기준으로 설명을 봅니다.',
+      '위험하거나 애매한 말은 학습자에게 보여주지 않아요.',
     ],
-    note: '그럴듯한 말보다 안전한 설명이 먼저입니다.',
+    note: '참고 출처',
+    sources: [
+      '국민재난안전포털 행동요령',
+      '행정안전부 안전한TV',
+      '한국장애인개발원 장애인 재난안전 가이드',
+    ],
     visual: 'shield',
     theme: 'coral',
   },
   {
-    eyebrow: '세 번째 도움',
-    title: '어려운 말을 쉬운 말로 바꿔요',
+    eyebrow: '세 번째 AI: 느린학습자 연구',
+    title: '느린학습자 연구 AI가 쉬운 말로 바꿔요',
     body: [
-      '긴 문장은 짧게 나눠요.',
-      '어려운 말은 쉬운 말로 바꿔요.',
-      '따라 읽기 좋게 다시 정리해요.',
+      '이 AI는 느린학습자 연구를 참고한 전문가입니다.',
+      '긴 문장은 짧게, 어려운 말은 쉬운 말로 바꿉니다.',
+      '따라 읽고 행동을 떠올리기 좋게 다시 정리해요.',
     ],
-    note: '쉬운 자료는 말, 그림, 배치를 함께 생각해야 합니다.',
+    note: '참고 문헌',
+    sources: [
+      'W3C COGA: Making Content Usable',
+      'Easy Read | Australian Style Manual',
+      'Mayer: Multimedia Learning - Segmenting Principle',
+      '경계선 지능·느린학습자 국내 문헌 검토',
+    ],
     visual: 'speech',
     theme: 'lavender',
   },
@@ -88,7 +99,7 @@ const cards = [
     title: '영상 하나가 연습 자료가 돼요',
     body: [
       '재난안전 영상을 올리면 장면별 연습으로 바꿉니다.',
-      '목표는 10분 안에 먼저 써 볼 수 있는 연습 자료를 만드는 것입니다.',
+      '목표는 10분 안에 사람이 검토할 수 있는 연습본을 만드는 것입니다.',
     ],
     note: '지금은 화재와 지진 예시로 먼저 보여드립니다.',
     visual: 'upload',
@@ -130,18 +141,6 @@ const cards = [
     note: '화재 연습이 끝나면 지진 연습으로 이어집니다.',
     visual: 'flow',
     theme: 'sky',
-  },
-  {
-    eyebrow: '전문가 조언이 필요합니다',
-    title: '전문가와 함께 더 확인하려고 해요',
-    body: [
-      '문장이 정말 쉬운지 알고 싶습니다.',
-      '행동 카드가 연습에 도움이 되는지 보고 싶습니다.',
-      '무섭거나 헷갈리는 부분은 없는지 확인하고 싶습니다.',
-    ],
-    note: '느린학습자 지원, 특수교육, 재난안전 전문가의 조언이 필요합니다.',
-    visual: 'care',
-    theme: 'lavender',
   },
   {
     eyebrow: '가장 중요한 약속',
@@ -295,6 +294,12 @@ function renderCard(card, index) {
       : `<div class="body-lines">${card.body
           .map((item) => `<p>${escapeHtml(item)}</p>`)
           .join('')}</div>`
+  const footer = card.sources?.length
+    ? `<footer>
+        <p>${escapeHtml(card.note)}</p>
+        <ul>${card.sources.map((source) => `<li>${escapeHtml(source)}</li>`).join('')}</ul>
+      </footer>`
+    : `<footer><p>${escapeHtml(card.note)}</p></footer>`
 
   return `
     <section class="card theme-${card.theme}">
@@ -309,7 +314,7 @@ function renderCard(card, index) {
         ${body}
       </main>
       <figure class="visual">${renderVisual(card.visual)}</figure>
-      <footer>${escapeHtml(card.note)}</footer>
+      ${footer}
     </section>`
 }
 
@@ -507,6 +512,25 @@ function renderHtml() {
         line-height: 1.35;
         word-break: keep-all;
       }
+
+      footer p {
+        margin: 0;
+      }
+
+      footer ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 22px;
+        line-height: 1.28;
+      }
+
+      footer li::before {
+        content: "· ";
+      }
     </style>
   </head>
   <body>
@@ -516,6 +540,12 @@ function renderHtml() {
 }
 
 await mkdir(pagesDir, { recursive: true })
+const existingPageFiles = await readdir(pagesDir)
+await Promise.all(
+  existingPageFiles
+    .filter((fileName) => /^page-\d+\.png$/.test(fileName))
+    .map((fileName) => unlink(resolve(pagesDir, fileName))),
+)
 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1080, height: 1080 } })
