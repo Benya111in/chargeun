@@ -425,7 +425,9 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
               </ol>
             ) : (
               <p className="mt-4 rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-3 text-lg font-semibold leading-8 text-[#596257]">
-                이 장면은 선생님이나 보호자와 공식 안내를 확인해요.
+                {segment.practiceMode === 'intro'
+                  ? '이 장면은 소개예요. 다음 장면에서 행동을 연습해요.'
+                  : '이 장면은 선생님이나 보호자와 공식 안내를 확인해요.'}
               </p>
             )}
           </section>
@@ -472,7 +474,8 @@ function PracticePanel({
   stage: PracticeStage
 }) {
   const learnerActionCards = getLearnerActionCards(segment)
-  const canAskQuestion = learnerActionCards.length > 0
+  const isIntroSegment = segment.practiceMode === 'intro'
+  const canAskQuestion = !isIntroSegment && learnerActionCards.length > 0
   const canContinue = canAskQuestion ? selectedAnswer?.correct === true : true
 
   if (stage === 'rest') {
@@ -536,27 +539,38 @@ function PracticePanel({
       </h1>
 
       <div className="mt-6 grid gap-3">
-        <h2 className="text-lg font-semibold">지금 할 일</h2>
-        {canAskQuestion ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            {learnerActionCards.map((card) => (
-              <div
-                key={`${card.order}-${card.label}`}
-                className="rounded-md border border-[#151713] bg-[#151713] px-4 py-4 text-white"
-              >
-                <p className="text-sm font-semibold text-white/70">
-                  {card.order}번
-                </p>
-                <p className="mt-2 text-xl font-semibold leading-8">
-                  {card.label}
-                </p>
-              </div>
-            ))}
-          </div>
+        {isIntroSegment ? (
+          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4">
+            <h2 className="text-lg font-semibold">지금 장면</h2>
+            <p className="mt-2 text-xl font-semibold leading-8 text-[#596257]">
+              내용을 소개하는 부분이에요. 다음 장면에서 행동을 연습해요.
+            </p>
+          </section>
         ) : (
-          <p className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4 text-xl font-semibold leading-8 text-[#596257]">
-            확실하지 않아요. 선생님이나 보호자와 공식 안내를 확인해요.
-          </p>
+          <>
+            <h2 className="text-lg font-semibold">지금 할 일</h2>
+            {canAskQuestion ? (
+              <div className="grid gap-3 md:grid-cols-3">
+                {learnerActionCards.map((card) => (
+                  <div
+                    key={`${card.order}-${card.label}`}
+                    className="rounded-md border border-[#151713] bg-[#151713] px-4 py-4 text-white"
+                  >
+                    <p className="text-sm font-semibold text-white/70">
+                      {card.order}번
+                    </p>
+                    <p className="mt-2 text-xl font-semibold leading-8">
+                      {card.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4 text-xl font-semibold leading-8 text-[#596257]">
+                확실하지 않아요. 선생님이나 보호자와 공식 안내를 확인해요.
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -611,7 +625,7 @@ function PracticePanel({
         </section>
       ) : null}
 
-      {showReason ? (
+      {!isIntroSegment && showReason ? (
         <div className="mt-5 rounded-md border border-[#dfe4da] bg-white px-4 py-4">
           <p className="text-sm font-semibold text-[#596257]">이유</p>
           <p className="mt-2 text-xl font-semibold leading-8">
@@ -620,21 +634,21 @@ function PracticePanel({
         </div>
       ) : null}
 
-      <PreservedCandidatePanel segment={segment} />
-
       <div className="mt-6 flex flex-wrap gap-2">
         <button className="link-button" onClick={onReplay} type="button">
           <RotateCcw className="size-4" />이 장면 다시 보기
         </button>
-        <button
-          aria-expanded={showReason}
-          className="link-button"
-          onClick={onToggleReason}
-          type="button"
-        >
-          <HelpCircle className="size-4" />
-          {showReason ? '이유 닫기' : '이유 보기'}
-        </button>
+        {!isIntroSegment ? (
+          <button
+            aria-expanded={showReason}
+            className="link-button"
+            onClick={onToggleReason}
+            type="button"
+          >
+            <HelpCircle className="size-4" />
+            {showReason ? '이유 닫기' : '이유 보기'}
+          </button>
+        ) : null}
         <button className="link-button" onClick={onRest} type="button">
           <PauseCircle className="size-4" />
           쉬기
@@ -658,38 +672,6 @@ function PracticePanel({
             다음 장면 보기
           </button>
         )}
-      </div>
-    </section>
-  )
-}
-
-function PreservedCandidatePanel({ segment }: { segment: TheaterSegment }) {
-  const candidates = getLearnerPreservedCandidates(segment)
-
-  if (candidates.length === 0) {
-    return null
-  }
-
-  return (
-    <section className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
-      <h2 className="text-lg font-semibold">잊지 말아요</h2>
-      <p className="mt-2 text-sm leading-6 text-[#596257]">
-        이 장면에서 함께 기억할 점이에요.
-      </p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {candidates.map((candidate) => (
-          <div
-            key={`${candidate.category}-${candidate.candidate}`}
-            className="rounded-md border border-[#dfe4da] bg-white px-4 py-3"
-          >
-            <p className="text-sm font-semibold text-[#151713]">
-              {getLearnerReminderText(candidate.candidate)}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-[#596257]">
-              다시 볼 때 선생님이나 보호자와 확인해요.
-            </p>
-          </div>
-        ))}
       </div>
     </section>
   )
@@ -815,52 +797,6 @@ function getSegmentStartSec(segment: TheaterSegment) {
   }
 
   return rawStartSec + segmentStartGuardSec
-}
-
-function getLearnerPreservedCandidates(segment: TheaterSegment) {
-  return segment.structuredExplanation.suppressedCandidates
-    .filter((candidate) =>
-      ['unsafe_action', 'unsupported_action', 'not_for_learner'].includes(
-        candidate.category,
-      ),
-    )
-    .slice(0, 2)
-}
-
-function getLearnerReminderText(candidate: string) {
-  if (candidate.includes('엘리베이터')) {
-    return '엘리베이터 대신 계단을 찾아요.'
-  }
-
-  if (candidate.includes('출입문') || candidate.includes('문을 열어')) {
-    return '나갈 수 있으면 문을 닫아요.'
-  }
-
-  if (
-    candidate.includes('연기 흡입') ||
-    candidate.includes('연기 쪽') ||
-    candidate.includes('연기가 짙')
-  ) {
-    return '연기가 있으면 몸을 낮춰요.'
-  }
-
-  if (candidate.includes('밖으로 뛰') || candidate.includes('무작정 이동')) {
-    return '바로 뛰지 말고 먼저 몸을 보호해요.'
-  }
-
-  if (candidate.includes('유리창') || candidate.includes('무거운 가구')) {
-    return '유리창 가까이는 피해서 머리를 지켜요.'
-  }
-
-  if (
-    candidate.includes('가스') ||
-    candidate.includes('전기') ||
-    candidate.includes('전깃불')
-  ) {
-    return '가스와 전기는 혼자 만지지 않아요.'
-  }
-
-  return candidate
 }
 
 function selectScenarioFromPath() {

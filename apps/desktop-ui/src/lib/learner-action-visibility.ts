@@ -9,6 +9,10 @@ export type LearnerActionCard = {
 export function getLearnerActionCards(
   segment: TheaterSegment,
 ): LearnerActionCard[] {
+  if (segment.practiceMode !== 'action') {
+    return []
+  }
+
   const structured = segment.structuredExplanation
 
   if (

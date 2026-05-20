@@ -16,29 +16,46 @@ describe('learningScenarios', () => {
         expect(segment.learnerExplanation).toBeTruthy()
         expect(segment.learnerExplanation.length).toBeLessThanOrEqual(35)
         expect(segment.learnerPrompt).toBeTruthy()
-        expect(segment.actionSteps.length).toBeGreaterThanOrEqual(1)
-        expect(segment.actionSteps.length).toBeLessThanOrEqual(3)
-        expect(
-          getLearnerActionCards(segment).map((card) => card.label),
-        ).toEqual(segment.actionSteps)
-        expect(segment.checkQuestion).toBeTruthy()
+        expect(segment.narration.length).toBeGreaterThan(0)
+        for (const cue of segment.narration) {
+          expect(cue.startMs).toBeGreaterThanOrEqual(segment.startMs)
+          expect(cue.endMs).toBeLessThanOrEqual(segment.endMs)
+          expect(cue.endMs).toBeGreaterThan(cue.startMs)
+          expect(cue.text.trim()).toBeTruthy()
+        }
         expect(segment.teachBack).toEqual(
           segment.structuredExplanation.tracks.teachBack,
         )
-        expect(segment.checkQuestion).toBe(segment.teachBack?.prompt)
-        expect(segment.answerOptions.length).toBeGreaterThanOrEqual(2)
-        expect(
-          segment.answerOptions.some((option) => option.correct),
-        ).toBeTruthy()
-        expect(
-          segment.answerOptions.filter((option) => option.correct),
-        ).toHaveLength(1)
-        const optionLabels = segment.answerOptions.map((option) => option.label)
-        expect(new Set(optionLabels).size).toBe(optionLabels.length)
-        expect(optionLabels).not.toContain('잘 모르겠어요')
-        expect(segment.answerOptions.find((option) => option.correct)?.id).toBe(
-          segment.teachBack?.correctOptionId,
-        )
+
+        if (segment.practiceMode === 'intro') {
+          expect(segment.actionSteps).toHaveLength(0)
+          expect(getLearnerActionCards(segment)).toEqual([])
+          expect(segment.checkQuestion).toBe('')
+          expect(segment.answerOptions).toHaveLength(0)
+        } else {
+          expect(segment.actionSteps.length).toBeGreaterThanOrEqual(1)
+          expect(segment.actionSteps.length).toBeLessThanOrEqual(3)
+          expect(
+            getLearnerActionCards(segment).map((card) => card.label),
+          ).toEqual(segment.actionSteps)
+          expect(segment.checkQuestion).toBeTruthy()
+          expect(segment.checkQuestion).toBe(segment.teachBack?.prompt)
+          expect(segment.answerOptions.length).toBeGreaterThanOrEqual(2)
+          expect(
+            segment.answerOptions.some((option) => option.correct),
+          ).toBeTruthy()
+          expect(
+            segment.answerOptions.filter((option) => option.correct),
+          ).toHaveLength(1)
+          const optionLabels = segment.answerOptions.map(
+            (option) => option.label,
+          )
+          expect(new Set(optionLabels).size).toBe(optionLabels.length)
+          expect(optionLabels).not.toContain('잘 모르겠어요')
+          expect(
+            segment.answerOptions.find((option) => option.correct)?.id,
+          ).toBe(segment.teachBack?.correctOptionId)
+        }
 
         const learnerActionLabels = getLearnerActionCards(segment).map(
           (card) => card.label,

@@ -122,30 +122,41 @@ export default function TeacherGuidePage() {
                   <OfficialEvidenceBlock segment={segment} />
                 </div>
 
+                <NarrationTimelineBlock segment={segment} />
+
                 <StructuredLearningBlock segment={segment} />
 
                 <div className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
                   <p className="text-sm font-semibold text-[#596257]">
                     Teach-back
                   </p>
-                  <p className="mt-2 text-lg font-semibold">
-                    {segment.checkQuestion}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {segment.answerOptions.map((option) => (
-                      <span
-                        key={option.id}
-                        className={cn(
-                          'rounded-md border px-3 py-2 text-sm font-semibold',
-                          option.correct
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                            : 'border-[#dfe4da] bg-white text-[#596257]',
-                        )}
-                      >
-                        {option.label}
-                      </span>
-                    ))}
-                  </div>
+                  {segment.practiceMode === 'intro' ? (
+                    <p className="mt-2 text-lg font-semibold">
+                      소개 장면입니다. 학습자 질문은 다음 행동 장면에서
+                      시작합니다.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-lg font-semibold">
+                        {segment.checkQuestion}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {segment.answerOptions.map((option) => (
+                          <span
+                            key={option.id}
+                            className={cn(
+                              'rounded-md border px-3 py-2 text-sm font-semibold',
+                              option.correct
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                                : 'border-[#dfe4da] bg-white text-[#596257]',
+                            )}
+                          >
+                            {option.label}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </article>
             ))}
@@ -154,6 +165,42 @@ export default function TeacherGuidePage() {
       </div>
     </main>
   )
+}
+
+function NarrationTimelineBlock({ segment }: { segment: TheaterSegment }) {
+  return (
+    <section className="mt-5 rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#596257]">
+        음성/자막 타임라인
+      </p>
+      <div className="mt-3 grid gap-2">
+        {segment.narration.map((cue) => (
+          <div
+            key={`${cue.startMs}-${cue.endMs}-${cue.text}`}
+            className="rounded-md border border-[#dfe4da] bg-white px-3 py-2 text-sm leading-6"
+          >
+            <p className="font-semibold text-[#151713]">
+              {formatCueTime(cue.startMs)}-{formatCueTime(cue.endMs)} ·{' '}
+              {cue.source === 'caption'
+                ? '자막'
+                : cue.source === 'audio'
+                  ? '음성'
+                  : '화면 글자'}
+            </p>
+            <p className="mt-1 text-[#596257]">{cue.text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function formatCueTime(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 function StructuredLearningBlock({ segment }: { segment: TheaterSegment }) {
@@ -176,10 +223,12 @@ function StructuredLearningBlock({ segment }: { segment: TheaterSegment }) {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <StructuredList
           items={
-            structured.tracks.action?.cards.map(
-              (card) =>
-                `${card.order}. ${card.label} · ${card.officialRuleIds.join(', ')}`,
-            ) ?? ['학습자 행동 카드는 review 상태입니다.']
+            segment.practiceMode === 'intro'
+              ? ['소개 장면이라 학습자 행동 카드를 숨깁니다.']
+              : (structured.tracks.action?.cards.map(
+                  (card) =>
+                    `${card.order}. ${card.label} · ${card.officialRuleIds.join(', ')}`,
+                ) ?? ['학습자 행동 카드는 review 상태입니다.'])
           }
           title="행동 카드 근거"
         />

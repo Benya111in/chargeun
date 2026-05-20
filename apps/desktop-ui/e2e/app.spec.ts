@@ -39,46 +39,63 @@ test('runs the scenario practice loop', async ({ page }) => {
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
-  await expect(page.getByText('지금 할 일')).toBeVisible()
+  await expect(page.getByText('아파트 화재 연습을 시작해요.')).toBeVisible()
+  await expect(page.getByText('지금 장면')).toBeVisible()
   await expect(
-    page.getByRole('listitem').filter({ hasText: '가족에게 알려요' }),
+    page.getByText(
+      '내용을 소개하는 부분이에요. 다음 장면에서 행동을 연습해요.',
+    ),
   ).toBeVisible()
-  await expect(
-    page.getByText('불이 나면 바로 알리고 나갈 준비를 해요.'),
-  ).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: '다음 장면 보기' }),
-  ).toBeDisabled()
-
-  await page.getByRole('button', { name: '혼자 확인하기' }).click()
-  await expect(
-    page.getByText('괜찮아요. 혼자 보러 가지 말고 바로 알려요. 다시 봐요.'),
-  ).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: '다음 장면 보기' }),
-  ).toBeDisabled()
-
-  await page.getByRole('button', { name: '가족에게 알리기' }).click()
-  await expect(page.getByText('맞아요. 불이 나면 바로 알려요.')).toBeVisible()
+  await expect(page.getByText('지금 할 일')).toHaveCount(0)
+  await expect(page.getByText('처음에 무엇을 할까요?')).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: '다음 장면 보기' }),
   ).toBeEnabled()
-  await expect(
-    page.getByRole('button', { name: '혼자 확인하기' }),
-  ).toBeDisabled()
-
-  await page.getByRole('button', { name: '이유 보기' }).click()
-  await expect(page.getByRole('button', { name: '이유 닫기' })).toBeVisible()
-  await expect(page.getByText('이유', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '다음 장면 보기' }).click()
   await expect(page.getByText('2 / 6')).toBeVisible()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
+  await expect(page.getByText('지금 할 일')).toBeVisible()
+  await expect(
+    page.getByRole('listitem').filter({ hasText: '문을 닫아요' }),
+  ).toBeVisible()
   await expect(page.getByText('나갈 수 있으면 현관문을 닫아요.')).toBeVisible()
-  await expect(page.getByText('잊지 말아요')).toBeVisible()
-  await expect(page.getByText('나갈 수 있으면 문을 닫아요.')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '다음 장면 보기' }),
+  ).toBeDisabled()
+
+  await page.getByRole('button', { name: '열어 두기' }).click()
+  await expect(
+    page.getByText('괜찮아요. 문을 닫는 장면을 다시 봐요.'),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '다음 장면 보기' }),
+  ).toBeDisabled()
+
+  await page.getByRole('button', { name: '닫기' }).click()
+  await expect(
+    page.getByText('맞아요. 문을 닫으면 연기가 덜 퍼져요.'),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '다음 장면 보기' }),
+  ).toBeEnabled()
+  await expect(page.getByRole('button', { name: '열어 두기' })).toBeDisabled()
+
+  await page.getByRole('button', { name: '이유 보기' }).click()
+  await expect(page.getByRole('button', { name: '이유 닫기' })).toBeVisible()
+  await expect(page.getByText('이유', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: '다음 장면 보기' }).click()
+  await expect(page.getByText('3 / 6')).toBeVisible()
+  await page.locator('video').evaluate((video) => {
+    video.dispatchEvent(new Event('ended', { bubbles: true }))
+  })
+  await expect(
+    page.getByText('불이 났을 때 엘리베이터는 타지 않아요.'),
+  ).toBeVisible()
+  await expect(page.getByText('잊지 말아요')).toHaveCount(0)
   await expect(page.getByText('헷갈릴 수 있어요')).toHaveCount(0)
   await expect(
     page.getByText('보일 수 있어요. 하지만 지금은 고르지 않아요.'),
@@ -167,9 +184,7 @@ test('clamps video before the next segment frame is shown', async ({
     video.dispatchEvent(new Event('timeupdate', { bubbles: true }))
   })
 
-  await expect(
-    page.getByText('불이 나면 바로 알리고 나갈 준비를 해요.'),
-  ).toBeVisible()
+  await expect(page.getByText('아파트 화재 연습을 시작해요.')).toBeVisible()
   await expect
     .poll(async () =>
       page.locator('video').evaluate((video) => video.currentTime),

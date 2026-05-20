@@ -33,7 +33,9 @@ export type TheaterSegment = {
   label: string
   learnerExplanation: string
   learnerPrompt: string
+  narration: TimedNarrationCue[]
   packet: PerceptionPacket
+  practiceMode: SegmentPracticeMode
   primarySourceTitle: string | null
   ruleMatches: GroundedRuleMatch[]
   safetyWarnings: string[]
@@ -48,6 +50,15 @@ export type TheaterSegment = {
     script: string
   }
   teachBack: LearningTeachBack | null
+}
+
+export type SegmentPracticeMode = 'intro' | 'action'
+
+export type TimedNarrationCue = {
+  endMs: number
+  source: 'audio' | 'caption' | 'onscreen'
+  startMs: number
+  text: string
 }
 
 export type PracticeAnswerOption = LearningTeachBack['options'][number] & {
@@ -76,7 +87,9 @@ type SegmentSeed = {
   label: string
   learnerExplanation?: string
   learnerPrompt?: string
+  narration?: TimedNarrationCue[]
   packet: PerceptionPacket
+  practiceMode?: SegmentPracticeMode
   rules: RuleRecord[]
   segmentOverrides?: Partial<Segment>
   startMs: number
@@ -95,33 +108,54 @@ export const learningScenarios: TheaterShow[] = [
     posterSrc: '/demo/fire-grounded-02.jpg',
     segments: [
       createSegment({
-        description: '불이 나면 바로 알려요.',
+        description: '아파트 화재 연습을 시작해요.',
         endMs: 10_200,
         id: 'fire-full-alert',
-        label: '불이 난 것을 알려요',
-        learnerExplanation: '불이 나면 바로 알리고 나갈 준비를 해요.',
-        learnerPrompt: '아파트에 불이 났어요. 먼저 알려야 해요.',
-        actionSteps: ['가족에게 알려요', '나갈 길을 봐요'],
+        label: '화재 연습을 시작해요',
+        learnerExplanation: '아파트 화재 연습을 시작해요.',
+        learnerPrompt: '먼저 숫자와 제목을 보고 있어요.',
+        actionSteps: [],
+        narration: [
+          {
+            endMs: 3_000,
+            source: 'onscreen',
+            startMs: 0,
+            text: '아파트 화재는 매년 평균 약 2,800여 건 발생합니다.',
+          },
+          {
+            endMs: 7_400,
+            source: 'onscreen',
+            startMs: 3_000,
+            text: '아파트 화재 사상자의 39.1%는 대피 중 발생합니다.',
+          },
+          {
+            endMs: 10_200,
+            source: 'onscreen',
+            startMs: 7_400,
+            text: '아파트 화재 시 이렇게 행동합시다.',
+          },
+        ],
+        practiceMode: 'intro',
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 혼자 보러 가지 말고 바로 알려요.',
-            id: 'check-alone',
-            label: '혼자 확인하기',
+            feedback: '괜찮아요. 아직 행동을 고르는 장면은 아니에요.',
+            id: 'act-now',
+            label: '지금 바로 행동 고르기',
           },
           correct: {
-            feedback: '맞아요. 불이 나면 바로 알려요.',
-            id: 'tell-family',
-            label: '가족에게 알리기',
+            feedback: '맞아요. 먼저 화재 연습이 시작되는 장면이에요.',
+            id: 'watch-intro',
+            label: '연습 시작 보기',
           },
           kind: 'signal',
-          prompt: '처음에 무엇을 할까요?',
+          prompt: '이 장면은 무엇을 알려줄까요?',
           ruleIds: ['KR_FIRE_01'],
         }),
         packet: createPacket({
           asrText:
-            '아파트 화재가 발생하면 주변 사람에게 즉시 알리고 가장 가까운 대피 경로를 찾습니다.',
-          objectHints: ['아파트 화재', '연기', '불길', '대피 준비'],
-          ocrTokens: ['아파트 화재', '행동요령', '대피'],
+            '아파트 화재는 매년 평균 약 2,800여 건 발생합니다. 아파트 화재 사상자의 39.1%는 대피 중 발생합니다. 아파트 화재 시 이렇게 행동합시다.',
+          objectHints: ['아파트 화재 통계', '안전교육 오프닝', '제목 화면'],
+          ocrTokens: ['아파트 화재', '2,800여 건', '39.1%', '행동요령'],
           sessionId: 'demo-fire-full-alert',
           startMs: 0,
           endMs: 10_200,
@@ -137,11 +171,12 @@ export const learningScenarios: TheaterShow[] = [
         startMs: 0,
         teacherGuide: {
           correction:
-            '화재를 혼자 확인하러 가지 않고 바로 알리는 행동을 먼저 말하게 합니다.',
-          observe: '처음 행동으로 알리기와 나갈 길 확인을 고르는지 봅니다.',
-          prompt: '불이 났다고 느끼면 누구에게 바로 알려야 할까요?',
+            '오프닝에서는 아직 행동 카드를 고르지 않고, 영상이 어떤 연습인지 확인하게 합니다.',
+          observe:
+            '학습자가 통계와 제목을 본 뒤 다음 장면으로 넘어갈 수 있는지 봅니다.',
+          prompt: '지금은 행동 장면인가요, 연습을 소개하는 장면인가요?',
           script:
-            '오프닝 장면에서 화재는 빠르게 알려야 하는 상황임을 짚습니다.',
+            '오프닝은 아파트 화재가 자주 일어나고 대피 중 다칠 수 있음을 알려 주는 소개 장면입니다.',
         },
       }),
       createSegment({
@@ -424,29 +459,50 @@ export const learningScenarios: TheaterShow[] = [
         endMs: 42_400,
         id: 'earthquake-full-opening',
         label: '지진 연습을 시작해요',
-        learnerExplanation: '지진은 갑자기 올 수 있어요. 미리 연습해요.',
-        learnerPrompt: '지진은 언제 올지 알기 어려워요.',
-        actionSteps: ['안전한 곳을 기억해요', '가족과 약속해요'],
+        learnerExplanation: '지진 행동요령을 소개해요.',
+        learnerPrompt: '지진이 왜 위험한지 설명하고 있어요.',
+        actionSteps: [],
+        narration: [
+          {
+            endMs: 17_560,
+            source: 'caption',
+            startMs: 0,
+            text: '언제 어디서 얼마나 강하게 발생할지 모르는 재난, 지진. 우리나라도 더 이상 지진의 안전지대가 아니고, 지진은 사전 예보가 불가능한 재난입니다.',
+          },
+          {
+            endMs: 28_960,
+            source: 'caption',
+            startMs: 17_560,
+            text: '따라서 평상시 지진 대처 요령을 숙지하고 올바르게 대응하는 것이 중요합니다.',
+          },
+          {
+            endMs: 42_400,
+            source: 'caption',
+            startMs: 37_200,
+            text: '지진 행동요령을 알아봅니다.',
+          },
+        ],
+        practiceMode: 'intro',
         teachBack: createTeachBack({
           contrast: {
-            feedback: '괜찮아요. 지진은 미리 연습해 두면 좋아요.',
-            id: 'no-plan',
-            label: '그때 생각하기',
+            feedback: '괜찮아요. 아직 행동을 고르는 장면은 아니에요.',
+            id: 'act-now',
+            label: '지금 행동 고르기',
           },
           correct: {
-            feedback: '맞아요. 안전한 곳과 만날 곳을 미리 정해요.',
-            id: 'prepare',
-            label: '미리 연습하기',
+            feedback: '맞아요. 지진 행동요령을 소개하는 장면이에요.',
+            id: 'watch-intro',
+            label: '소개 보기',
           },
           kind: 'signal',
-          prompt: '지진 전에 무엇을 해 둘까요?',
+          prompt: '이 장면은 무엇을 알려줄까요?',
           ruleIds: ['KR_EQ_01'],
         }),
         packet: createPacket({
           asrText:
-            '지진은 사전 예보가 어려우므로 평상시 대처 요령을 숙지하고 가족 연락 방법과 대피 장소를 미리 정합니다.',
-          objectHints: ['지진 안내', '오프닝', '대피 준비', '가족 약속'],
-          ocrTokens: ['지진', '대처 요령', '평상시', '대피'],
+            '언제 어디서 얼마나 강하게 발생할지 모르는 재난, 지진. 우리나라도 더 이상 지진의 안전지대가 아니고 지진은 사전 예보가 불가능한 재난입니다. 따라서 평상시 지진 대처 요령을 숙지하고 올바르게 대응하는 것이 중요합니다. 지진 행동요령을 알아봅니다.',
+          objectHints: ['지진 안내 오프닝', '대처 요령 제목', '교육 시작'],
+          ocrTokens: ['지진', '대처 요령', '평상시', '행동요령'],
           sessionId: 'demo-earthquake-full-opening',
           startMs: 0,
           endMs: 42_400,
@@ -462,12 +518,12 @@ export const learningScenarios: TheaterShow[] = [
         startMs: 0,
         teacherGuide: {
           correction:
-            '오프닝은 공포를 키우기보다 “미리 연습하면 된다”는 말로 정리합니다.',
+            '오프닝에서는 행동을 고르게 하지 말고 “왜 미리 연습하는지”만 짚습니다.',
           observe:
             '학습자가 실제 상황용이 아니라 사전 연습용이라는 점을 이해하는지 봅니다.',
-          prompt: '우리 집에서 흔들릴 때 숨을 곳은 어디일까요?',
+          prompt: '지금 장면은 행동을 연습하나요, 지진을 소개하나요?',
           script:
-            '지진은 갑자기 올 수 있으므로 미리 약속과 대피 장소를 정하는 장면입니다.',
+            '오프닝은 지진은 예고하기 어렵고 평소 행동요령을 알아두어야 한다는 소개 장면입니다.',
         },
       }),
       createSegment({
@@ -1335,6 +1391,7 @@ export const practiceSequenceScenarios = learningScenarios.filter(
 export const theaterShows = learningScenarios
 
 function createSegment(seed: SegmentSeed): TheaterSegment {
+  const practiceMode = seed.practiceMode ?? 'action'
   const detectedSegment = buildSegmentFromPerception({
     packet: seed.packet,
     rules: seed.rules,
@@ -1390,14 +1447,24 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     },
   })
   const teachBack = structuredExplanation.tracks.teachBack ?? null
+  const actionSteps =
+    practiceMode === 'intro'
+      ? []
+      : (seed.actionSteps ?? [
+          safetyView.explanation.tracks.action ??
+            safetyView.explanation.tracks.easy,
+        ])
 
   return {
-    actionSteps: seed.actionSteps ?? [
-      safetyView.explanation.tracks.action ??
-        safetyView.explanation.tracks.easy,
-    ],
-    answerOptions: teachBack ? toPracticeAnswerOptions(teachBack) : [],
-    checkQuestion: teachBack?.prompt ?? '먼저 무엇을 할까요?',
+    actionSteps,
+    answerOptions:
+      practiceMode === 'intro' || !teachBack
+        ? []
+        : toPracticeAnswerOptions(teachBack),
+    checkQuestion:
+      practiceMode === 'intro'
+        ? ''
+        : (teachBack?.prompt ?? '먼저 무엇을 할까요?'),
     description: seed.description,
     endMs: seed.endMs,
     explanation: safetyView.explanation,
@@ -1405,7 +1472,16 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     label: seed.label,
     learnerExplanation: seed.learnerExplanation ?? seed.description,
     learnerPrompt: seed.learnerPrompt ?? seed.description,
+    narration: seed.narration ?? [
+      {
+        endMs: seed.endMs,
+        source: seed.packet.asrText.trim() ? 'audio' : 'onscreen',
+        startMs: seed.startMs,
+        text: seed.packet.asrText || seed.description,
+      },
+    ],
     packet: seed.packet,
+    practiceMode,
     primarySourceTitle: ruleMatches[0]?.rule.source_title ?? null,
     ruleMatches,
     safetyWarnings: safetyView.warnings,
