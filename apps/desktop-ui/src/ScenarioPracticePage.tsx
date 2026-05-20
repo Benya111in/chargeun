@@ -220,7 +220,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     }
 
     video.pause()
-    video.currentTime = getSegmentStartSec(targetSegment)
+    video.currentTime = getSegmentPreviewSec(targetSegment)
   }, [scenario.segments, segmentIndex, stage])
 
   useEffect(() => {
@@ -276,7 +276,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     }
 
     video.pause()
-    video.currentTime = getSegmentStartSec(targetSegment)
+    video.currentTime = getSegmentPreviewSec(targetSegment)
   }
 
   const rest = () => {
@@ -331,7 +331,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
                   }}
                   onLoadedMetadata={(event) => {
                     event.currentTarget.currentTime =
-                      getSegmentStartSec(segment)
+                      getSegmentPreviewSec(segment)
                   }}
                   onTimeUpdate={(event) => {
                     if (
@@ -1069,6 +1069,16 @@ function getSegmentStartSec(segment: TheaterSegment) {
   }
 
   return rawStartSec + segmentStartGuardSec
+}
+
+function getSegmentPreviewSec(segment: TheaterSegment) {
+  const previewMs = segment.previewMs
+
+  if (previewMs === undefined) {
+    return getSegmentStartSec(segment)
+  }
+
+  return Math.min(segment.endMs / 1000, previewMs / 1000)
 }
 
 function getActionStepLabel(order: number, total: number) {

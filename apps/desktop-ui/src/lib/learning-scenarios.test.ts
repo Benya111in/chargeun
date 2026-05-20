@@ -348,6 +348,35 @@ describe('learningScenarios', () => {
     expect(afterReport?.startMs).toBe(194_500)
   })
 
+  it('keeps home return and gas checks split at the first gas frame', () => {
+    const earthquakeScenario = learningScenarios.find(
+      (scenario) => scenario.id === 'earthquake-protect-flow',
+    )!
+
+    const returnDoor = earthquakeScenario.segments.find(
+      (segment) => segment.id === 'earthquake-full-return-door',
+    )!
+    const doorGas = earthquakeScenario.segments.find(
+      (segment) => segment.id === 'earthquake-full-door-gas',
+    )!
+
+    expect(returnDoor.endMs).toBe(230_450)
+    expect(returnDoor.pauseMs).toBe(230_450)
+    expect(doorGas.startMs).toBe(230_500)
+    expect(doorGas.previewMs).toBe(231_000)
+    expect(returnDoor.narration.map((cue) => cue.text).join(' ')).not.toMatch(
+      /가스|전기|수도관/,
+    )
+    expect(returnDoor.packet.objectHints.join(' ')).not.toMatch(
+      /가스|전기|수도관/,
+    )
+    expect(returnDoor.packet.ocrTokens.join(' ')).not.toMatch(
+      /가스|전기|수도관/,
+    )
+    expect(doorGas.narration[0]?.text).toContain('가스, 전기, 수도관')
+    expect(doorGas.packet.asrText).toContain('가스, 전기, 수도관')
+  })
+
   it('does not pause the outdoor earthquake narration before the sentence ends', () => {
     const earthquakeScenario = learningScenarios.find(
       (scenario) => scenario.id === 'earthquake-protect-flow',

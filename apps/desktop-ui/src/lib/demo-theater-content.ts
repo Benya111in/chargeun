@@ -39,6 +39,7 @@ export type TheaterSegment = {
   narration: TimedNarrationCue[]
   packet: PerceptionPacket
   pauseMs?: number
+  previewMs?: number
   practiceMode: SegmentPracticeMode
   primarySourceTitle: string | null
   ruleMatches: GroundedRuleMatch[]
@@ -103,6 +104,7 @@ type SegmentSeed = {
   narration?: TimedNarrationCue[]
   packet: PerceptionPacket
   pauseMs?: number
+  previewMs?: number
   practiceMode?: SegmentPracticeMode
   rules: RuleRecord[]
   segmentOverrides?: Partial<Segment>
@@ -1427,11 +1429,12 @@ export const learningScenarios: TheaterShow[] = [
       }),
       createSegment({
         description: '집에 돌아오면 문을 천천히 열어요.',
-        endMs: 235_400,
+        endMs: 230_450,
         id: 'earthquake-full-return-door',
         label: '문은 천천히 열어요',
         learnerExplanation: '문 주변을 보고 천천히 열어요.',
         learnerPrompt: '문 뒤에 물건이 쏟아질 수 있어요.',
+        pauseMs: 230_450,
         actionSteps: [
           '문 주변을 봐요',
           '문을 천천히 열어요',
@@ -1445,16 +1448,10 @@ export const learningScenarios: TheaterShow[] = [
             text: '가정이나 사무실로 돌아간 후에는 피해 상태를 확인하고 안전이 의심되면 전문가의 확인을 받도록 합니다.',
           },
           {
-            endMs: 230_840,
+            endMs: 230_450,
             source: 'audio',
             startMs: 223_240,
             text: '옷장이나 보관함 등의 내용물이 쏟아져 내려 부상을 입을 수도 있으므로 문을 열 때 주의합니다.',
-          },
-          {
-            endMs: 235_400,
-            source: 'audio',
-            startMs: 230_840,
-            text: '가스, 전기, 수도관 등의 확인도 필수입니다.',
           },
         ],
         teachBack: createTeachBack({
@@ -1474,12 +1471,12 @@ export const learningScenarios: TheaterShow[] = [
         }),
         packet: createPacket({
           asrText:
-            '가정이나 사무실로 돌아간 후에는 피해 상태를 확인하고 문을 열 때 주의합니다. 가스, 전기, 수도관도 확인해야 합니다.',
-          objectHints: ['문 주변 물건', '문 열기', '가스', '전기', '수도관'],
-          ocrTokens: ['문을 열 때 주의', '가스', '전기', '수도관'],
+            '가정이나 사무실로 돌아간 후에는 피해 상태를 확인하고 문을 열 때 주의합니다.',
+          objectHints: ['문 주변 물건', '문 열기', '피해 확인'],
+          ocrTokens: ['문을 열 때 주의', '피해 확인'],
           sessionId: 'demo-earthquake-full-return-door',
           startMs: 214_400,
-          endMs: 235_400,
+          endMs: 230_450,
           uiElements: ['문을 열 때 주의'],
         }),
         rules: earthquakeRuleCatalog,
@@ -1506,12 +1503,19 @@ export const learningScenarios: TheaterShow[] = [
         label: '가스 냄새를 말해요',
         learnerExplanation: '어른에게 말하고 밖으로 나가요.',
         learnerPrompt: '가스 냄새나 새는 소리가 나요.',
+        previewMs: 231_000,
         actionSteps: [
           '냄새와 소리를 말해요',
           '밖으로 나가요',
           '다시 쓰기 전에 물어봐요',
         ],
         narration: [
+          {
+            endMs: 235_400,
+            source: 'audio',
+            startMs: 230_500,
+            text: '가스, 전기, 수도관 등의 확인도 필수입니다.',
+          },
           {
             endMs: 243_920,
             source: 'audio',
@@ -1542,11 +1546,11 @@ export const learningScenarios: TheaterShow[] = [
         }),
         packet: createPacket({
           asrText:
-            '가스 냄새가 나거나 가스 새는 소리가 들리면 직접 만지지 말고 어른에게 말한 뒤 안전한 곳으로 갑니다.',
+            '가스, 전기, 수도관 등의 확인도 필수입니다. 가스 냄새가 나거나 가스 새는 소리가 들리면 직접 만지지 말고 어른에게 말한 뒤 안전한 곳으로 갑니다.',
           objectHints: ['가스 냄새', '가스 밸브', '창문', '안전한 곳'],
           ocrTokens: ['가스 냄새', '가스 확인'],
           sessionId: 'demo-earthquake-full-door-gas',
-          startMs: 235_400,
+          startMs: 230_500,
           endMs: 251_880,
           uiElements: ['가스 냄새가 나면'],
         }),
@@ -1557,7 +1561,7 @@ export const learningScenarios: TheaterShow[] = [
           officialRuleIds: ['KR_EQ_16'],
           phase: 'after_shaking',
         },
-        startMs: 235_400,
+        startMs: 230_500,
         teacherGuide: {
           correction:
             '성인이 밸브를 만지는 장면은 학습자에게 “어른에게 말하기”로 바꿔 설명합니다.',
@@ -2230,6 +2234,7 @@ function createSegment(seed: SegmentSeed): TheaterSegment {
     ],
     packet: seed.packet,
     pauseMs: seed.pauseMs,
+    previewMs: seed.previewMs,
     practiceMode,
     primarySourceTitle: ruleMatches[0]?.rule.source_title ?? null,
     ruleMatches,
