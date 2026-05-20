@@ -1,5 +1,24 @@
 import { expect, test, type Page } from '@playwright/test'
 
+async function advanceThroughReviewCards(page: Page) {
+  const nextReviewButton = page.getByRole('button', { name: /다음 복습/ })
+
+  for (let index = 0; index < 24; index += 1) {
+    if ((await nextReviewButton.count()) === 0) {
+      return
+    }
+
+    if (!(await nextReviewButton.isEnabled())) {
+      return
+    }
+
+    await expect(nextReviewButton).toHaveClass(/next-ready-attention/)
+    await nextReviewButton.click()
+  }
+
+  throw new Error('Review cards did not reach the final disabled state.')
+}
+
 test('renders the learning home and opens a scenario', async ({ page }) => {
   await page.goto('/')
 
@@ -196,7 +215,19 @@ test('offers next practice and restart controls after the final scene', async ({
   await expect(
     page.getByRole('heading', { name: '계단으로 나가요' }),
   ).toHaveCount(0)
-  await page.getByRole('button', { name: '다음 복습' }).click()
+  await expect(
+    page.getByRole('button', { name: /다음 복습/ }),
+  ).toHaveClass(/next-ready-attention/)
+  await expect(
+    page.getByRole('button', {
+      name: '복습을 끝까지 보면 다음 연습으로 가요',
+    }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: '다음 연습으로 가기' }),
+  ).toHaveCount(0)
+
+  await page.getByRole('button', { name: /다음 복습/ }).click()
   await expect(
     page.getByRole('heading', { name: '계단으로 나가요' }),
   ).toBeVisible()
@@ -216,9 +247,14 @@ test('offers next practice and restart controls after the final scene', async ({
     page.getByRole('button', { name: '맞는 답을 고르면 다음 연습으로 가요' }),
   ).toHaveCount(0)
 
+  await advanceThroughReviewCards(page)
+
   await expect(
     page.getByRole('link', { name: '다음 연습으로 가기' }),
   ).toHaveAttribute('href', '#/scenario/earthquake-protect-flow')
+  await expect(
+    page.getByRole('link', { name: '다음 연습으로 가기' }),
+  ).toHaveClass(/next-ready-attention/)
   await expect(
     page.getByRole('link', {
       name: '다음 연습 지진이 났을 때 흔들릴 때, 밖으로 나갈 때, 집에 돌아온 뒤까지 이어서 연습해요',
@@ -281,6 +317,13 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await expect(
     page.getByRole('link', { name: '오늘 연습 끝내기' }),
   ).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: '복습을 끝까지 보면 마칠 수 있어요' }),
+  ).toBeDisabled()
+  await advanceThroughReviewCards(page)
+  await expect(page.getByRole('button', { name: '연습 끝내기' })).toHaveClass(
+    /next-ready-attention/,
+  )
   await page.getByRole('button', { name: '연습 끝내기' }).click()
   await expect(
     page.getByRole('dialog', {
@@ -340,12 +383,19 @@ test('ends the final earthquake after-shaking practice without looping', async (
     page.getByText('전기가 고장 난 것 같으면 어른에게 말해요.'),
   ).toBeVisible()
   await expect(
-    page.getByRole('button', { name: '맞는 답을 고르면 마칠 수 있어요' }),
+    page.getByRole('button', { name: '복습을 끝까지 보면 마칠 수 있어요' }),
   ).toBeDisabled()
 
+  await advanceThroughReviewCards(page)
+  await expect(
+    page.getByRole('button', { name: '맞는 답을 고르면 마칠 수 있어요' }),
+  ).toBeDisabled()
   await page.getByRole('button', { name: '어른에게 말하기' }).click()
   await expect(page.getByRole('link', { name: '오늘 연습 끝내기' })).toHaveCount(
     0,
+  )
+  await expect(page.getByRole('button', { name: '연습 끝내기' })).toHaveClass(
+    /next-ready-attention/,
   )
   await page.getByRole('button', { name: '연습 끝내기' }).click()
   await expect(page.getByText('연습 완료')).toBeVisible()

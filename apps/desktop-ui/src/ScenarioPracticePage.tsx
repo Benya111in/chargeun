@@ -403,6 +403,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 
           <PracticePanel
             isFinalSegment={isFinalSegment}
+            key={segment.id}
             nextPractice={nextPractice}
             onNext={nextSegment}
             onReplay={() => playSegment(segmentIndex)}
@@ -502,6 +503,12 @@ function PracticePanel({
   const learnerActionCards = getLearnerActionCards(segment)
   const isIntroSegment = segment.practiceMode === 'intro'
   const isReviewSegment = isFinalSegment && reviewGroups.length > 0
+  const safeReviewIndex = Math.min(
+    reviewIndex,
+    Math.max(reviewGroups.length - 1, 0),
+  )
+  const reviewComplete =
+    !isReviewSegment || safeReviewIndex >= reviewGroups.length - 1
   const canAskQuestion = !isIntroSegment && learnerActionCards.length > 0
   const canContinue = canAskQuestion ? selectedAnswer?.correct === true : true
   const shouldEmphasizeNextButton =
@@ -510,11 +517,6 @@ function PracticePanel({
   const learnerReasonText = canAskQuestion
     ? getLearnerReasonText(segment.explanation.tracks.reason)
     : null
-  const safeReviewIndex = Math.min(
-    reviewIndex,
-    Math.max(reviewGroups.length - 1, 0),
-  )
-
   if (stage === 'rest') {
     return (
       <section className="rounded-md border border-[#dfe4da] bg-white p-4">
@@ -703,6 +705,7 @@ function PracticePanel({
             nextPractice={nextPractice}
             onRestart={onRestart}
             onShowSurvey={onShowSurvey}
+            reviewComplete={reviewComplete}
           />
         ) : (
           <button
@@ -845,11 +848,19 @@ function ScenarioReviewCarousel({
           ))}
         </div>
         <button
-          className="inline-flex min-h-9 items-center rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:border-[#dfe4da] disabled:bg-white disabled:text-[#596257]"
+          className={cn(
+            'inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:border-[#dfe4da] disabled:bg-white disabled:text-[#596257]',
+            canGoNext && 'next-ready-attention',
+          )}
           disabled={!canGoNext}
           onClick={() => setReviewIndex(reviewIndex + 1)}
           type="button"
         >
+          {canGoNext ? (
+            <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
+              이어서 봐요
+            </span>
+          ) : null}
           다음 복습
         </button>
       </div>
@@ -926,11 +937,13 @@ function FinalPracticeActions({
   nextPractice,
   onRestart,
   onShowSurvey,
+  reviewComplete,
 }: {
   canContinue: boolean
   nextPractice: TheaterShow | null
   onRestart: () => void
   onShowSurvey: () => void
+  reviewComplete: boolean
 }) {
   const nextHref = nextPractice
     ? appHref(`/scenario/${nextPractice.id}`)
@@ -938,22 +951,29 @@ function FinalPracticeActions({
   const nextPracticeNote = nextPractice
     ? simplifyLearnerCopy(nextPractice.homeNote ?? nextPractice.note)
     : null
+  const canAdvance = canContinue && reviewComplete
 
   return (
     <>
-      {canContinue && nextPractice ? (
+      {canAdvance && nextPractice ? (
         <a
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
+          className="next-ready-attention inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
           href={nextHref}
         >
+          <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
+            이제 눌러요
+          </span>
           다음 연습으로 가기
         </a>
-      ) : canContinue ? (
+      ) : canAdvance ? (
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
+          className="next-ready-attention inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
           onClick={onShowSurvey}
           type="button"
         >
+          <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
+            이제 눌러요
+          </span>
           연습 끝내기
         </button>
       ) : (
@@ -962,18 +982,19 @@ function FinalPracticeActions({
           disabled
           type="button"
         >
-          {nextPractice
-            ? '맞는 답을 고르면 다음 연습으로 가요'
-            : '맞는 답을 고르면 마칠 수 있어요'}
+          {!reviewComplete
+            ? nextPractice
+              ? '복습을 끝까지 보면 다음 연습으로 가요'
+              : '복습을 끝까지 보면 마칠 수 있어요'
+            : nextPractice
+              ? '맞는 답을 고르면 다음 연습으로 가요'
+              : '맞는 답을 고르면 마칠 수 있어요'}
         </button>
       )}
-      {nextPractice ? (
+      {nextPractice && canAdvance ? (
         <a
           aria-label={`다음 연습 ${nextPractice.title} ${nextPracticeNote}`}
-          className={cn(
-            'inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713]',
-            !canContinue && 'pointer-events-none opacity-55',
-          )}
+          className="inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713]"
           href={nextHref}
         >
           <span className="text-xs font-semibold text-[#596257]">다음 연습</span>
@@ -982,6 +1003,17 @@ function FinalPracticeActions({
             {nextPracticeNote}
           </span>
         </a>
+      ) : nextPractice ? (
+        <div
+          aria-disabled="true"
+          className="inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713] opacity-55"
+        >
+          <span className="text-xs font-semibold text-[#596257]">다음 연습</span>
+          <span className="text-sm font-semibold">{nextPractice.title}</span>
+          <span className="text-xs leading-5 text-[#596257]">
+            {nextPracticeNote}
+          </span>
+        </div>
       ) : null}
       <button
         className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-sm font-medium text-[#151713]"
