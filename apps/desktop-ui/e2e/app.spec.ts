@@ -60,6 +60,25 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
   ).toBeVisible()
 })
 
+test('generates a practice page from a video URL', async ({ page }) => {
+  await page.goto('/')
+
+  await page
+    .getByLabel('재난안전 영상 링크로 연습 만들기')
+    .fill('https://www.youtube.com/watch?v=earthquake-training')
+  await page.getByRole('button', { name: '만들기' }).click()
+
+  await expect(page.getByText('학습 화면을 만들고 있어요')).toBeVisible()
+  await expect(page.getByText('공식 행동요령과 맞는지 확인하고 있어요.')).toBeVisible()
+  await expect(page).toHaveURL(/#\/scenario\/generated-[a-z0-9]+$/, {
+    timeout: 6_000,
+  })
+  await expect(page.getByText('URL로 만든 연습').first()).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '영상 시작하기' }),
+  ).toBeVisible()
+})
+
 test('runs the scenario practice loop', async ({ page }) => {
   await page.goto('/#/scenario/fire-grounded-flow')
 

@@ -23,6 +23,10 @@ import { getLearnerActionCards } from './lib/learner-action-visibility'
 import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 import { appHref, getAppRoute, publicAssetSrc } from './lib/routes'
 import { cn } from './lib/utils'
+import {
+  loadGeneratedScenario,
+  toGeneratedTheaterShow,
+} from './lib/generated-scenario'
 
 type PracticeStage = 'explanation' | 'playback' | 'ready' | 'rest'
 
@@ -1207,13 +1211,28 @@ function selectScenarioFromPath() {
   const canonicalId = scenarioAliases[id] ?? id
 
   const scenario =
-    learningScenarios.find((item) => item.id === canonicalId) ?? null
+    learningScenarios.find((item) => item.id === canonicalId) ??
+    loadGeneratedScenarioFromId(canonicalId)
 
   if (scenario?.localOnly && !isLocalSeasonalEnabled()) {
     return null
   }
 
   return scenario
+}
+
+function loadGeneratedScenarioFromId(id: string) {
+  if (!id.startsWith('generated-')) {
+    return null
+  }
+
+  const record = loadGeneratedScenario(id)
+
+  if (!record) {
+    return null
+  }
+
+  return toGeneratedTheaterShow(record)
 }
 
 function getNextScenario(currentScenario: TheaterShow) {
