@@ -54,6 +54,15 @@ type CaptionCue = {
   text: string
 }
 
+type CaptionTopicKey =
+  | 'call_119'
+  | 'drain_waterway'
+  | 'evacuate_to_safe_place'
+  | 'intro_weather'
+  | 'outdoor_activity'
+  | 'outro_review'
+  | 'stay_away_from_low_water'
+
 type GeneratedPracticeSegment = {
   actionReasons: string[]
   actionSteps: string[]
@@ -320,7 +329,7 @@ function buildSegment(input: {
   const learnerPrompt =
     practiceMode === 'action'
       ? situationFromText(text, input.hazard)
-      : `${input.hazard.label} 내용을 듣고 있어요.`
+      : situationFromText(text, input.hazard)
   const learnerExplanation =
     practiceMode === 'action'
       ? summarizeAction(actionSteps)
@@ -505,6 +514,11 @@ function groupCues(cues: CaptionCue[]) {
     return buildFallbackCues('재난안전 영상을 보고 있어요.').map((cue) => [cue])
   }
 
+  const topicGroups = groupCuesByTopic(normalized)
+  if (topicGroups.length >= 3) {
+    return topicGroups.slice(0, 28)
+  }
+
   const groups: CaptionCue[][] = []
   let current: CaptionCue[] = []
 
@@ -529,6 +543,75 @@ function groupCues(cues: CaptionCue[]) {
   return groups.slice(0, 28)
 }
 
+function groupCuesByTopic(cues: CaptionCue[]) {
+  const distinctTopics = new Set(
+    cues.map((cue) => topicKeyForCueText(cue.text)).filter(Boolean),
+  )
+
+  if (distinctTopics.size < 3) {
+    return []
+  }
+
+  const groups: CaptionCue[][] = []
+  let current: CaptionCue[] = []
+  let currentTopic: CaptionTopicKey | null = null
+
+  for (const cue of cues) {
+    const topic: CaptionTopicKey | null = topicKeyForCueText(cue.text) ?? currentTopic
+    const previous = current.at(-1)
+    const gap = previous ? cue.startMs - previous.endMs : 0
+    const shouldSplit =
+      current.length > 0 &&
+      ((topic && currentTopic && topic !== currentTopic) || gap > 2_500)
+
+    if (shouldSplit) {
+      groups.push(current)
+      current = []
+    }
+
+    current.push(cue)
+    currentTopic = topic ?? currentTopic
+  }
+
+  if (current.length > 0) {
+    groups.push(current)
+  }
+
+  return groups
+    .map((group) => trimRepeatedCueGroup(group))
+    .filter((group) => group.length > 0)
+}
+
+function trimRepeatedCueGroup(group: CaptionCue[]) {
+  return group.filter((cue, index) => {
+    const previous = group[index - 1]
+    if (!previous) return true
+
+    return !(
+      (cue.text.includes(previous.text) || previous.text.includes(cue.text)) &&
+      Math.abs(cue.text.length - previous.text.length) < 8
+    )
+  })
+}
+
+function topicKeyForCueText(text: string): CaptionTopicKey | null {
+  const normalized = normalizeCueText(text)
+
+  if (/안전수칙|챙겨주세요|챙기/u.test(normalized)) return 'outro_review'
+  if (/배수로|물꼬|점검/u.test(normalized)) return 'drain_waterway'
+  if (/고립|신고|1\s*1|119/u.test(normalized)) return 'call_119'
+  if (/낮은|나리|다리|건너지|건너/u.test(normalized)) {
+    return 'stay_away_from_low_water'
+  }
+  if (/갑자기 비|쏟아질|안전한 곳|대피/u.test(normalized)) {
+    return 'evacuate_to_safe_place'
+  }
+  if (/산행|캠핑/u.test(normalized)) return 'outdoor_activity'
+  if (/여름철|호우|태풍|비바람/u.test(normalized)) return 'intro_weather'
+
+  return null
+}
+
 function parseVtt(input: string): CaptionCue[] {
   const cues: CaptionCue[] = []
   const blocks = input.split(/\n\s*\n/u)
@@ -549,14 +632,13 @@ function parseVtt(input: string): CaptionCue[] {
     )
     const startMs = parseTimestamp(rawStart)
     const endMs = parseTimestamp(rawEnd)
-    const rawCueText = lines.slice(timeLineIndex + 1).join(' ')
-
-    // YouTube auto captions include progressive word-by-word cue blocks. The
-    // following stable duplicate cue contains the completed phrase, so skip the
-    // progressive block to avoid repeated, broken learner text.
-    if (/<\d{2}:\d{2}:|<c[ >]/u.test(rawCueText)) {
-      continue
-    }
+    const rawTextLines = lines.slice(timeLineIndex + 1)
+    const hasProgressiveText = rawTextLines.some((line) =>
+      /<\d{2}:\d{2}:|<c[ >]/u.test(line),
+    )
+    const rawCueText = hasProgressiveText
+      ? (rawTextLines.at(-1) ?? '')
+      : rawTextLines.join(' ')
 
     const text = normalizeCueText(
       rawCueText.replace(/<[^>]+>/gu, ' ').replace(/&nbsp;/gu, ' '),
@@ -604,16 +686,27 @@ function extractActions(text: string, hazard: HazardProfile) {
   add(/탁자|책상/u.test(text), '탁자 아래로 들어가요')
   add(/넓은|운동장|공원|대피소/u.test(text), '넓은 곳으로 가요')
   add(/선생님|보호자|어른/u.test(text), '어른 말을 들어요')
-  add(/119|신고/u.test(text), '119나 어른에게 알려요')
+  add(/119|신고/u.test(text) && !isWeatherSafetyText(text), '119나 어른에게 알려요')
   add(/연기|몸을 낮/u.test(text), '몸을 낮춰요')
   add(/가스|냄새/u.test(text), '가스 냄새를 어른에게 말해요')
   add(/창문|유리/u.test(text) && /(떨어|멀리|가까이 가지)/u.test(text), '창문에서 떨어져요')
+  add(/산행|캠핑/u.test(text), '안전한 실내에 있어요')
+  add(/갑자기 비|안전한 곳|대피/u.test(text), '안전한 곳으로 가요')
+  add(/낮은|나리|다리|건너지|건너/u.test(text), '물이 찬 낮은 곳을 돌아가요')
+  add(/고립|신고|1\s*1|119/u.test(text), '119에 알려요')
+  add(/배수로|물꼬|점검/u.test(text), '어른과 안전한 곳에 있어요')
 
   if (candidates.length === 0 && /(하세요|해요|갑니다|가세요|대피|피하)/u.test(text)) {
     candidates.push(hazard.fallbackAction)
   }
 
   return candidates.slice(0, 3)
+}
+
+function isWeatherSafetyText(text: string) {
+  return /산행|캠핑|갑자기 비|낮은|나리|다리|건너지|건너|고립|배수로|물꼬|호우|태풍/u.test(
+    text,
+  )
 }
 
 function reasonForAction(action: string, hazard: HazardProfile) {
@@ -627,6 +720,9 @@ function reasonForAction(action: string, hazard: HazardProfile) {
   if (action.includes('낮춰')) return '연기는 위로 올라가서 낮게 움직이면 숨쉬기 쉬워요.'
   if (action.includes('가스')) return '가스 냄새는 폭발 위험을 알려 줄 수 있어요.'
   if (action.includes('창문')) return '유리가 깨지면 다칠 수 있어요.'
+  if (action.includes('실내')) return '비바람이 강할 때 밖에 있으면 다칠 수 있어요.'
+  if (action.includes('안전한 곳')) return '비가 갑자기 많이 오면 물이 빠르게 불어날 수 있어요.'
+  if (action.includes('낮은 곳')) return '물이 찬 길은 깊이를 알기 어려워요.'
 
   return hazard.reason
 }
@@ -636,6 +732,17 @@ function doNotForText(text: string, hazard: HazardProfile) {
   if (/창문|유리/u.test(text)) return '창문 가까이에 가지 않아요.'
   if (/연기/u.test(text)) return '연기 쪽으로 가지 않아요.'
   if (/가스/u.test(text)) return '불을 켜거나 전기 스위치를 만지지 않아요.'
+  if (/산행|캠핑/u.test(text)) return '산이나 캠핑장에 가지 않아요.'
+  if (/낮은|나리|다리|건너지|건너/u.test(text)) {
+    return '물이 찬 낮은 곳은 건너지 않아요.'
+  }
+  if (/고립|신고|1\s*1|119/u.test(text)) return '혼자 빠져나오려고 하지 않아요.'
+  if (/배수로|물꼬|점검/u.test(text)) {
+    return '배수로와 물꼬를 보러 나가지 않아요.'
+  }
+  if (/갑자기 비|안전한 곳|대피/u.test(text)) {
+    return '물이 불어난 곳에 가까이 가지 않아요.'
+  }
 
   return hazard.doNot
 }
@@ -684,6 +791,9 @@ function optionForAction(action: string): {
   if (action.includes('119')) return { kind: 'signal', label: '119', prompt: '도움이 필요하면 무엇을 기억할까요?' }
   if (action.includes('가스')) return { kind: 'signal', label: '가스 냄새', prompt: '무엇을 말할까요?' }
   if (action.includes('창문')) return { kind: 'object', label: '창문', prompt: '무엇에서 떨어질까요?' }
+  if (action.includes('실내')) return { kind: 'place', label: '실내', prompt: '어디에 있을까요?' }
+  if (action.includes('안전한 곳')) return { kind: 'place', label: '안전한 곳', prompt: '어디로 갈까요?' }
+  if (action.includes('낮은 곳')) return { kind: 'place', label: '높은 길', prompt: '어떤 길로 갈까요?' }
 
   return { kind: 'state', label: '안전', prompt: '무엇을 기억할까요?' }
 }
@@ -701,6 +811,14 @@ function contrastForOption(
 }
 
 function situationFromText(text: string, hazard: HazardProfile) {
+  if (/여름철|호우|태풍|비바람/u.test(text)) return '호우와 태풍 안전수칙을 배워요.'
+  if (/산행|캠핑/u.test(text)) return '비와 태풍이 올 수 있어요.'
+  if (/갑자기 비|쏟아질/u.test(text)) return '비가 갑자기 많이 와요.'
+  if (/낮은|나리|다리|건너지|건너/u.test(text)) return '물이 찬 낮은 곳이 있어요.'
+  if (/고립|신고|1\s*1|119/u.test(text)) return '혼자 움직이기 어려워요.'
+  if (/배수로|물꼬|점검/u.test(text)) return '물이 불어난 곳은 위험해요.'
+  if (/안전수칙|챙겨주세요|챙기/u.test(text)) return '안전수칙을 다시 기억해요.'
+
   const shortText = shortenLearnerText(text, `${hazard.label} 장면이에요.`)
   if (shortText.includes(hazard.label)) return shortText
 
@@ -717,6 +835,13 @@ function summarizeAction(actions: string[]) {
 function shortenLearnerText(text: string, fallback: string) {
   const cleaned = normalizeCueText(text)
     .replace(/하십시오|하세요/gu, '해요')
+  if (/여름철|호우|태풍|비바람/u.test(cleaned)) {
+    return '호우와 태풍 안전수칙을 배워요.'
+  }
+  if (/안전수칙|챙겨주세요|챙기/u.test(cleaned)) {
+    return '안전수칙을 다시 기억해요.'
+  }
+
   const firstSentence = cleaned.split(/(?<=[.?!。！？요다])\s+/u)[0] ?? cleaned
   const short = firstSentence
     .replace(/[.。]$/u, '')
