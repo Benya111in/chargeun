@@ -40,6 +40,15 @@ describe('generated scenario URL flow', () => {
     )
   })
 
+  it('accepts bare YouTube links and raw video IDs', () => {
+    expect(normalizeScenarioUrl('youtube.com/watch?v=IiVsojHcoEo')).toBe(
+      'https://youtube.com/watch?v=IiVsojHcoEo',
+    )
+    expect(normalizeScenarioUrl('IiVsojHcoEo')).toBe(
+      'https://www.youtube.com/watch?v=IiVsojHcoEo',
+    )
+  })
+
   it('creates a generated scenario wrapper that the practice player can render', () => {
     const record = createGeneratedScenarioRecord(
       'https://www.youtube.com/watch?v=yYwX3qqVMSE',

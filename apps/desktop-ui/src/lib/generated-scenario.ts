@@ -145,13 +145,29 @@ export function matchUrlToScenario(
 }
 
 export function normalizeScenarioUrl(sourceUrl: string) {
-  const url = new URL(sourceUrl.trim())
+  const url = new URL(normalizeYouTubeInput(sourceUrl.trim()))
 
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
     throw new Error('http 또는 https 링크만 사용할 수 있습니다.')
   }
 
   return url.toString()
+}
+
+function normalizeYouTubeInput(input: string) {
+  if (/^[a-zA-Z0-9_-]{11}$/u.test(input)) {
+    return `https://www.youtube.com/watch?v=${input}`
+  }
+
+  if (/^https?:\/\//iu.test(input)) {
+    return input
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(input)) {
+    throw new Error('http 또는 https 링크만 사용할 수 있습니다.')
+  }
+
+  return `https://${input.replace(/^\/+/u, '')}`
 }
 
 export function saveGeneratedScenario(record: GeneratedScenarioRecord) {

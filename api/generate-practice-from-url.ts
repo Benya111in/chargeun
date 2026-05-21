@@ -805,12 +805,59 @@ function normalizeUrl(input: unknown) {
     throw new ValidationError('url_required', '영상 URL을 입력해 주세요.')
   }
 
-  const url = new URL(input.trim())
+  const trimmed = input.trim()
+  const candidate = normalizeYouTubeInput(trimmed)
+
+  let url: URL
+  try {
+    url = new URL(candidate)
+  } catch {
+    throw new ValidationError(
+      'invalid_youtube_url',
+      '유튜브 영상 링크를 입력해 주세요.',
+    )
+  }
+
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new ValidationError('invalid_url', 'http 또는 https 영상 링크만 사용할 수 있습니다.')
+    throw new ValidationError(
+      'invalid_youtube_url',
+      '유튜브 영상 링크를 입력해 주세요.',
+    )
+  }
+
+  if (!isYouTubeHost(url.hostname)) {
+    throw new ValidationError(
+      'invalid_youtube_url',
+      '유튜브 영상 링크를 입력해 주세요.',
+    )
   }
 
   return url.toString()
+}
+
+function normalizeYouTubeInput(input: string) {
+  if (/^[a-zA-Z0-9_-]{11}$/u.test(input)) {
+    return `https://www.youtube.com/watch?v=${input}`
+  }
+
+  if (/^https?:\/\//iu.test(input)) {
+    return input
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(input)) {
+    throw new ValidationError(
+      'invalid_youtube_url',
+      '유튜브 영상 링크를 입력해 주세요.',
+    )
+  }
+
+  return `https://${input.replace(/^\/+/u, '')}`
+}
+
+function isYouTubeHost(hostname: string) {
+  const normalized = hostname.toLowerCase().replace(/^www\./u, '')
+
+  return normalized === 'youtube.com' || normalized === 'youtu.be'
 }
 
 function hashText(text: string) {

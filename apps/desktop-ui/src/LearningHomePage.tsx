@@ -111,8 +111,8 @@ export default function LearningHomePage() {
                     disabled={isGenerating}
                     id="disaster-video-url"
                     onChange={(event) => setSourceUrl(event.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    type="url"
+                    placeholder="youtube.com/watch?v=..."
+                    type="text"
                     value={sourceUrl}
                   />
                 </div>

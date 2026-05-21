@@ -82,7 +82,7 @@ test('generates a practice page from a video URL', async ({ page }) => {
 
   await page
     .getByLabel('재난안전 영상 링크로 연습 만들기')
-    .fill('https://www.youtube.com/watch?v=earthquake-training')
+    .fill('youtube.com/watch?v=earthquake-training')
   await page.getByRole('button', { name: '만들기' }).click()
 
   await expect(page.getByText('학습 화면을 만들고 있어요')).toBeVisible()
