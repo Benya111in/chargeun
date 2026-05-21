@@ -1,4 +1,12 @@
-export type HazardType = 'fire' | 'earthquake' | 'unknown'
+export type HazardType =
+  | 'fire'
+  | 'earthquake'
+  | 'heavy_rain'
+  | 'typhoon'
+  | 'heatwave'
+  | 'coldwave'
+  | 'heavy_snow'
+  | 'unknown'
 
 export type CaptureSourceType =
   | 'monitor'

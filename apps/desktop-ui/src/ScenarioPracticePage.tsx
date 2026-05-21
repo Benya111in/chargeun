@@ -20,6 +20,7 @@ import {
   simplifyLearnerWarning,
 } from './lib/learner-copy'
 import { getLearnerActionCards } from './lib/learner-action-visibility'
+import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 import { appHref, getAppRoute, publicAssetSrc } from './lib/routes'
 import { cn } from './lib/utils'
 
@@ -997,7 +998,9 @@ function FinalPracticeActions({
           className="inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713]"
           href={nextHref}
         >
-          <span className="text-xs font-semibold text-[#596257]">다음 연습</span>
+          <span className="text-xs font-semibold text-[#596257]">
+            다음 연습
+          </span>
           <span className="text-sm font-semibold">{nextPractice.title}</span>
           <span className="text-xs leading-5 text-[#596257]">
             {nextPracticeNote}
@@ -1008,7 +1011,9 @@ function FinalPracticeActions({
           aria-disabled="true"
           className="inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713] opacity-55"
         >
-          <span className="text-xs font-semibold text-[#596257]">다음 연습</span>
+          <span className="text-xs font-semibold text-[#596257]">
+            다음 연습
+          </span>
           <span className="text-sm font-semibold">{nextPractice.title}</span>
           <span className="text-xs leading-5 text-[#596257]">
             {nextPracticeNote}
@@ -1201,9 +1206,14 @@ function selectScenarioFromPath() {
 
   const canonicalId = scenarioAliases[id] ?? id
 
-  return (
-    learningScenarios.find((scenario) => scenario.id === canonicalId) ?? null
-  )
+  const scenario =
+    learningScenarios.find((item) => item.id === canonicalId) ?? null
+
+  if (scenario?.localOnly && !isLocalSeasonalEnabled()) {
+    return null
+  }
+
+  return scenario
 }
 
 function getNextScenario(currentScenario: TheaterShow) {

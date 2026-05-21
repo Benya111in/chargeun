@@ -268,6 +268,109 @@ describe('learningScenarios', () => {
     )
   })
 
+  it('keeps local seasonal videos split into focused short scenes', () => {
+    const expectedMinimumSegments = new Map([
+      ['heavy-rain-safety-flow', 10],
+      ['typhoon-safety-flow', 7],
+      ['heatwave-safety-flow', 7],
+      ['coldwave-safety-flow', 7],
+      ['heavy-snow-safety-flow', 8],
+    ])
+
+    for (const [scenarioId, minimumCount] of expectedMinimumSegments) {
+      const scenario = learningScenarios.find(
+        (item) => item.id === scenarioId,
+      )!
+      expect(scenario.localOnly).toBe(true)
+      expect(scenario.segments.length).toBeGreaterThanOrEqual(minimumCount)
+
+      for (const [index, segment] of scenario.segments.entries()) {
+        expect(segment.endMs).toBeGreaterThan(segment.startMs)
+        expect(segment.endMs - segment.startMs).toBeLessThanOrEqual(30_000)
+        if (index > 0) {
+          expect(segment.startMs).toBe(scenario.segments[index - 1]!.endMs)
+        }
+      }
+    }
+  })
+
+  it('keeps seasonal spoken and onscreen source details covered after splitting', () => {
+    const narrationText = (scenarioId: string) =>
+      learningScenarios
+        .find((scenario) => scenario.id === scenarioId)!
+        .segments.flatMap((segment) => segment.narration)
+        .map((cue) => cue.text)
+        .join(' ')
+
+    expect(narrationText('heavy-rain-safety-flow')).toEqual(
+      expect.stringContaining('안전디딤돌'),
+    )
+    expect(narrationText('heavy-rain-safety-flow')).toEqual(
+      expect.stringContaining('가스밸브'),
+    )
+    expect(narrationText('heavy-rain-safety-flow')).toEqual(
+      expect.stringContaining('맨홀'),
+    )
+    expect(narrationText('heavy-rain-safety-flow')).toEqual(
+      expect.stringContaining('침수된 음식물'),
+    )
+    expect(narrationText('heavy-rain-safety-flow')).toEqual(
+      expect.stringContaining('관청이나 119'),
+    )
+
+    expect(narrationText('typhoon-safety-flow')).toEqual(
+      expect.stringContaining('문과 창문'),
+    )
+    expect(narrationText('typhoon-safety-flow')).toEqual(
+      expect.stringContaining('해안가'),
+    )
+    expect(narrationText('typhoon-safety-flow')).toEqual(
+      expect.stringContaining('공사자재'),
+    )
+    expect(narrationText('typhoon-safety-flow')).toEqual(
+      expect.stringContaining('논둑이나 물꼬'),
+    )
+
+    expect(narrationText('heatwave-safety-flow')).toEqual(
+      expect.stringContaining('창문이 닫힌 자동차'),
+    )
+    expect(narrationText('heatwave-safety-flow')).toEqual(
+      expect.stringContaining('무더위쉼터'),
+    )
+    expect(narrationText('heatwave-safety-flow')).toEqual(
+      expect.stringContaining('축사와 양식장'),
+    )
+    expect(narrationText('heatwave-safety-flow')).toEqual(
+      expect.stringContaining('병원'),
+    )
+
+    expect(narrationText('coldwave-safety-flow')).toEqual(
+      expect.stringContaining('수도 계량기'),
+    )
+    expect(narrationText('coldwave-safety-flow')).toEqual(
+      expect.stringContaining('비닐하우스'),
+    )
+    expect(narrationText('coldwave-safety-flow')).toEqual(
+      expect.stringContaining('스노우체인'),
+    )
+    expect(narrationText('coldwave-safety-flow')).toEqual(
+      expect.stringContaining('도로결빙'),
+    )
+
+    expect(narrationText('heavy-snow-safety-flow')).toEqual(
+      expect.stringContaining('비상용품'),
+    )
+    expect(narrationText('heavy-snow-safety-flow')).toEqual(
+      expect.stringContaining('보온장갑'),
+    )
+    expect(narrationText('heavy-snow-safety-flow')).toEqual(
+      expect.stringContaining('체인'),
+    )
+    expect(narrationText('heavy-snow-safety-flow')).toEqual(
+      expect.stringContaining('비닐하우스'),
+    )
+  })
+
   it('keeps concrete earthquake details visible in learner cards', () => {
     const earthquakeScenario = learningScenarios.find(
       (scenario) => scenario.id === 'earthquake-protect-flow',

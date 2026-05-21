@@ -7,9 +7,9 @@
 - `LearningReviewSubmission` 타입은 추가됐지만, LRS 결과를 QA JSON/persistence에 저장하고 LAS와 분리 분석하는 화면은 아직 없다.
 - `/teacher`와 `/qa`는 evidence source와 suppressed candidates를 표시하지만, QA가 start/end time이나 decision point를 직접 수정하는 편집 UI는 아직 없다.
 - 공식 rule catalog의 `learnerActionLabel`, `easyReason`, `unsafeConfusions` 같은 교육용 확장 필드는 아직 P1 범위다. 현재는 기존 `action`, `do_not`, `why`, `caregiver`, `report_script`와 scenario override에서 구조화 데이터를 만든다.
-- 공식 source RAG는 현재 화재/지진 핵심 청크 13개만 갖고 있다. SafeTV, 국민안전24, 한국장애인개발원 자료를 더 넓게 수집하되 원문/영상 전체를 저장하지 않고 paraphrase chunk와 출처 URL 중심으로 확장해야 한다.
+- 공식 source RAG는 화재/지진에 더해 호우, 태풍, 폭염, 한파, 대설 핵심 청크까지 확장됐다. 호우 후 망가진 길/시설 신고와 대설 비닐하우스/양식장 관리는 별도 rule/chunk로 분리했다. 다만 산사태, 해일, 미세먼지, 감염병 등 남은 주제는 아직 선별 전이며, 원문/영상 전체 저장보다 paraphrase chunk와 출처 URL 중심 원칙은 유지해야 한다.
 - official RAG는 행동 카드의 근거를 보강하지만, 새 행동을 자동 생성하거나 검수 없이 허가하지 않는다. LLM structured output을 붙이더라도 `schema parse -> rule grounding -> review/blocked routing`을 통과해야 한다.
-- 공식 영상 원본은 라이선스 검토 전까지 tracked 배포 자산으로 넣지 않는다. 현재 public demo mp4는 로컬 데모 자산이며, 실제 배포용 SafeTV/공공 영상 사용은 출처 표기와 2차 이용 조건 확인이 필요하다.
+- 공식 영상 원본은 라이선스 검토 전까지 tracked 배포 자산으로 넣지 않는다. 계절 재난 public demo mp4도 현재는 로컬 preview용 ignored 프로토타입 자산이며, 실제 배포용 SafeTV/공공 영상 사용은 출처 표기와 2차 이용 조건 확인이 필요하다.
 - 행동 카드는 현재 텍스트 카드 중심이다. 실제 Easy Read 품질을 위해서는 연령과 문해력에 맞는 그림/아이콘 검증이 필요하다.
 - `/teacher`는 진행자 문구와 공식 근거를 보여 주지만, 학습 기록·세션 저장·인쇄 카드 출력은 아직 없다.
 - `/live-lab`는 실험 기능으로 격리되고 beta code 확인 전에는 비활성화된다. 다만 실제 배포에서는 Vercel `BETA_ACCESS_CODES` 설정과 durable rate limit이 필요하다.
@@ -58,4 +58,5 @@
 - `/demo` scene-stepper의 장면 window는 현재 수동으로 정의한 presentation metadata라서, 실제 라이브 segment detector 결과와 자동 동기화되지는 않는다.
 - `/demo`는 발표 호환 경로로 `/scenario/fire-grounded-flow` 학습 플레이어를 연다. grounding 근거, 관찰 신호, 운영자 제어가 필요하면 `/teacher` 또는 `/qa`를 사용해야 한다.
 - 지진 학습 시나리오는 음성/자막의 핵심 단서를 더 많이 보존하도록 16개 장면으로 보강했지만, 실제 느린학습자가 정보량을 과하다고 느끼는지 또는 여전히 부족하다고 느끼는지는 사용자 테스트가 필요하다. 엘리베이터/지하철이 섞여 보인 원본 구간은 기본 학습 흐름에서 제거했다.
+- 계절 재난 5종은 contact sheet와 공식 transcript 기준으로 다시 잘게 나눴고, 로컬 계절 장면은 30초 이하/연속 구간/핵심 대본 키워드 보존 테스트를 통과한다. 그래도 실제 영상 음성 문장 끝과 0.1초 단위 프레임 경계는 브라우저별 디코딩 차이가 있으므로, 최종 공개 전에는 각 원본을 다시 수동 재생 검수해야 한다.
 - `/qa` 검증 화면에는 아직 일부 운영자용 영어/내부 용어가 남아 있다. 기본 학습자 경로에서는 숨겼지만, 내부 QA 배포 전에는 접근 통제와 용어 정리가 더 필요하다.

@@ -8,13 +8,18 @@ import {
 } from './lib/demo-theater-content'
 import { liveRuleCatalog } from './lib/rule-catalog'
 import { appHref } from './lib/routes'
+import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 import { cn } from './lib/utils'
 
+const teacherScenarios = learningScenarios.filter(
+  (scenario) => isLocalSeasonalEnabled() || !scenario.localOnly,
+)
+
 export default function TeacherGuidePage() {
-  const [scenarioId, setScenarioId] = useState(learningScenarios[0]?.id ?? '')
+  const [scenarioId, setScenarioId] = useState(teacherScenarios[0]?.id ?? '')
   const scenario =
-    learningScenarios.find((item) => item.id === scenarioId) ??
-    learningScenarios[0]
+    teacherScenarios.find((item) => item.id === scenarioId) ??
+    teacherScenarios[0]
 
   return (
     <main className="min-h-screen bg-[#f7f8f4] text-[#151713]">
@@ -45,7 +50,7 @@ export default function TeacherGuidePage() {
               근거를 진행자가 확인합니다.
             </p>
             <div className="mt-5 grid gap-2">
-              {learningScenarios.map((item) => (
+              {teacherScenarios.map((item) => (
                 <button
                   key={item.id}
                   className={cn(

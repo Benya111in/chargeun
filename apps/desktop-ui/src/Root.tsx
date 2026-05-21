@@ -1,8 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 
 import { appHref, getAppRoute } from './lib/routes'
+import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 
 const LearningHomePage = lazy(() => import('./LearningHomePage.tsx'))
+const LocalSeasonalPage = lazy(() => import('./LocalSeasonalPage.tsx'))
 const LiveLabPage = lazy(() => import('./WebAppPage.tsx'))
 const QaWorkspacePage = lazy(() => import('./App.tsx'))
 const ScenarioPracticePage = lazy(() => import('./ScenarioPracticePage.tsx'))
@@ -27,25 +29,28 @@ export function Root() {
     normalizedPathname === '/demo' ||
     normalizedPathname === '/teacher' ||
     normalizedPathname === '/live-lab' ||
+    (isLocalSeasonalEnabled() && normalizedPathname === '/local-seasonal') ||
     normalizedPathname === '/qa' ||
     normalizedPathname.startsWith('/scenario/')
   const Page =
     normalizedPathname === '/demo' ||
     normalizedPathname.startsWith('/scenario/')
       ? ScenarioPracticePage
-      : normalizedPathname === '/teacher'
-        ? TeacherGuidePage
-        : normalizedPathname === '/live-lab'
-          ? LiveLabPage
-          : normalizedPathname === '/qa'
-            ? isQaUnlocked()
-              ? QaWorkspacePage
-              : InternalQaGatePage
-            : normalizedPathname === '/'
-              ? LearningHomePage
-              : isKnownPath
+      : isLocalSeasonalEnabled() && normalizedPathname === '/local-seasonal'
+        ? LocalSeasonalPage
+        : normalizedPathname === '/teacher'
+          ? TeacherGuidePage
+          : normalizedPathname === '/live-lab'
+            ? LiveLabPage
+            : normalizedPathname === '/qa'
+              ? isQaUnlocked()
+                ? QaWorkspacePage
+                : InternalQaGatePage
+              : normalizedPathname === '/'
                 ? LearningHomePage
-                : NotFoundPage
+                : isKnownPath
+                  ? LearningHomePage
+                  : NotFoundPage
 
   return (
     <Suspense

@@ -12,6 +12,7 @@ const main = async () => {
   const files = [
     path.join(root, 'data', 'rules', 'fire_rules.json'),
     path.join(root, 'data', 'rules', 'earthquake_rules.json'),
+    path.join(root, 'data', 'rules', 'seasonal_rules.json'),
   ]
 
   for (const file of files) {

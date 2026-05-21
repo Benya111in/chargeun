@@ -1,6 +1,16 @@
 import { z } from 'zod'
 
-export const hazardTypeSchema = z.enum(['fire', 'earthquake', 'unknown'])
+const knownHazardTypes = [
+  'fire',
+  'earthquake',
+  'heavy_rain',
+  'typhoon',
+  'heatwave',
+  'coldwave',
+  'heavy_snow',
+] as const
+
+export const hazardTypeSchema = z.enum([...knownHazardTypes, 'unknown'])
 export const captureSourceTypeSchema = z.enum([
   'monitor',
   'window',
@@ -357,7 +367,7 @@ export const officialSourceRecordSchema = z.object({
     'local_manual_only',
     'cache_ignored',
   ]),
-  hazards: z.array(z.enum(['fire', 'earthquake'])).min(1),
+  hazards: z.array(z.enum(knownHazardTypes)).min(1),
   retrievedAt: z.string().min(1),
   updatedAt: z.string().min(1).optional(),
 })
@@ -365,7 +375,7 @@ export const officialSourceRecordSchema = z.object({
 export const officialSourceChunkSchema = z.object({
   chunkId: z.string().min(1),
   sourceId: z.string().min(1),
-  hazard: z.enum(['fire', 'earthquake']),
+  hazard: z.enum(knownHazardTypes),
   phase: z.string().min(1),
   ruleIds: z.array(z.string().min(1)).min(1),
   heading: z.string().min(1),
@@ -613,7 +623,7 @@ export const captureAudioSampleSchema = z.object({
 
 export const ruleRecordSchema = z.object({
   rule_id: z.string(),
-  hazard: z.enum(['fire', 'earthquake']),
+  hazard: z.enum(knownHazardTypes),
   phase: z.string(),
   when: z.array(z.string()).min(1),
   action: z.string().min(1),

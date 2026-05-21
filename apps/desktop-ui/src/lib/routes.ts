@@ -1,6 +1,8 @@
+import { isLocalSeasonalEnabled } from './local-seasonal'
+
 export function getAppRoute() {
-  const hashRoute = window.location.hash.match(/^#(?<route>\/.*)$/)?.groups
-    ?.route
+  const hashRoute =
+    window.location.hash.match(/^#(?<route>\/.*)$/)?.groups?.route
 
   if (hashRoute) {
     return normalizeRoute(hashRoute)
@@ -46,6 +48,7 @@ function isDirectAppRoute(path: string) {
     path === '/demo' ||
     path === '/teacher' ||
     path === '/live-lab' ||
+    (isLocalSeasonalEnabled() && path === '/local-seasonal') ||
     path === '/qa' ||
     path.startsWith('/scenario/')
   )

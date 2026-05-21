@@ -327,3 +327,39 @@
 3. live ASR OpenAI fallback을 앱 설정 또는 secure local secret 주입 경로까지 제품형으로 다듬기
 4. demo/live empty state와 첫 사용 설명을 제품 수준으로 정리
 5. 발표 화면 진입 링크와 운영자용 전환 UX 정리
+
+## 2026-05-21
+
+### 완료
+
+- 안전한TV 공식 영상 기반 계절 재난 학습 시나리오 5종을 추가했다: 호우, 태풍, 폭염, 한파, 대설
+- 각 시나리오는 기존 화재/지진 학습 플레이어와 같은 구조를 따른다: 영상 장면, 자동 정지, 상황/해야 할 일 카드, 하지 말아요, 이유, 확인 질문, 장면별 복습
+- `data/rules/seasonal_rules.json`에 계절 재난 공식 rule 20개를 추가하고, `rule-catalog`와 shared hazard schema에 `heavy_rain`, `typhoon`, `heatwave`, `coldwave`, `heavy_snow`를 연결했다
+- `data/official_sources/official_sources.json`와 `data/official_sources/official_chunks.json`에 안전한TV 출처와 rule-grounded chunk를 추가해 teacher/QA evidence가 새 주제에도 나오도록 확장했다
+- 로컬 원본 영상은 `data/eval/sources/seasonal/*` 아래 ignored 자산으로 두고, 로컬 preview용 압축 mp4/poster도 `apps/desktop-ui/public/demo-video/seasonal/*`에 ignored 자산으로 분리했다
+- GitHub Pages 체험 링크의 기본 홈과 학습 순서는 유지했다. 새 계절 재난 주제는 dev 환경의 `/local-seasonal`과 직접 `/scenario/:id` 접근에서만 확인한다
+- E2E 테스트를 갱신해 기존 공개 흐름은 `화재 -> 지진 -> 설문`으로 남고, 로컬 전용 계절 재난 페이지는 별도 경로로 열리는지 확인했다
+
+### 검증
+
+- `pnpm --filter @ansimtrack/shared-types test`
+- `pnpm --filter desktop-ui test -- src/lib/learning-scenarios.test.ts`
+- `pnpm --filter desktop-ui typecheck`
+- `pnpm rules:validate`
+- `pnpm build`
+- `pnpm --filter desktop-ui test:e2e -- app.spec.ts`
+- `pnpm --filter desktop-ui lint`
+
+### 진행 중
+
+- 호우/태풍/폭염/한파/대설의 장면 분할을 다시 검수해, 한 장면에 여러 주제가 섞이던 4~5개 장면 구성을 7~12개 짧은 장면으로 재분할했다. 로컬 계절 재난 시나리오는 이제 각 장면이 30초 이하이고, 시간 구간이 겹치거나 비지 않도록 테스트로 고정했다.
+- 계절 재난 rule catalog를 22개로 늘리고, 호우 후 망가진 길/시설 신고와 대설 비닐하우스/양식장 관리 rule 및 official chunk를 분리했다. 덕분에 해당 장면의 행동 카드가 넓은 기존 rule에 억지로 붙지 않고 장면별 근거를 가진다.
+- `learning-scenarios.test.ts`에 계절 재난 최소 장면 수, segment 연속성, 30초 이하 duration, 핵심 대본 키워드 보존 검증을 추가했다.
+- 실제 느린학습자/교사 검토를 통해 정보량, 표현 난이도, 장면 길이는 다시 조정해야 한다.
+- 계절 재난 영상 자산은 로컬 프로토타입 검증용으로만 넣었다. 공개 공유 범위가 커지기 전 안전한TV 영상의 2차 이용 조건과 출처 표기 방식을 확인해야 한다.
+
+### 다음
+
+1. 산사태, 해일, 미세먼지, 감염병 등 남은 주제 후보를 공식 영상/문서 기준으로 선별
+2. 새 계절 재난 5종을 교사/보호자에게 우선 검수받아 어색한 문장과 과도한 정보량 정리
+3. 공식 영상 사용 권한과 출처 표기 기준 확정

@@ -35,6 +35,9 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
   await expect(
     page.getByRole('link', { name: /학습 체험하기/ }),
   ).toHaveAttribute('href', '#/scenario/fire-grounded-flow')
+  await expect(
+    page.getByRole('link', { name: '로컬 전용 새 재난 주제 보기' }),
+  ).toHaveCount(0)
   await expect(page.getByText('화면 공유 시작')).toHaveCount(0)
   await expect(page.getByText('화면공유 AI 분석')).toHaveCount(0)
   await expect(page.getByRole('link', { name: /화재가 났을 때/ })).toHaveCount(
@@ -61,9 +64,9 @@ test('runs the scenario practice loop', async ({ page }) => {
   await page.goto('/#/scenario/fire-grounded-flow')
 
   await expect(page.getByRole('link', { name: '안심트랙 연습' })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: '다른 연습 고르기' })).toHaveCount(
-    0,
-  )
+  await expect(
+    page.getByRole('link', { name: '다른 연습 고르기' }),
+  ).toHaveCount(0)
   await page.getByRole('button', { name: '영상 시작하기' }).click()
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
@@ -215,9 +218,9 @@ test('offers next practice and restart controls after the final scene', async ({
   await expect(
     page.getByRole('heading', { name: '계단으로 나가요' }),
   ).toHaveCount(0)
-  await expect(
-    page.getByRole('button', { name: /다음 복습/ }),
-  ).toHaveClass(/next-ready-attention/)
+  await expect(page.getByRole('button', { name: /다음 복습/ })).toHaveClass(
+    /next-ready-attention/,
+  )
   await expect(
     page.getByRole('button', {
       name: '복습을 끝까지 보면 다음 연습으로 가요',
@@ -279,6 +282,9 @@ test('starts earthquake practice from the first scene after fire practice', asyn
   await page.locator('video').evaluate((video) => {
     video.dispatchEvent(new Event('ended', { bubbles: true }))
   })
+  await expect(
+    page.getByRole('heading', { name: '한 장씩 복습해요' }),
+  ).toBeVisible()
   await advanceThroughReviewCards(page)
 
   await page.getByRole('link', { name: '다음 연습으로 가기' }).click()
@@ -358,9 +364,27 @@ test('runs the full earthquake practice as one sequence', async ({ page }) => {
   await expect(
     page.getByRole('link', { name: '설문 조사 하러 가기' }),
   ).toHaveAttribute('href', 'https://forms.gle/nzCofnS9KosQ3X566')
+})
+
+test('keeps local-only seasonal pages out of the production preview', async ({
+  page,
+}) => {
+  await page.goto('/#/local-seasonal')
+
   await expect(
-    page.getByRole('link', { name: '처음 화면으로 가기' }),
-  ).toHaveAttribute('href', '#/')
+    page.getByRole('heading', { name: '연습 화면을 찾지 못했어요.' }),
+  ).toBeVisible()
+  await expect(page.getByRole('link', { name: /비가 많이 올 때/ })).toHaveCount(
+    0,
+  )
+
+  await page.goto('/#/scenario/heavy-rain-safety-flow')
+  await expect(
+    page.getByRole('heading', { name: '연습 장면을 찾지 못했어요.' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: '영상 시작하기' })).toHaveCount(
+    0,
+  )
 })
 
 test('clamps video before the next segment frame is shown', async ({
@@ -416,9 +440,9 @@ test('ends the final earthquake after-shaking practice without looping', async (
     page.getByRole('button', { name: '맞는 답을 고르면 마칠 수 있어요' }),
   ).toBeDisabled()
   await page.getByRole('button', { name: '어른에게 말하기' }).click()
-  await expect(page.getByRole('link', { name: '오늘 연습 끝내기' })).toHaveCount(
-    0,
-  )
+  await expect(
+    page.getByRole('link', { name: '오늘 연습 끝내기' }),
+  ).toHaveCount(0)
   await expect(page.getByRole('button', { name: '연습 끝내기' })).toHaveClass(
     /next-ready-attention/,
   )

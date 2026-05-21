@@ -16,5 +16,50 @@
     "durationSeconds": 60,
     "localPath": "",
     "notes": "안전한TV 다운로드 버튼에서 제공하는 원본 mp4를 로컬에 저장한 경로를 `data/eval/source_videos.local.json`에 넣고 사용합니다."
+  },
+  {
+    "sourceId": "safetv-heavy-rain-914",
+    "title": "집중호우 발생 시 행동요령 ㅣ 민방위 교육 영상",
+    "url": "https://www.safetv.go.kr/base/video/view?idx=914",
+    "credit": "행정안전부 안전한TV",
+    "durationSeconds": 273,
+    "localPath": "",
+    "notes": "집중호우 학습 시나리오의 공식 영상/대본 소스입니다. 원본은 로컬에만 보관합니다."
+  },
+  {
+    "sourceId": "safetv-typhoon-916",
+    "title": "태풍 발생 시 행동요령 ㅣ 민방위 교육 영상",
+    "url": "https://www.safetv.go.kr/base/video/view?idx=916",
+    "credit": "행정안전부 안전한TV",
+    "durationSeconds": 90,
+    "localPath": "",
+    "notes": "태풍 학습 시나리오의 공식 영상/대본 소스입니다. 원본은 로컬에만 보관합니다."
+  },
+  {
+    "sourceId": "safetv-heatwave-918",
+    "title": "폭염 발생 시 행동요령 ㅣ 민방위 교육 영상",
+    "url": "https://www.safetv.go.kr/base/video/view?idx=918",
+    "credit": "행정안전부 안전한TV",
+    "durationSeconds": 105,
+    "localPath": "",
+    "notes": "폭염 학습 시나리오의 공식 영상/대본 소스입니다. 원본은 로컬에만 보관합니다."
+  },
+  {
+    "sourceId": "safetv-coldwave-884",
+    "title": "겨울철 강추위! 한파 대비 5가지 행동요령(스팟)",
+    "url": "https://www.safetv.go.kr/base/video/view?idx=884",
+    "credit": "행정안전부 안전한TV",
+    "durationSeconds": 89,
+    "localPath": "",
+    "notes": "한파 학습 시나리오의 공식 영상/대본 소스입니다. 원본은 로컬에만 보관합니다."
+  },
+  {
+    "sourceId": "safetv-heavy-snow-885",
+    "title": "많은 눈이 쌓이는 대설 피해 예방 5가지 행동수칙(스팟)",
+    "url": "https://www.safetv.go.kr/base/video/view?idx=885",
+    "credit": "행정안전부 안전한TV",
+    "durationSeconds": 80,
+    "localPath": "",
+    "notes": "대설 학습 시나리오의 공식 영상/대본 소스입니다. 원본은 로컬에만 보관합니다."
   }
 ]
