@@ -447,6 +447,19 @@ function PracticeHero({
 }) {
   const isResting = stage === 'rest'
   const isExplaining = stage === 'explanation'
+  const headingText = isResting
+    ? '잠깐 쉬어도 괜찮아요.'
+    : isExplaining
+      ? segment.learnerExplanation
+      : '영상을 보고 멈추면 같이 연습해요.'
+  const headingLengthClassName =
+    headingText.length > 56
+      ? 'text-[clamp(1.35rem,2.1cqw,2.25rem)] leading-[1.12]'
+      : headingText.length > 40
+        ? 'text-[clamp(1.6rem,2.75cqw,2.85rem)] leading-[1.1]'
+        : headingText.length > 26
+          ? 'text-[clamp(1.85rem,3.6cqw,3.35rem)] leading-[1.08]'
+          : 'text-[clamp(2rem,5cqw,4rem)] leading-[1.03]'
 
   return (
     <section className="rounded-md border border-[#dfe4da] bg-white p-4 [container-type:inline-size]">
@@ -456,13 +469,12 @@ function PracticeHero({
       <h1
         ref={isExplaining ? headingRef : undefined}
         tabIndex={isExplaining ? -1 : undefined}
-        className="mt-1 whitespace-nowrap text-[clamp(2rem,5cqw,4rem)] font-semibold leading-[1.03] tracking-tight outline-none"
+        className={cn(
+          'mt-1 max-w-full break-keep font-semibold tracking-tight outline-none',
+          headingLengthClassName,
+        )}
       >
-        {isResting
-          ? '잠깐 쉬어도 괜찮아요.'
-          : isExplaining
-            ? segment.learnerExplanation
-            : '영상을 보고 멈추면 같이 연습해요.'}
+        {headingText}
       </h1>
       {isResting ? (
         <p className="mt-2 text-lg font-semibold leading-7 text-[#596257]">

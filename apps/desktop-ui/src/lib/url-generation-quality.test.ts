@@ -251,4 +251,21 @@ describe('URL practice generation quality gate', () => {
       ),
     ).toBe('drain_waterway')
   })
+
+  it('adds a visual pause point before a near-end scene cut leaks the next visual', () => {
+    expect(
+      __testGeneratePracticeFromUrl.buildGeneratedPauseMs({
+        endMs: 29_790,
+        sceneCutCandidatesMs: [27_690, 29_300, 32_100],
+        startMs: 16_040,
+      }),
+    ).toBe(28_950)
+    expect(
+      __testGeneratePracticeFromUrl.buildGeneratedPauseMs({
+        endMs: 29_790,
+        sceneCutCandidatesMs: [24_000, 32_100],
+        startMs: 16_040,
+      }),
+    ).toBeUndefined()
+  })
 })

@@ -165,6 +165,8 @@ type GeneratedPracticeSegment = {
     startMs: number
     text: string
   }>
+  pauseMs?: number
+  previewMs?: number
   packet: PerceptionPacket
   practiceMode: 'action' | 'intro'
   primarySourceTitle: string | null
@@ -203,6 +205,8 @@ const safetyNotice =
 const maximumGeneratedSegmentMs = 18_000
 const boundaryPrecisionMs = 10
 const defaultGenerationModel = 'gpt-5.5'
+const generatedVisualTailGuardMs = 350
+const generatedVisualTailWindowMs = 1_800
 
 const hazardProfiles: HazardProfile[] = [
   {
@@ -548,6 +552,7 @@ function buildScenarioFromLlmPlan(input: {
       index,
       jobId: input.jobId,
       plan: segment,
+      sceneCutCandidatesMs: input.evidenceReport.sceneCutCandidatesMs,
       sourceTitle: input.sourceTitle,
       sourceUrl: input.sourceUrl,
     }),
@@ -733,11 +738,17 @@ function buildSegmentFromLlmPlan(input: {
   index: number
   jobId: string
   plan: LlmScenarioSegment
+  sceneCutCandidatesMs: number[]
   sourceTitle: string
   sourceUrl: string
 }): GeneratedPracticeSegment {
   const startMs = quantizeBoundaryMs(input.plan.startMs)
   const endMs = quantizeBoundaryMs(input.plan.endMs)
+  const pauseMs = buildGeneratedPauseMs({
+    endMs,
+    sceneCutCandidatesMs: input.sceneCutCandidatesMs,
+    startMs,
+  })
   const actionSteps = input.plan.actionSteps.slice(0, 3)
   const sourceTopicKeys = input.plan.sourceTopicKeys.filter(isCaptionTopicKey)
   const practiceMode =
@@ -899,6 +910,7 @@ function buildSegmentFromLlmPlan(input: {
         text: narrationText,
       },
     ],
+    pauseMs,
     packet,
     practiceMode,
     primarySourceTitle: input.sourceTitle,
@@ -944,6 +956,29 @@ function hazardProfileForType(hazardType: HazardType) {
   return (
     hazardProfiles.find((profile) => profile.hazard === hazardType) ??
     hazardProfiles.at(-1)!
+  )
+}
+
+function buildGeneratedPauseMs(input: {
+  endMs: number
+  sceneCutCandidatesMs: number[]
+  startMs: number
+}) {
+  const latestSafeCut = input.sceneCutCandidatesMs
+    .filter(
+      (cutMs) =>
+        cutMs > input.startMs + 1_500 &&
+        cutMs < input.endMs &&
+        input.endMs - cutMs <= generatedVisualTailWindowMs,
+    )
+    .at(-1)
+
+  if (latestSafeCut === undefined) {
+    return undefined
+  }
+
+  return quantizeBoundaryMs(
+    Math.max(input.startMs + 700, latestSafeCut - generatedVisualTailGuardMs),
   )
 }
 
@@ -2816,6 +2851,7 @@ function hashText(text: string) {
 
 export const __testGeneratePracticeFromUrl = {
   auditGeneratedScenario,
+  buildGeneratedPauseMs,
   buildGenerationEvidenceReport,
   buildRequiredSourceTopicEvidence,
   buildScenario,
