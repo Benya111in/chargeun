@@ -40,6 +40,9 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
   ).toHaveCount(0)
   await expect(page.getByText('화면 공유 시작')).toHaveCount(0)
   await expect(page.getByText('화면공유 AI 분석')).toHaveCount(0)
+  await expect(page.getByText('재난안전 영상 링크로 연습 만들기')).toHaveCount(
+    0,
+  )
   await expect(page.getByRole('link', { name: /화재가 났을 때/ })).toHaveCount(
     0,
   )
@@ -60,7 +63,25 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
   ).toBeVisible()
 })
 
-test('generates a practice page from a video URL', async ({ page }) => {
+test('renders the isolated URL generator page', async ({ page }) => {
+  await page.goto('/#/url-generator')
+
+  await expect(
+    page.getByRole('heading', {
+      name: /유튜브 링크를 넣으면\s*장면별 연습 화면을\s*새로 만듭니다\./,
+    }),
+  ).toBeVisible()
+  await expect(page.getByText('새 영상 생성 페이지')).toBeVisible()
+  await expect(page.getByLabel('새 재난안전 영상 URL')).toBeVisible()
+  await expect(page.getByText('생성 API 연결')).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: '기존 체험 페이지로 돌아가기' }),
+  ).toHaveAttribute('href', '#/')
+})
+
+test('generates a practice page from a video URL on the isolated page', async ({
+  page,
+}) => {
   await page.route('**/api/generate-practice-from-url', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -78,28 +99,25 @@ test('generates a practice page from a video URL', async ({ page }) => {
       },
     })
   })
-  await page.goto('/')
+  await page.goto('/#/url-generator')
 
   await page
-    .getByLabel('재난안전 영상 링크로 연습 만들기')
+    .getByLabel('새 재난안전 영상 URL')
     .fill('youtube.com/watch?v=earthquake-training')
   await page.getByRole('button', { name: '만들기' }).click()
 
-  await expect(page.getByText('학습 화면을 만들고 있어요')).toBeVisible()
   await expect(
-    page.getByText('음성 문장이 끝나는 지점을 찾고 있어요.'),
+    page.getByText('새 영상으로 학습 화면을 만들고 있어요'),
+  ).toBeVisible()
+  await expect(page.getByText('음성이 끝나는 지점을 찾습니다.')).toBeVisible()
+  await expect(
+    page.getByText('화면 자막과 장면이 바뀌는 지점을 봅니다.'),
   ).toBeVisible()
   await expect(
-    page.getByText('영상 프레임이 바뀌는 지점을 찾고 있어요.'),
+    page.getByText('GPT-5.5가 장면별 학습 화면을 작성합니다.'),
   ).toBeVisible()
   await expect(
-    page.getByText('장면 경계를 0.01초 단위로 맞추고 있어요.'),
-  ).toBeVisible()
-  await expect(
-    page.getByText('GPT-5.5가 장면별 학습안을 작성하고 있어요.'),
-  ).toBeVisible()
-  await expect(
-    page.getByText('장면 수와 문장 품질을 검사하고 있어요.'),
+    page.getByText('재난안전 표현과 쉬운말 품질을 검사합니다.'),
   ).toBeVisible()
   await expect(page).toHaveURL(/#\/scenario\/generated-e2e$/, {
     timeout: 20_000,

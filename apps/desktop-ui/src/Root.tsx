@@ -9,6 +9,7 @@ const LiveLabPage = lazy(() => import('./WebAppPage.tsx'))
 const QaWorkspacePage = lazy(() => import('./App.tsx'))
 const ScenarioPracticePage = lazy(() => import('./ScenarioPracticePage.tsx'))
 const TeacherGuidePage = lazy(() => import('./TeacherGuidePage.tsx'))
+const UrlGeneratorPage = lazy(() => import('./UrlGeneratorPage.tsx'))
 
 export function Root() {
   const [normalizedPathname, setNormalizedPathname] = useState(getAppRoute)
@@ -29,6 +30,7 @@ export function Root() {
     normalizedPathname === '/demo' ||
     normalizedPathname === '/teacher' ||
     normalizedPathname === '/live-lab' ||
+    normalizedPathname === '/url-generator' ||
     (isLocalSeasonalEnabled() && normalizedPathname === '/local-seasonal') ||
     normalizedPathname === '/qa' ||
     normalizedPathname.startsWith('/scenario/')
@@ -42,15 +44,17 @@ export function Root() {
           ? TeacherGuidePage
           : normalizedPathname === '/live-lab'
             ? LiveLabPage
-            : normalizedPathname === '/qa'
-              ? isQaUnlocked()
-                ? QaWorkspacePage
-                : InternalQaGatePage
-              : normalizedPathname === '/'
-                ? LearningHomePage
-                : isKnownPath
+            : normalizedPathname === '/url-generator'
+              ? UrlGeneratorPage
+              : normalizedPathname === '/qa'
+                ? isQaUnlocked()
+                  ? QaWorkspacePage
+                  : InternalQaGatePage
+                : normalizedPathname === '/'
                   ? LearningHomePage
-                  : NotFoundPage
+                  : isKnownPath
+                    ? LearningHomePage
+                    : NotFoundPage
 
   return (
     <Suspense

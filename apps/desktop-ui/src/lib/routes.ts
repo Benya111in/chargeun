@@ -48,6 +48,7 @@ function isDirectAppRoute(path: string) {
     path === '/demo' ||
     path === '/teacher' ||
     path === '/live-lab' ||
+    path === '/url-generator' ||
     (isLocalSeasonalEnabled() && path === '/local-seasonal') ||
     path === '/qa' ||
     path.startsWith('/scenario/')

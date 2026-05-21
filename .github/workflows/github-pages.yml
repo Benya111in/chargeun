@@ -37,6 +37,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build static site
+        env:
+          VITE_GENERATOR_API_BASE: ${{ vars.GENERATOR_API_BASE }}
         run: pnpm --filter desktop-ui build
 
       - name: Configure Pages

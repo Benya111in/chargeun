@@ -1,99 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import {
-  ArrowRight,
-  CheckCircle2,
-  Link2,
-  LoaderCircle,
-  ShieldAlert,
-} from 'lucide-react'
+import { ArrowRight, CheckCircle2, ShieldAlert } from 'lucide-react'
 
 import { appHref } from './lib/routes'
 import { isLocalSeasonalEnabled } from './lib/local-seasonal'
-import {
-  saveGeneratedScenario,
-  type GeneratedScenarioRecord,
-} from './lib/generated-scenario'
 
 const safetyNotice =
   '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
-const generationSteps = [
-  '영상 파일과 자막을 가져오고 있어요.',
-  '음성 문장이 끝나는 지점을 찾고 있어요.',
-  '영상 프레임이 바뀌는 지점을 찾고 있어요.',
-  '장면 경계를 0.01초 단위로 맞추고 있어요.',
-  'GPT-5.5가 장면별 학습안을 작성하고 있어요.',
-  '쉬운 말, 하지 말아요, 이유, 질문을 만들고 있어요.',
-  '장면 수와 문장 품질을 검사하고 있어요.',
-]
-const minimumGenerationDisplayMs = 14_000
-
 export default function LearningHomePage() {
-  const [sourceUrl, setSourceUrl] = useState('')
-  const [generationStepIndex, setGenerationStepIndex] = useState(0)
-  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
-    null,
-  )
-  const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [urlError, setUrlError] = useState('')
-
-  useEffect(() => {
-    if (!isGenerating || !generationStartedAt) {
-      return
-    }
-
-    const updateProgress = () => {
-      const elapsedMs = Date.now() - generationStartedAt
-      setGenerationElapsedSeconds(Math.floor(elapsedMs / 1000))
-      setGenerationStepIndex(
-        Math.min(generationSteps.length - 1, Math.floor(elapsedMs / 2_500)),
-      )
-    }
-    updateProgress()
-    const intervalId = window.setInterval(updateProgress, 450)
-
-    return () => window.clearInterval(intervalId)
-  }, [generationStartedAt, isGenerating])
-
-  const handleUrlSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (isGenerating) {
-      return
-    }
-
-    try {
-      setUrlError('')
-      setGenerationStepIndex(0)
-      setGenerationElapsedSeconds(0)
-      setGenerationStartedAt(Date.now())
-      setIsGenerating(true)
-
-      const generationPromise = requestGeneratedPractice(sourceUrl)
-      const [generationResult] = await Promise.allSettled([
-        generationPromise,
-        wait(minimumGenerationDisplayMs),
-      ] as const)
-
-      if (generationResult.status === 'rejected') {
-        throw generationResult.reason
-      }
-
-      const { record } = generationResult.value
-
-      saveGeneratedScenario(record)
-      window.location.href = appHref(`/scenario/${record.id}`)
-    } catch (error) {
-      setUrlError(
-        error instanceof Error
-          ? error.message
-          : '링크를 확인하지 못했어요. 다시 입력해 주세요.',
-      )
-      setGenerationStartedAt(null)
-      setIsGenerating(false)
-    }
-  }
-
   return (
     <main className="min-h-screen bg-[#f7f8f4] text-[#151713]">
       <section className="mx-auto flex min-h-screen w-full max-w-[1180px] flex-col justify-center px-5 py-8 md:px-8">
@@ -123,48 +35,6 @@ export default function LearningHomePage() {
                 <ArrowRight className="size-6" />
               </a>
             </div>
-
-            <form
-              className="mt-5 max-w-3xl rounded-md border border-[#dfe4da] bg-white p-4 shadow-sm"
-              onSubmit={handleUrlSubmit}
-            >
-              <label
-                className="text-base font-semibold"
-                htmlFor="disaster-video-url"
-              >
-                재난안전 영상 링크로 연습 만들기
-              </label>
-              <p className="mt-1 text-sm font-semibold leading-6 text-[#596257]">
-                유튜브나 공공기관 영상 주소를 넣으면 영상 자막과 시간을 읽고 새
-                장면별 학습 화면을 바로 만들어요.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <div className="relative min-w-0 flex-1">
-                  <Link2 className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-[#596257]" />
-                  <input
-                    className="min-h-12 w-full rounded-md border border-[#dfe4da] bg-[#f7f8f4] py-3 pl-10 pr-3 text-base font-semibold text-[#151713] outline-none transition focus:border-[#151713]"
-                    disabled={isGenerating}
-                    id="disaster-video-url"
-                    onChange={(event) => setSourceUrl(event.target.value)}
-                    placeholder="youtube.com/watch?v=..."
-                    type="text"
-                    value={sourceUrl}
-                  />
-                </div>
-                <button
-                  className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-md border border-[#151713] bg-[#151713] px-5 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={isGenerating || sourceUrl.trim().length === 0}
-                  type="submit"
-                >
-                  만들기
-                </button>
-              </div>
-              {urlError ? (
-                <p className="mt-2 text-sm font-semibold leading-6 text-rose-700">
-                  {urlError}
-                </p>
-              ) : null}
-            </form>
 
             <div className="mt-7 grid max-w-3xl gap-3 md:grid-cols-3">
               <IntroPoint title="짧게 봐요">한 장면만 보고 멈춰요.</IntroPoint>
@@ -197,12 +67,6 @@ export default function LearningHomePage() {
           </aside>
         </div>
       </section>
-      {isGenerating ? (
-        <GenerationDialog
-          elapsedSeconds={generationElapsedSeconds}
-          stepIndex={generationStepIndex}
-        />
-      ) : null}
     </main>
   )
 }
@@ -225,79 +89,4 @@ function IntroPoint({
       </p>
     </section>
   )
-}
-
-function GenerationDialog({
-  elapsedSeconds,
-  stepIndex,
-}: {
-  elapsedSeconds: number
-  stepIndex: number
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/46 px-4">
-      <section
-        aria-live="polite"
-        className="w-full max-w-lg rounded-md border border-[#dfe4da] bg-white p-6 text-[#151713] shadow-[0_24px_80px_rgba(0,0,0,0.22)]"
-      >
-        <div className="flex items-center gap-3">
-          <LoaderCircle className="size-7 animate-spin" />
-          <div>
-            <p className="text-sm font-semibold text-[#596257]">
-              학습 화면을 만들고 있어요
-            </p>
-            <h2 className="mt-1 text-2xl font-semibold">
-              잠시만 기다려 주세요.
-            </h2>
-            <p className="mt-1 text-sm font-semibold text-[#596257]">
-              {elapsedSeconds}초째 처리 중입니다.
-            </p>
-          </div>
-        </div>
-        <ol className="mt-5 grid gap-2">
-          {generationSteps.map((step, index) => (
-            <li
-              className={`rounded-md border px-4 py-3 text-base font-semibold ${
-                index <= stepIndex
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
-                  : 'border-[#dfe4da] bg-[#f7f8f4] text-[#596257]'
-              }`}
-              key={step}
-            >
-              {index + 1}. {step}
-            </li>
-          ))}
-        </ol>
-      </section>
-    </div>
-  )
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
-}
-
-async function requestGeneratedPractice(sourceUrl: string): Promise<{
-  record: GeneratedScenarioRecord
-}> {
-  const response = await fetch('/api/generate-practice-from-url', {
-    body: JSON.stringify({ sourceUrl }),
-    headers: {
-      'content-type': 'application/json',
-    },
-    method: 'POST',
-  })
-  const payload = (await response.json()) as {
-    message?: string
-    record?: GeneratedScenarioRecord
-  }
-
-  if (!response.ok || !payload.record) {
-    throw new Error(
-      payload.message ??
-        '영상에서 학습 화면을 만들지 못했어요. 다른 링크로 다시 시도해 주세요.',
-    )
-  }
-
-  return { record: payload.record }
 }

@@ -80,6 +80,64 @@ export function assertSameOrigin(req: any, res: any) {
   return false
 }
 
+export function getGeneratorAllowedOrigins() {
+  return [
+    'http://localhost:1420',
+    'http://localhost:4173',
+    'http://127.0.0.1:1420',
+    'http://127.0.0.1:4173',
+    'https://benya111in.github.io',
+    ...parseCsv(process.env.GENERATOR_ALLOWED_ORIGINS),
+  ]
+}
+
+export function handleCors(req: any, res: any, allowedOrigins: string[]) {
+  const origin = getHeader(req, 'origin')
+  const isAllowed = Boolean(origin && allowedOrigins.includes(origin))
+
+  if (isAllowed) {
+    res.setHeader('access-control-allow-origin', origin)
+    res.setHeader('access-control-allow-methods', 'POST, OPTIONS')
+    res.setHeader('access-control-allow-headers', 'content-type')
+    res.setHeader('vary', 'origin')
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = isAllowed || !origin ? 204 : 403
+    res.end()
+    return true
+  }
+
+  return false
+}
+
+export function assertSameOriginOrAllowed(
+  req: any,
+  res: any,
+  allowedOrigins: string[],
+) {
+  const origin = getHeader(req, 'origin')
+  const host = getHeader(req, 'x-forwarded-host') || getHeader(req, 'host')
+
+  if (!origin || !host) {
+    return true
+  }
+
+  try {
+    if (new URL(origin).host === host || allowedOrigins.includes(origin)) {
+      return true
+    }
+  } catch {
+    // Fall through to rejection.
+  }
+
+  sendJson(res, 403, {
+    error: 'origin_forbidden',
+    message: 'This origin is not allowed to call the generator API.',
+  })
+  return false
+}
+
 export function validateBetaAccess(req: any, res: any) {
   const config = getConfig()
   const betaCode = getHeader(req, 'x-beta-code')

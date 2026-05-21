@@ -16,7 +16,9 @@ import OpenAI from 'openai'
 import {
   ValidationError,
   assertMethod,
-  assertSameOrigin,
+  assertSameOriginOrAllowed,
+  getGeneratorAllowedOrigins,
+  handleCors,
   parseModelJson,
   readJsonBody,
   sendJson,
@@ -477,7 +479,16 @@ const visualCaptionEvidenceSchema = {
 }
 
 export default async function handler(req: any, res: any) {
-  if (!assertMethod(req, res, ['POST']) || !assertSameOrigin(req, res)) {
+  const allowedOrigins = getGeneratorAllowedOrigins()
+
+  if (handleCors(req, res, allowedOrigins)) {
+    return
+  }
+
+  if (
+    !assertMethod(req, res, ['POST']) ||
+    !assertSameOriginOrAllowed(req, res, allowedOrigins)
+  ) {
     return
   }
 
