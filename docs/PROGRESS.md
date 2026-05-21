@@ -19,6 +19,7 @@
 - `pnpm --filter desktop-ui build`, `pnpm --filter desktop-ui test -- learning-scenarios`, `pnpm --filter desktop-ui exec playwright test e2e/app.spec.ts`, 브라우저 DOM/screenshot 확인으로 공개 링크 진입 흐름을 검증했다.
 - URL 입력 자동 생성 경로가 자막을 너무 크게 묶어 2개 장면만 만들 수 있던 문제를 고쳤다. 자막/오디오 주제 전환을 기준으로 장면을 나누고, 생성 직후 `url_generation_lrs_v1` 품질 게이트를 통과해야만 결과를 저장한다.
 - 품질 게이트는 장면 수 부족, 30초 초과 장면, 행동/하지 말아요/확인 질문 누락, 정답 1개 위반, 쉬운말 금지 표현, `말해요/알려요` 대상 누락을 blocker로 처리한다. `youtube.com/watch?v=IiVsojHcoEo`는 7개 장면으로 분할되고 quality score 100을 통과했다.
+- 펭수 태풍 영상 `oWu95ZitpTI`가 30초 초과 장면으로 막히던 원인을 보강했다. 태풍 URL 생성은 이제 외출 자제, 문/창문, 간판/위험 시설물, 배수구, 하천/운전, 농촌 시설물/배수로, 바닷가/선박을 별도 판단 지점으로 나누며, 해당 영상은 10개 장면과 quality score 100으로 통과한다.
 
 ### 진행 중
 
