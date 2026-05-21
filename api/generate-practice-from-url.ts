@@ -52,21 +52,24 @@ type CaptionCue = {
   text: string
 }
 
-type CaptionTopicKey =
-  | 'call_119'
-  | 'coastal_boat'
-  | 'drain_waterway'
-  | 'evacuate_to_safe_place'
-  | 'farm_facility'
-  | 'home_drain'
-  | 'indoor_window'
-  | 'intro_weather'
-  | 'outdoor_signage'
-  | 'outdoor_activity'
-  | 'outro_review'
-  | 'river_car_drive'
-  | 'stay_away_from_low_water'
-  | 'typhoon_warning'
+const captionTopicKeys = [
+  'call_119',
+  'coastal_boat',
+  'drain_waterway',
+  'evacuate_to_safe_place',
+  'farm_facility',
+  'home_drain',
+  'indoor_window',
+  'intro_weather',
+  'outdoor_signage',
+  'outdoor_activity',
+  'outro_review',
+  'river_car_drive',
+  'stay_away_from_low_water',
+  'typhoon_warning',
+] as const
+
+type CaptionTopicKey = (typeof captionTopicKeys)[number]
 
 type GeneratedQualityIssue = {
   code: string
@@ -133,6 +136,7 @@ type LlmScenarioSegment = {
   learnerSequence: Array<{ kind: 'action' | 'situation'; text: string }>
   practiceMode: 'action' | 'intro'
   requiredLearnerKeywords: string[]
+  sourceTopicKeys: string[]
   startMs: number
   teacherGuide: {
     correction: string
@@ -169,6 +173,7 @@ type GeneratedPracticeSegment = {
   safetyWarnings: string[]
   safetyNotice: string
   segment: Segment
+  sourceTopicKeys?: CaptionTopicKey[]
   startMs: number
   structuredExplanation: StructuredLearningExplanation
   teacherGuide: {
@@ -313,6 +318,11 @@ const llmScenarioPlanSchema = {
             maxItems: 8,
             type: 'array',
           },
+          sourceTopicKeys: {
+            items: { type: 'string' },
+            maxItems: 8,
+            type: 'array',
+          },
           startMs: { type: 'number' },
           teacherGuide: {
             additionalProperties: false,
@@ -338,6 +348,7 @@ const llmScenarioPlanSchema = {
           'learnerSequence',
           'practiceMode',
           'requiredLearnerKeywords',
+          'sourceTopicKeys',
           'startMs',
           'teacherGuide',
         ],
@@ -444,6 +455,7 @@ async function generatePracticeFromUrl(sourceUrl: string) {
         generationQualityReport: GeneratedQualityReport
       })
     | null = null
+  let lastQualityReport: GeneratedQualityReport | null = null
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const scenarioPlan = await generateScenarioPlanWithOpenAI({
@@ -474,6 +486,7 @@ async function generatePracticeFromUrl(sourceUrl: string) {
       cues,
       scenario.generationEvidenceReport,
     )
+    lastQualityReport = qualityReport
 
     if (qualityReport.passed) {
       scenarioWithQuality = {
@@ -492,8 +505,9 @@ async function generatePracticeFromUrl(sourceUrl: string) {
 
   if (!scenarioWithQuality) {
     throw new Error(
-      qualityFeedback ||
-        'GPT-5.5 제작 결과가 학습 품질 검사를 통과하지 못했습니다.',
+      lastQualityReport
+        ? formatQualityFailure(lastQualityReport)
+        : 'GPT-5.5 제작 결과가 학습 품질 검사를 통과하지 못했습니다.',
     )
   }
 
@@ -580,6 +594,7 @@ async function generateScenarioPlanWithOpenAI(input: {
     apiKey: process.env.OPENAI_API_KEY,
   })
   let validationFeedback = ''
+  const requiredSourceTopics = buildRequiredSourceTopicEvidence(input.cues)
   if (input.qualityFeedback) {
     validationFeedback = input.qualityFeedback
   }
@@ -615,7 +630,10 @@ async function generateScenarioPlanWithOpenAI(input: {
 
     try {
       const plan = parseModelJson(outputText) as LlmScenarioPlan
-      assertLlmScenarioPlan(plan)
+      assertLlmScenarioPlan(
+        plan,
+        requiredSourceTopics.map((topic) => topic.topic),
+      )
       return plan
     } catch (error) {
       lastError = error
@@ -688,6 +706,9 @@ function buildScenarioPlanPrompt(
                 'hazardType must be one of earthquake, fire, heavy_rain, typhoon, unknown.',
                 'The final scenario must include at least minimumSegments segments.',
                 'Every requiredSourceTopics item must appear in at least one segment teacherGuide.script and be reflected in learnerPrompt, learnerExplanation, actionSteps, doNot, or actionReasons.',
+                'Every segment must include sourceTopicKeys. Use only the requiredSourceTopics.topic values covered by that segment time range. Use [] only for pure intro/outro scenes.',
+                'Every requiredSourceTopics.topic must appear in at least one segment.sourceTopicKeys. Do not invent topic keys.',
+                'Every meaningful audio cue must be covered by at least one segment time window. Do not skip spoken guidance just because the caption text is noisy.',
                 'Each segment startMs/endMs must use 10ms precision and stay inside evidence time ranges.',
                 'Intro/outro segments may have no action cards. Action scenes must have 1-3 actionSteps, doNot, actionReasons, and exactly one correct answer option.',
                 'Use answer questions as reinforcement, not a trick test. Still exactly one option must be correct.',
@@ -718,6 +739,7 @@ function buildSegmentFromLlmPlan(input: {
   const startMs = quantizeBoundaryMs(input.plan.startMs)
   const endMs = quantizeBoundaryMs(input.plan.endMs)
   const actionSteps = input.plan.actionSteps.slice(0, 3)
+  const sourceTopicKeys = input.plan.sourceTopicKeys.filter(isCaptionTopicKey)
   const practiceMode =
     input.plan.practiceMode === 'action' && actionSteps.length > 0
       ? 'action'
@@ -885,6 +907,7 @@ function buildSegmentFromLlmPlan(input: {
     safetyNotice,
     safetyWarnings: practiceMode === 'action' ? [input.plan.doNot] : [],
     segment,
+    sourceTopicKeys,
     startMs,
     structuredExplanation,
     teacherGuide: input.plan.teacherGuide,
@@ -949,11 +972,15 @@ function markOpenAiGenerationComplete(
   }
 }
 
-function assertLlmScenarioPlan(plan: LlmScenarioPlan) {
+function assertLlmScenarioPlan(
+  plan: LlmScenarioPlan,
+  allowedSourceTopics: CaptionTopicKey[] = [],
+) {
   if (!plan || !Array.isArray(plan.segments) || plan.segments.length === 0) {
     throw new Error('GPT-5.5 제작 결과에 장면이 없습니다.')
   }
 
+  const allowedTopicSet = new Set(allowedSourceTopics)
   let previousEndMs = -1
   for (const [index, segment] of plan.segments.entries()) {
     if (
@@ -977,6 +1004,24 @@ function assertLlmScenarioPlan(plan: LlmScenarioPlan) {
       throw new Error(`GPT-5.5 장면 ${index + 1}의 행동 카드가 너무 많습니다.`)
     }
 
+    if (!Array.isArray(segment.sourceTopicKeys)) {
+      throw new Error(`GPT-5.5 장면 ${index + 1}에 원본 토픽 표시가 없습니다.`)
+    }
+
+    for (const topic of segment.sourceTopicKeys) {
+      if (!isCaptionTopicKey(topic)) {
+        throw new Error(
+          `GPT-5.5 장면 ${index + 1}의 원본 토픽 ${topic}은 허용되지 않습니다.`,
+        )
+      }
+
+      if (allowedTopicSet.size > 0 && !allowedTopicSet.has(topic)) {
+        throw new Error(
+          `GPT-5.5 장면 ${index + 1}의 원본 토픽 ${topic}은 이 영상 근거에 없습니다.`,
+        )
+      }
+    }
+
     if (segment.practiceMode === 'action') {
       if (segment.actionSteps.length === 0) {
         throw new Error(`GPT-5.5 장면 ${index + 1}에 행동 카드가 없습니다.`)
@@ -994,6 +1039,10 @@ function assertLlmScenarioPlan(plan: LlmScenarioPlan) {
       }
     }
   }
+}
+
+function isCaptionTopicKey(value: string): value is CaptionTopicKey {
+  return (captionTopicKeys as readonly string[]).includes(value)
 }
 
 function buildRequiredSourceTopicEvidence(cues: CaptionCue[]) {
@@ -1024,12 +1073,56 @@ function buildRequiredSourceTopicEvidence(cues: CaptionCue[]) {
       .map((entry) => entry.text)
       .join(' ')
       .slice(0, 260),
+    learnerKeywords: learnerKeywordsForTopic(topic),
+    label: topicLabelForPrompt(topic),
     topic,
     timeRangeMs: {
       endMs: Math.max(...entries.map((entry) => entry.endMs)),
       startMs: Math.min(...entries.map((entry) => entry.startMs)),
     },
   }))
+}
+
+function topicLabelForPrompt(topic: CaptionTopicKey) {
+  const labels: Record<CaptionTopicKey, string> = {
+    call_119: '119 또는 주변 어른에게 알리기',
+    coastal_boat: '바닷가와 배 안전',
+    drain_waterway: '배수로와 물꼬',
+    evacuate_to_safe_place: '안전한 곳으로 대피하기',
+    farm_facility: '농촌 시설물과 비닐하우스',
+    home_drain: '집 주변 배수구 확인',
+    indoor_window: '실내 문과 창문',
+    intro_weather: '비와 태풍 소개',
+    outdoor_activity: '산행과 캠핑 피하기',
+    outdoor_signage: '밖의 간판과 위험한 물건',
+    outro_review: '마지막 복습',
+    river_car_drive: '하천 근처 차와 운전',
+    stay_away_from_low_water: '물이 찬 낮은 곳 피하기',
+    typhoon_warning: '태풍 소식과 외출 줄이기',
+  }
+
+  return labels[topic]
+}
+
+function learnerKeywordsForTopic(topic: CaptionTopicKey) {
+  const keywords: Record<CaptionTopicKey, string[]> = {
+    call_119: ['119', '어른', '알리기'],
+    coastal_boat: ['바닷가', '배', '묶기'],
+    drain_waterway: ['배수로', '물꼬'],
+    evacuate_to_safe_place: ['안전한 곳', '대피'],
+    farm_facility: ['농촌', '비닐하우스', '시설물'],
+    home_drain: ['집 주변', '배수구'],
+    indoor_window: ['문', '창문', '창문 가까이 가지 않기'],
+    intro_weather: ['비', '태풍'],
+    outdoor_activity: ['산', '캠핑', '가지 않기'],
+    outdoor_signage: ['간판', '위험한 물건', '피하기'],
+    outro_review: ['다시 기억하기'],
+    river_car_drive: ['하천', '차', '천천히 운전'],
+    stay_away_from_low_water: ['물이 찬 곳', '건너지 않기'],
+    typhoon_warning: ['태풍', '밖에 나가지 않기'],
+  }
+
+  return keywords[topic]
 }
 
 async function downloadVideo(sourceUrl: string, workDir: string) {
@@ -1265,6 +1358,7 @@ function auditGeneratedScenario(
 ): GeneratedQualityReport {
   const issues: GeneratedQualityIssue[] = []
   const sourceTopics = extractSourceTopics(cues)
+  const sourceTopicEvidence = buildRequiredSourceTopicEvidence(cues)
   const sourceDurationMs =
     Math.max(...cues.map((cue) => cue.endMs), 0) -
     Math.min(...cues.map((cue) => cue.startMs), 0)
@@ -1304,16 +1398,38 @@ function auditGeneratedScenario(
     )
   }
 
-  for (const topic of sourceTopics) {
-    const found = scenario.segments.some((segment) =>
-      segmentTopics(segment).has(topic),
+  const uncoveredCue = cues.find(
+    (cue) =>
+      isMeaningfulLearningCue(cue) &&
+      !scenario.segments.some((segment) =>
+        segmentCoversCueMidpoint(segment, cue),
+      ),
+  )
+  if (uncoveredCue) {
+    addIssue(
+      'blocker',
+      'uncovered_audio_cue',
+      `자막/오디오 문장 "${normalizeCueText(uncoveredCue.text).slice(0, 40)}"이 학습 장면 시간에 포함되지 않았습니다.`,
+    )
+  }
+
+  for (const topicEvidence of sourceTopicEvidence) {
+    const found = scenario.segments.some(
+      (segment) =>
+        segmentTopics(segment).has(topicEvidence.topic) &&
+        windowsOverlap(
+          segment.startMs,
+          segment.endMs,
+          topicEvidence.timeRangeMs.startMs,
+          topicEvidence.timeRangeMs.endMs,
+        ),
     )
 
     if (!found) {
       addIssue(
         'blocker',
         'missing_audio_topic',
-        `자막/오디오 주제 ${topic}가 학습 장면에 남지 않았습니다.`,
+        `자막/오디오 주제 ${topicLabelForPrompt(topicEvidence.topic)}가 학습 장면에 남지 않았습니다.`,
       )
     }
   }
@@ -1487,6 +1603,10 @@ function extractSourceTopics(cues: CaptionCue[]) {
 }
 
 function segmentTopics(segment: GeneratedPracticeSegment) {
+  if (Array.isArray(segment.sourceTopicKeys)) {
+    return new Set(segment.sourceTopicKeys.filter(isCaptionTopicKey))
+  }
+
   return extractSourceTopics(
     segment.narration.map((cue) => ({
       endMs: cue.endMs,
@@ -1494,6 +1614,15 @@ function segmentTopics(segment: GeneratedPracticeSegment) {
       text: cue.text,
     })),
   )
+}
+
+function windowsOverlap(
+  startA: number,
+  endA: number,
+  startB: number,
+  endB: number,
+) {
+  return Math.max(startA, startB) <= Math.min(endA, endB)
 }
 
 function learnerVisibleTexts(segment: GeneratedPracticeSegment) {
@@ -1509,6 +1638,25 @@ function learnerVisibleTexts(segment: GeneratedPracticeSegment) {
       option.label,
     ]),
   ].filter(Boolean)
+}
+
+function isMeaningfulLearningCue(cue: CaptionCue) {
+  const normalized = normalizeCueText(cue.text)
+
+  return (
+    normalized.length >= 8 &&
+    !/^\[?음악\]?$/u.test(normalized) &&
+    !/^(주세요|지켜주세요)$/u.test(normalized)
+  )
+}
+
+function segmentCoversCueMidpoint(
+  segment: Pick<GeneratedPracticeSegment, 'endMs' | 'startMs'>,
+  cue: CaptionCue,
+) {
+  const midpoint = (cue.startMs + cue.endMs) / 2
+
+  return midpoint >= segment.startMs - 250 && midpoint <= segment.endMs + 250
 }
 
 function learnerTextProblem(text: string) {
@@ -1991,7 +2139,7 @@ function topicKeyForCueText(text: string): CaptionTopicKey | null {
   if (/태풍피해 없이|안전수칙|챙겨주세요|챙기/u.test(normalized))
     return 'outro_review'
   if (/바닷가|선박|배를|배는|묶어 두/u.test(normalized)) return 'coastal_boat'
-  if (/농촌|물고|시설물.*묶|단단히 묶/u.test(normalized)) {
+  if (/농촌|비닐하우스|농가|축사|시설물.*묶|단단히 묶/u.test(normalized)) {
     return 'farm_facility'
   }
   if (/하천|주차|차량|운전|서행/u.test(normalized)) return 'river_car_drive'
@@ -2005,7 +2153,7 @@ function topicKeyForCueText(text: string): CaptionTopicKey | null {
   if (/외출을 차지|외출을 자제|북상|대비하세요/u.test(normalized)) {
     return 'typhoon_warning'
   }
-  if (/배수로|물꼬|점검/u.test(normalized)) return 'drain_waterway'
+  if (/배수로|물꼬/u.test(normalized)) return 'drain_waterway'
   if (/고립|신고|1\s*1|119/u.test(normalized)) return 'call_119'
   if (/낮은 다리|낮은 곳|물이 찬|침수.*다리|건너지|건너/u.test(normalized)) {
     return 'stay_away_from_low_water'
@@ -2669,9 +2817,11 @@ function hashText(text: string) {
 export const __testGeneratePracticeFromUrl = {
   auditGeneratedScenario,
   buildGenerationEvidenceReport,
+  buildRequiredSourceTopicEvidence,
   buildScenario,
   detectHazard,
   parseVtt,
+  topicKeyForCueText,
 }
 
 function runCommandWithOutput(command: string, args: string[]) {

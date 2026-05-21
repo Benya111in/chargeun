@@ -210,4 +210,45 @@ describe('URL practice generation quality gate', () => {
       'too_few_segments_for_audio_topics',
     )
   })
+
+  it('blocks outputs that skip meaningful spoken guidance between scenes', () => {
+    const cues = __testGeneratePracticeFromUrl.parseVtt(typhoonPreparednessVtt)
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('태풍')
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      hazard,
+      jobId: 'generated-test-typhoon-gap',
+      sourceTitle: '태풍 대비법',
+      sourceUrl: 'https://www.youtube.com/watch?v=oWu95ZitpTI',
+      videoSrc: '/generated/generated-test-typhoon-gap/source.mp4',
+    })
+    const gappedScenario = {
+      ...scenario,
+      segments: scenario.segments.filter(
+        (segment) => !segment.learnerPrompt.includes('집 주변'),
+      ),
+    }
+    const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
+      gappedScenario,
+      cues,
+    )
+
+    expect(report.passed).toBe(false)
+    expect(report.issues.map((issue) => issue.code)).toContain(
+      'uncovered_audio_cue',
+    )
+  })
+
+  it('does not invent a drain-waterway topic from the word 점검 alone', () => {
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '공사현장의 낙하물 방지망을 설치하고 시설물을 미리 점검해요.',
+      ),
+    ).toBeNull()
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '배수로나 물꼬는 미리 점검하고 비가 올 때는 나가지 않아요.',
+      ),
+    ).toBe('drain_waterway')
+  })
 })
