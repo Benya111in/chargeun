@@ -6,22 +6,30 @@ export const generatedScenarioStorageKey = 'chagunchagun.generated-scenarios.v1'
 export type GeneratedScenarioRecord = {
   baseScenarioId: string
   createdAt: string
+  customScenario?: TheaterShow
   id: string
+  matchBasis: 'metadata' | 'url'
   sourceUrl: string
+  sourceTitle?: string
+  thumbnailUrl?: string
   topicLabel: string
   version: 1
 }
 
 export type UrlScenarioMatch = {
+  matchBasis: 'metadata' | 'url'
   scenarioId: string
   topicLabel: string
 }
 
-const fallbackScenarioId = 'fire-grounded-flow'
+export type VideoMetadata = {
+  thumbnailUrl?: string
+  title?: string
+}
 
 const keywordMatches: Array<{
   keywords: string[]
-  match: UrlScenarioMatch
+  match: Omit<UrlScenarioMatch, 'matchBasis'>
 }> = [
   {
     keywords: ['지진', 'earthquake', 'quake', 'seismic'],
@@ -76,33 +84,64 @@ const keywordMatches: Array<{
 
 export function createGeneratedScenarioRecord(
   sourceUrl: string,
+  metadata: VideoMetadata = {},
 ): GeneratedScenarioRecord {
   const normalizedUrl = normalizeScenarioUrl(sourceUrl)
-  const match = matchUrlToScenario(normalizedUrl)
+  const match = matchUrlToScenario(normalizedUrl, metadata.title ?? '')
+
+  if (!match) {
+    throw new Error(
+      '영상 제목에서 재난 주제를 찾지 못했어요. 화재, 지진, 태풍처럼 주제가 보이는 영상 링크를 넣어 주세요.',
+    )
+  }
 
   return {
     baseScenarioId: match.scenarioId,
     createdAt: new Date().toISOString(),
     id: `generated-${hashUrl(normalizedUrl)}`,
+    matchBasis: match.matchBasis,
     sourceUrl: normalizedUrl,
+    sourceTitle: metadata.title,
+    thumbnailUrl: metadata.thumbnailUrl,
     topicLabel: match.topicLabel,
     version: 1,
   }
 }
 
-export function matchUrlToScenario(sourceUrl: string): UrlScenarioMatch {
-  const haystack = decodeURIComponent(sourceUrl).toLowerCase()
+export async function createGeneratedScenarioRecordFromUrl(sourceUrl: string) {
+  const normalizedUrl = normalizeScenarioUrl(sourceUrl)
+  const urlMatch = matchUrlToScenario(normalizedUrl)
+
+  if (urlMatch) {
+    return createGeneratedScenarioRecord(normalizedUrl)
+  }
+
+  const metadata = await fetchVideoMetadata(normalizedUrl)
+
+  return createGeneratedScenarioRecord(normalizedUrl, metadata)
+}
+
+export function matchUrlToScenario(
+  sourceUrl: string,
+  metadataText = '',
+): UrlScenarioMatch | null {
+  const urlText = decodeURIComponent(sourceUrl).toLowerCase()
+  const metadataHaystack = metadataText.toLowerCase()
 
   for (const item of keywordMatches) {
-    if (item.keywords.some((keyword) => includesKeyword(haystack, keyword))) {
-      return normalizeMatch(item.match)
+    if (item.keywords.some((keyword) => includesKeyword(urlText, keyword))) {
+      return normalizeMatch({ ...item.match, matchBasis: 'url' })
+    }
+
+    if (
+      metadataHaystack &&
+      item.keywords.some((keyword) => includesKeyword(metadataHaystack, keyword))
+    ) {
+      return normalizeMatch({ ...item.match, matchBasis: 'metadata' })
     }
   }
 
-  return {
-    scenarioId: fallbackScenarioId,
-    topicLabel: '재난안전 연습',
-  }
+  return null
 }
 
 export function normalizeScenarioUrl(sourceUrl: string) {
@@ -158,6 +197,24 @@ export function loadGeneratedScenarioRecords(): GeneratedScenarioRecord[] {
 }
 
 export function toGeneratedTheaterShow(record: GeneratedScenarioRecord) {
+  if (record.customScenario) {
+    return {
+      ...record.customScenario,
+      generatedSourceTitle:
+        record.customScenario.generatedSourceTitle ?? record.sourceTitle,
+      generatedSourceUrl:
+        record.customScenario.generatedSourceUrl ?? record.sourceUrl,
+      generatedThumbnailUrl:
+        record.customScenario.generatedThumbnailUrl ?? record.thumbnailUrl,
+      generatedTopicLabel:
+        record.customScenario.generatedTopicLabel ?? record.topicLabel,
+      id: record.id,
+      practiceSequence: false,
+      showOnHome: false,
+      title: record.customScenario.title || 'URL로 만든 연습',
+    } satisfies TheaterShow
+  }
+
   const baseScenario = resolveBaseScenario(record.baseScenarioId)
 
   if (!baseScenario) {
@@ -166,6 +223,10 @@ export function toGeneratedTheaterShow(record: GeneratedScenarioRecord) {
 
   return {
     ...baseScenario,
+    generatedSourceTitle: record.sourceTitle,
+    generatedSourceUrl: record.sourceUrl,
+    generatedThumbnailUrl: record.thumbnailUrl,
+    generatedTopicLabel: record.topicLabel,
     homeNote:
       '입력한 영상 링크를 바탕으로 장면별 학습 화면을 만든 미리보기입니다.',
     homeTitle: 'URL로 만든 연습',
@@ -177,29 +238,21 @@ export function toGeneratedTheaterShow(record: GeneratedScenarioRecord) {
   } satisfies TheaterShow
 }
 
-function normalizeMatch(match: UrlScenarioMatch): UrlScenarioMatch {
+function normalizeMatch(match: UrlScenarioMatch): UrlScenarioMatch | null {
   const scenario = resolveBaseScenario(match.scenarioId)
 
   if (scenario) {
     return match
   }
 
-  return {
-    scenarioId: fallbackScenarioId,
-    topicLabel: '재난안전 연습',
-  }
+  return null
 }
 
 function resolveBaseScenario(scenarioId: string) {
-  const scenario =
-    learningScenarios.find((item) => item.id === scenarioId) ??
-    learningScenarios.find((item) => item.id === fallbackScenarioId) ??
-    null
+  const scenario = learningScenarios.find((item) => item.id === scenarioId) ?? null
 
   if (scenario?.localOnly && !isLocalSeasonalEnabled()) {
-    return (
-      learningScenarios.find((item) => item.id === fallbackScenarioId) ?? null
-    )
+    return null
   }
 
   return scenario
@@ -221,8 +274,43 @@ function isGeneratedScenarioRecord(
     typeof record.sourceUrl === 'string' &&
     typeof record.baseScenarioId === 'string' &&
     typeof record.topicLabel === 'string' &&
-    typeof record.createdAt === 'string'
+    typeof record.createdAt === 'string' &&
+    (record.matchBasis === undefined ||
+      record.matchBasis === 'url' ||
+      record.matchBasis === 'metadata')
   )
+}
+
+async function fetchVideoMetadata(sourceUrl: string): Promise<VideoMetadata> {
+  try {
+    const response = await fetch(
+      `https://noembed.com/embed?url=${encodeURIComponent(sourceUrl)}`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      },
+    )
+
+    if (!response.ok) {
+      return {}
+    }
+
+    const payload = (await response.json()) as {
+      thumbnail_url?: unknown
+      title?: unknown
+    }
+
+    return {
+      thumbnailUrl:
+        typeof payload.thumbnail_url === 'string'
+          ? payload.thumbnail_url
+          : undefined,
+      title: typeof payload.title === 'string' ? payload.title : undefined,
+    }
+  } catch {
+    return {}
+  }
 }
 
 function includesKeyword(haystack: string, keyword: string) {

@@ -61,6 +61,23 @@ test('renders the learning home and opens a scenario', async ({ page }) => {
 })
 
 test('generates a practice page from a video URL', async ({ page }) => {
+  await page.route('**/api/generate-practice-from-url', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      json: {
+        record: {
+          baseScenarioId: 'earthquake-protect-flow',
+          createdAt: '2026-05-21T00:00:00.000Z',
+          id: 'generated-e2e',
+          matchBasis: 'metadata',
+          sourceTitle: '지진 발생 시 이렇게 행동하세요!',
+          sourceUrl: 'https://www.youtube.com/watch?v=earthquake-training',
+          topicLabel: '지진 영상 학습',
+          version: 1,
+        },
+      },
+    })
+  })
   await page.goto('/')
 
   await page
@@ -69,11 +86,17 @@ test('generates a practice page from a video URL', async ({ page }) => {
   await page.getByRole('button', { name: '만들기' }).click()
 
   await expect(page.getByText('학습 화면을 만들고 있어요')).toBeVisible()
-  await expect(page.getByText('공식 행동요령과 맞는지 확인하고 있어요.')).toBeVisible()
-  await expect(page).toHaveURL(/#\/scenario\/generated-[a-z0-9]+$/, {
+  await expect(
+    page.getByText('타임스탬프를 보고 장면을 나누고 있어요.'),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/#\/scenario\/generated-e2e$/, {
     timeout: 6_000,
   })
   await expect(page.getByText('URL로 만든 연습').first()).toBeVisible()
+  await expect(page.getByText('지진 영상 학습')).toBeVisible()
+  await expect(
+    page.getByText('입력한 영상: 지진 발생 시 이렇게 행동하세요!'),
+  ).toBeVisible()
   await expect(
     page.getByRole('button', { name: '영상 시작하기' }),
   ).toBeVisible()

@@ -20,3 +20,4 @@ data/eval/clips/*
 data/eval/sources/*
 !data/eval/sources/.gitkeep
 apps/desktop-ui/public/demo-video/seasonal/*
+apps/desktop-ui/public/generated/*

@@ -10,16 +10,16 @@ import {
 import { appHref } from './lib/routes'
 import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 import {
-  createGeneratedScenarioRecord,
   saveGeneratedScenario,
+  type GeneratedScenarioRecord,
 } from './lib/generated-scenario'
 
 const safetyNotice =
   '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
 const generationSteps = [
-  '영상에서 연습할 장면을 찾고 있어요.',
-  '공식 행동요령과 맞는지 확인하고 있어요.',
-  '쉬운 말과 카드로 바꾸고 있어요.',
+  '영상 파일과 자막을 가져오고 있어요.',
+  '타임스탬프를 보고 장면을 나누고 있어요.',
+  '쉬운 말과 카드 화면을 새로 만들고 있어요.',
 ]
 
 export default function LearningHomePage() {
@@ -40,12 +40,12 @@ export default function LearningHomePage() {
       setGenerationStepIndex(0)
       setIsGenerating(true)
 
-      const record = createGeneratedScenarioRecord(sourceUrl)
-
       for (let index = 0; index < generationSteps.length; index += 1) {
         setGenerationStepIndex(index)
         await wait(520)
       }
+
+      const { record } = await requestGeneratedPractice(sourceUrl)
 
       saveGeneratedScenario(record)
       window.location.href = appHref(`/scenario/${record.id}`)
@@ -100,8 +100,8 @@ export default function LearningHomePage() {
                 재난안전 영상 링크로 연습 만들기
               </label>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#596257]">
-                유튜브나 공공기관 영상 주소를 넣으면 장면별 학습 화면으로
-                바꿔서 바로 열어요.
+                유튜브나 공공기관 영상 주소를 넣으면 영상 자막과 시간을 읽고
+                새 장면별 학습 화면을 바로 만들어요.
               </p>
               <div className="mt-3 flex gap-2">
                 <div className="relative min-w-0 flex-1">
@@ -228,4 +228,29 @@ function GenerationDialog({ stepIndex }: { stepIndex: number }) {
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function requestGeneratedPractice(sourceUrl: string): Promise<{
+  record: GeneratedScenarioRecord
+}> {
+  const response = await fetch('/api/generate-practice-from-url', {
+    body: JSON.stringify({ sourceUrl }),
+    headers: {
+      'content-type': 'application/json',
+    },
+    method: 'POST',
+  })
+  const payload = (await response.json()) as {
+    message?: string
+    record?: GeneratedScenarioRecord
+  }
+
+  if (!response.ok || !payload.record) {
+    throw new Error(
+      payload.message ??
+        '영상에서 학습 화면을 만들지 못했어요. 다른 링크로 다시 시도해 주세요.',
+    )
+  }
+
+  return { record: payload.record }
 }

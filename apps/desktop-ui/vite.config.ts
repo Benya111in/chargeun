@@ -1,12 +1,14 @@
 import path from 'node:path'
 
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+import generatePracticeFromUrl from '../../api/generate-practice-from-url'
+
 export default defineConfig({
   base: './',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), localGeneratePracticeApi()],
   resolve: {
     alias: {
       '@ansimtrack/shadow-buffer': path.resolve(
@@ -39,3 +41,14 @@ export default defineConfig({
     strictPort: true,
   },
 })
+
+function localGeneratePracticeApi(): Plugin {
+  return {
+    name: 'local-generate-practice-api',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-practice-from-url', (req, res) => {
+        void generatePracticeFromUrl(req, res)
+      })
+    },
+  }
+}

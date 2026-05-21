@@ -309,6 +309,9 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     <main className="min-h-screen bg-[#f7f8f4] text-[#151713]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col gap-2 px-4 py-1.5 lg:px-6">
         <SafetyBanner notice={segment.safetyNotice} />
+        {scenario.generatedSourceUrl ? (
+          <GeneratedSourceBanner scenario={scenario} />
+        ) : null}
 
         <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,0.98fr)_minmax(440px,0.58fr)]">
           <section className="flex min-w-0 flex-col gap-3">
@@ -1104,6 +1107,24 @@ function SafetyBanner({ notice }: { notice: string }) {
         <span className="mr-3 text-sm">연습 전에 기억해요</span>
         {notice}
       </p>
+    </section>
+  )
+}
+
+function GeneratedSourceBanner({ scenario }: { scenario: TheaterShow }) {
+  return (
+    <section className="rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-emerald-950">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
+        <span className="rounded-md bg-emerald-700 px-2 py-1 text-white">
+          URL로 만든 연습
+        </span>
+        <span>{scenario.generatedTopicLabel ?? '재난안전 연습'}</span>
+        {scenario.generatedSourceTitle ? (
+          <span className="text-emerald-900">
+            입력한 영상: {scenario.generatedSourceTitle}
+          </span>
+        ) : null}
+      </div>
     </section>
   )
 }

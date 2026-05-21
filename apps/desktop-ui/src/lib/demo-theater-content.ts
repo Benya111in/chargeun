@@ -81,6 +81,10 @@ export type PracticeAnswerOption = LearningTeachBack['options'][number] & {
 
 export type TheaterShow = {
   accentClassName: string
+  generatedSourceTitle?: string
+  generatedSourceUrl?: string
+  generatedThumbnailUrl?: string
+  generatedTopicLabel?: string
   homeNote?: string
   homeTitle?: string
   id: string
