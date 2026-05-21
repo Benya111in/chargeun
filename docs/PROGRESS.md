@@ -348,6 +348,8 @@
 - URL 자동 생성이 더 이상 fallback 문장만으로 결과를 만들지 않도록 바꿨다. 자막/오디오 텍스트 근거가 없으면 실패시키고, 생성 결과에는 `audio-caption-parse`, `audio-sentence-boundary-split`, `visual-scene-probe`, `boundary-precision-quantize` 단계와 0.01초 경계 보정 리포트를 저장한다.
 - 로컬 생성 API가 `ffprobe`로 영상 길이를 읽고 `ffmpeg` scene detection으로 프레임 변화 후보를 뽑아 자막/오디오 문장 경계와 함께 쓰도록 보강했다. 태풍 URL 실호출 기준 32개 caption/audio cue, 33개 scene 후보, 10개 학습 장면, 품질 100점을 확인했다.
 - URL 생성 로딩 UI 문구도 실제 처리 단계에 맞춰 `음성 문장 끝`, `영상 프레임 변화`, `0.01초 경계 보정`, `문장 품질 검사`를 순서대로 보여 주도록 바꾸고 최소 표시 시간을 10초로 늘렸다.
+- URL 입력 실제 생성 경로를 deterministic 휴리스틱 생성에서 `GPT-5.5 strict JSON 제작 에이전트`로 전환했다. 로컬 코드는 증거 수집, schema validation, LRS 품질검사만 담당하고, 장면 분할/쉬운말/해야 할 일/이유/하지 말아요/확인 질문은 GPT-5.5 출력만 사용한다.
+- GPT-5.5 결과가 시간 겹침, 원본 주제 누락, 어색한 잔여 표현(`권장함`) 등으로 검증에 걸리면 같은 GPT-5.5에게 실패 사유를 돌려보내 전체 시나리오를 다시 작성하게 했다. 태풍 URL 실호출에서 10개 장면, `gpt-5.5` model tag, audio+visual evidence, 품질 100점 통과를 확인했다.
 
 ### 검증
 

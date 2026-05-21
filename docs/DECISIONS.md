@@ -443,3 +443,8 @@
 
 - 이유: 화재/지진 샘플 수준의 품질은 자막/오디오 문장, 프레임 변화, 장면 경계 보정, 품질검사를 모두 거쳐야 나온다. 자막이 없는 영상에 fallback 문장을 붙여 바로 학습 화면으로 보내면 “AI가 분석했다”는 사용자의 기대와 실제 구현이 어긋난다.
 - 영향: `/api/generate-practice-from-url`은 자막/오디오 텍스트 근거가 없으면 결과를 만들지 않는다. 통과한 결과에는 caption cue 수, sentence split 수, ffmpeg scene-cut 후보, 0.01초 boundary quantization, 사용한 evidence type을 `generationQualityReport.analysisDepth`에 남긴다.
+
+### D-079 URL 학습 화면의 교육 내용 생성은 GPT-5.5가 전담한다
+
+- 이유: 휴리스틱으로 행동 카드와 쉬운말을 조합하면 새 영상에서 어색한 문장, 주제 누락, 잘못된 장면 결합이 반복된다. URL 입력 제품은 “빠른 미리보기”가 아니라 실제 제작 에이전트가 충분히 시간을 들여 만든 결과여야 한다.
+- 영향: 실제 `/api/generate-practice-from-url` 경로는 `OPENAI_GENERATION_MODEL` 기본값 `gpt-5.5`를 사용한다. 로컬 코드는 다운로드, 자막/프레임 증거 수집, strict JSON schema 검증, LRS 품질 차단, 실패 사유 기반 재생성 루프만 담당한다. GPT 결과가 품질검사를 통과하지 못하면 로컬이 임의로 메우지 않고 GPT-5.5에게 전체 시나리오를 다시 작성하게 한다.

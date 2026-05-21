@@ -96,10 +96,13 @@ test('generates a practice page from a video URL', async ({ page }) => {
     page.getByText('장면 경계를 0.01초 단위로 맞추고 있어요.'),
   ).toBeVisible()
   await expect(
+    page.getByText('GPT-5.5가 장면별 학습안을 작성하고 있어요.'),
+  ).toBeVisible()
+  await expect(
     page.getByText('장면 수와 문장 품질을 검사하고 있어요.'),
   ).toBeVisible()
   await expect(page).toHaveURL(/#\/scenario\/generated-e2e$/, {
-    timeout: 16_000,
+    timeout: 20_000,
   })
   await expect(page.getByText('URL로 만든 연습').first()).toBeVisible()
   await expect(page.getByText('지진 영상 학습')).toBeVisible()

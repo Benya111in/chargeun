@@ -1,10 +1,16 @@
 import path from 'node:path'
 
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 import generatePracticeFromUrl from '../../api/generate-practice-from-url'
+
+const repoRoot = path.resolve(__dirname, '..', '..')
+const rootEnv = loadEnv(process.env.NODE_ENV ?? 'development', repoRoot, '')
+for (const key of ['OPENAI_API_KEY', 'OPENAI_GENERATION_MODEL']) {
+  process.env[key] ||= rootEnv[key]
+}
 
 export default defineConfig({
   base: './',
@@ -33,7 +39,7 @@ export default defineConfig({
     port: 1420,
     strictPort: true,
     fs: {
-      allow: [path.resolve(__dirname, '..', '..')],
+      allow: [repoRoot],
     },
   },
   preview: {

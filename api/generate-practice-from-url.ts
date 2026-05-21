@@ -11,10 +11,13 @@ import {
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import OpenAI from 'openai'
+
 import {
   ValidationError,
   assertMethod,
   assertSameOrigin,
+  parseModelJson,
   readJsonBody,
   sendJson,
 } from './_shared'
@@ -86,8 +89,11 @@ type GenerationEvidenceReport = {
   audioCueCount: number
   expandedCueCount: number
   frameBoundaryPrecisionMs: 10
+  generationModel?: string
   sceneCutCandidatesMs: number[]
-  segmentationEvidence: Array<'audio-caption' | 'visual-scene-cut'>
+  segmentationEvidence: Array<
+    'audio-caption' | 'gpt-5.5-scenario-authoring' | 'visual-scene-cut'
+  >
   sentenceBoundaryCount: number
   stages: Array<{
     evidence: string
@@ -101,6 +107,39 @@ type GenerationEvidenceReport = {
 type VideoProbe = {
   durationMs: number | null
   frameRate: number | null
+}
+
+type LlmScenarioPlan = {
+  hazardType: HazardType
+  note: string
+  segments: LlmScenarioSegment[]
+  title: string
+}
+
+type LlmScenarioSegment = {
+  actionReasons: string[]
+  actionSteps: string[]
+  answerOptions: Array<{
+    correct: boolean
+    feedback: string
+    kind: LearningTeachBackOption['kind']
+    label: string
+  }>
+  checkQuestion: string
+  doNot: string
+  endMs: number
+  learnerExplanation: string
+  learnerPrompt: string
+  learnerSequence: Array<{ kind: 'action' | 'situation'; text: string }>
+  practiceMode: 'action' | 'intro'
+  requiredLearnerKeywords: string[]
+  startMs: number
+  teacherGuide: {
+    correction: string
+    observe: string
+    prompt: string
+    script: string
+  }
 }
 
 type GeneratedPracticeSegment = {
@@ -158,6 +197,7 @@ const safetyNotice =
   '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.'
 const maximumGeneratedSegmentMs = 18_000
 const boundaryPrecisionMs = 10
+const defaultGenerationModel = 'gpt-5.5'
 
 const hazardProfiles: HazardProfile[] = [
   {
@@ -206,6 +246,112 @@ const hazardProfiles: HazardProfile[] = [
     ruleId: 'LOCAL_GENERAL_GENERATED',
   },
 ]
+
+const llmScenarioPlanSchema = {
+  additionalProperties: false,
+  properties: {
+    hazardType: {
+      enum: ['earthquake', 'fire', 'heavy_rain', 'typhoon', 'unknown'],
+      type: 'string',
+    },
+    note: { type: 'string' },
+    segments: {
+      items: {
+        additionalProperties: false,
+        properties: {
+          actionReasons: {
+            items: { type: 'string' },
+            maxItems: 3,
+            type: 'array',
+          },
+          actionSteps: {
+            items: { type: 'string' },
+            maxItems: 3,
+            type: 'array',
+          },
+          answerOptions: {
+            items: {
+              additionalProperties: false,
+              properties: {
+                correct: { type: 'boolean' },
+                feedback: { type: 'string' },
+                kind: {
+                  enum: ['object', 'person', 'place', 'signal', 'state'],
+                  type: 'string',
+                },
+                label: { type: 'string' },
+              },
+              required: ['correct', 'feedback', 'kind', 'label'],
+              type: 'object',
+            },
+            maxItems: 2,
+            minItems: 2,
+            type: 'array',
+          },
+          checkQuestion: { type: 'string' },
+          doNot: { type: 'string' },
+          endMs: { type: 'number' },
+          learnerExplanation: { type: 'string' },
+          learnerPrompt: { type: 'string' },
+          learnerSequence: {
+            items: {
+              additionalProperties: false,
+              properties: {
+                kind: { enum: ['action', 'situation'], type: 'string' },
+                text: { type: 'string' },
+              },
+              required: ['kind', 'text'],
+              type: 'object',
+            },
+            maxItems: 4,
+            minItems: 1,
+            type: 'array',
+          },
+          practiceMode: { enum: ['action', 'intro'], type: 'string' },
+          requiredLearnerKeywords: {
+            items: { type: 'string' },
+            maxItems: 8,
+            type: 'array',
+          },
+          startMs: { type: 'number' },
+          teacherGuide: {
+            additionalProperties: false,
+            properties: {
+              correction: { type: 'string' },
+              observe: { type: 'string' },
+              prompt: { type: 'string' },
+              script: { type: 'string' },
+            },
+            required: ['correction', 'observe', 'prompt', 'script'],
+            type: 'object',
+          },
+        },
+        required: [
+          'actionReasons',
+          'actionSteps',
+          'answerOptions',
+          'checkQuestion',
+          'doNot',
+          'endMs',
+          'learnerExplanation',
+          'learnerPrompt',
+          'learnerSequence',
+          'practiceMode',
+          'requiredLearnerKeywords',
+          'startMs',
+          'teacherGuide',
+        ],
+        type: 'object',
+      },
+      maxItems: 28,
+      minItems: 1,
+      type: 'array',
+    },
+    title: { type: 'string' },
+  },
+  required: ['hazardType', 'note', 'segments', 'title'],
+  type: 'object',
+}
 
 export default async function handler(req: any, res: any) {
   if (!assertMethod(req, res, ['POST']) || !assertSameOrigin(req, res)) {
@@ -284,33 +430,71 @@ async function generatePracticeFromUrl(sourceUrl: string) {
   ).catch(() => [])
   const cues = prepareEvidenceCues(rawCues, sceneCutCandidatesMs)
   const title = info.title ?? '입력한 재난안전 영상'
-  const hazard = detectHazard(
-    `${title}\n${cues.map((cue) => cue.text).join('\n')}`,
-  )
   const evidenceReport = buildGenerationEvidenceReport({
     cues,
     rawCues,
     sceneCutCandidatesMs,
     videoProbe,
   })
-  const scenario = buildScenario({
-    cues,
-    evidenceReport,
-    frameCutsMs: sceneCutCandidatesMs,
-    hazard,
-    jobId,
-    sourceTitle: title,
-    sourceUrl,
-    videoSrc: `/generated/${jobId}/source.mp4`,
-  })
-  const qualityReport = auditGeneratedScenario(scenario, cues, evidenceReport)
-  const scenarioWithQuality = {
-    ...scenario,
-    generationQualityReport: qualityReport,
+  const generationModel =
+    process.env.OPENAI_GENERATION_MODEL?.trim() || defaultGenerationModel
+  let qualityFeedback = ''
+  let scenarioWithQuality:
+    | (ReturnType<typeof buildScenarioFromLlmPlan> & {
+        generationQualityReport: GeneratedQualityReport
+      })
+    | null = null
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const scenarioPlan = await generateScenarioPlanWithOpenAI({
+      cues,
+      evidenceReport,
+      generationModel,
+      qualityFeedback,
+      sceneCutCandidatesMs,
+      sourceTitle: title,
+      sourceUrl,
+      videoProbe,
+    })
+    const scenario = buildScenarioFromLlmPlan({
+      evidenceReport: markOpenAiGenerationComplete(
+        evidenceReport,
+        generationModel,
+        scenarioPlan.segments.length,
+      ),
+      hazard: hazardProfileForType(scenarioPlan.hazardType),
+      jobId,
+      plan: scenarioPlan,
+      sourceTitle: title,
+      sourceUrl,
+      videoSrc: `/generated/${jobId}/source.mp4`,
+    })
+    const qualityReport = auditGeneratedScenario(
+      scenario,
+      cues,
+      scenario.generationEvidenceReport,
+    )
+
+    if (qualityReport.passed) {
+      scenarioWithQuality = {
+        ...scenario,
+        generationQualityReport: qualityReport,
+      }
+      break
+    }
+
+    qualityFeedback = [
+      'Previous full scenario passed JSON validation but failed local learning-quality validation.',
+      formatQualityFailure(qualityReport),
+      'Regenerate the full scenario and preserve every source audio topic in at least one teacherGuide.script and learner-facing scene.',
+    ].join('\n')
   }
 
-  if (!qualityReport.passed) {
-    throw new Error(formatQualityFailure(qualityReport))
+  if (!scenarioWithQuality) {
+    throw new Error(
+      qualityFeedback ||
+        'GPT-5.5 제작 결과가 학습 품질 검사를 통과하지 못했습니다.',
+    )
   }
 
   await writeFile(
@@ -329,10 +513,523 @@ async function generatePracticeFromUrl(sourceUrl: string) {
       sourceTitle: title,
       sourceUrl,
       thumbnailUrl: info.thumbnail,
-      topicLabel: `${hazard.label} 영상 학습`,
+      topicLabel: `${scenarioWithQuality.generatedTopicLabel}`,
       version: 1,
     },
   }
+}
+
+function buildScenarioFromLlmPlan(input: {
+  evidenceReport: GenerationEvidenceReport
+  hazard: HazardProfile
+  jobId: string
+  plan: LlmScenarioPlan
+  sourceTitle: string
+  sourceUrl: string
+  videoSrc: string
+}) {
+  const segments = input.plan.segments.map((segment, index) =>
+    buildSegmentFromLlmPlan({
+      hazard: input.hazard,
+      index,
+      jobId: input.jobId,
+      plan: segment,
+      sourceTitle: input.sourceTitle,
+      sourceUrl: input.sourceUrl,
+    }),
+  )
+
+  return {
+    accentClassName: 'bg-emerald-400',
+    generatedSourceTitle: input.sourceTitle,
+    generatedSourceUrl: input.sourceUrl,
+    generatedTopicLabel: `${input.hazard.label} 영상 학습`,
+    generationEvidenceReport: input.evidenceReport,
+    homeNote: 'GPT-5.5가 입력 영상 근거를 읽고 만든 장면별 학습 화면입니다.',
+    homeTitle: input.plan.title || 'URL로 만든 연습',
+    id: input.jobId,
+    note:
+      input.plan.note ||
+      '영상 자막과 프레임 근거를 바탕으로 만든 학습 화면입니다.',
+    posterSrc: '/demo/fire-grounded-02.jpg',
+    practiceSequence: false,
+    segments,
+    showOnHome: false,
+    title: input.plan.title || 'URL로 만든 연습',
+    videoSrc: input.videoSrc,
+  }
+}
+
+async function generateScenarioPlanWithOpenAI(input: {
+  cues: CaptionCue[]
+  evidenceReport: GenerationEvidenceReport
+  generationModel: string
+  qualityFeedback?: string
+  sceneCutCandidatesMs: number[]
+  sourceTitle: string
+  sourceUrl: string
+  videoProbe: VideoProbe
+}): Promise<LlmScenarioPlan> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error(
+      'OPENAI_API_KEY가 설정되어 있지 않아 GPT-5.5 제작 에이전트를 실행하지 않았습니다.',
+    )
+  }
+
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  })
+  let validationFeedback = ''
+  if (input.qualityFeedback) {
+    validationFeedback = input.qualityFeedback
+  }
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await client.responses.create({
+      input: buildScenarioPlanPrompt(input, validationFeedback),
+      model: input.generationModel,
+      text: {
+        format: {
+          name: 'slowlearner_url_scenario_plan',
+          schema: llmScenarioPlanSchema,
+          strict: true,
+          type: 'json_schema',
+        },
+      },
+    } as any)
+
+    const outputText =
+      (response as any).output_text ??
+      (response as any).output
+        ?.flatMap((item: any) => item.content ?? [])
+        .map((content: any) => content.text ?? '')
+        .join('\n')
+
+    if (!outputText) {
+      lastError = new Error('GPT-5.5 제작 에이전트가 빈 결과를 반환했습니다.')
+      validationFeedback =
+        'Previous attempt failed because the model returned empty output. Return a complete valid JSON scenario.'
+      continue
+    }
+
+    try {
+      const plan = parseModelJson(outputText) as LlmScenarioPlan
+      assertLlmScenarioPlan(plan)
+      return plan
+    } catch (error) {
+      lastError = error
+      validationFeedback = [
+        'Previous generated JSON failed local validation.',
+        `Validation error: ${error instanceof Error ? error.message : String(error)}`,
+        'Regenerate the full scenario. Do not return only the changed segment.',
+        'Fix all segment overlaps, invalid durations, missing action cards, ambiguous answers, and hard learner-facing words.',
+      ].join('\n')
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('GPT-5.5 제작 결과가 검증을 통과하지 못했습니다.')
+}
+
+function buildScenarioPlanPrompt(
+  input: {
+    cues: CaptionCue[]
+    generationModel: string
+    sceneCutCandidatesMs: number[]
+    sourceTitle: string
+    sourceUrl: string
+    videoProbe: VideoProbe
+  },
+  validationFeedback: string,
+) {
+  return [
+    {
+      content: [
+        'You are the GPT-5.5 production agent for a Korean disaster-safety learning tool for slow learners.',
+        'You must author the complete learning scenario. The server only validates; it does not fill missing education content.',
+        'Use only the provided transcript/audio cues and scene-cut evidence. Do not invent disaster instructions not supported by the input.',
+        'Every action scene must separate: situation, what to do, why, what not to do, and one low-pressure review question.',
+        'Keep learner Korean short and concrete. Avoid difficult Sino-Korean words and awkward machine-translation phrasing.',
+        'Do not use these learner-facing words or phrases: 유입, 차단, 숙지, 저지대, 고립되어, 가능할 수, 찾기해야, 가기해야, 안전합니다.',
+        'If the transcript contains important terms such as 방석, 탁자, 가스 냄새, 전선, 문, 계단, 119, 안내 방송, keep those key nouns in the learner text.',
+        'Segment boundaries must end after a spoken sentence when possible. Prefer 8-18 second scenes. Never exceed 30 seconds.',
+        'Segment times must be monotonic: each segment.startMs must be greater than or equal to the previous segment.endMs minus 100ms.',
+        'Return JSON only.',
+      ].join('\n'),
+      role: 'system',
+    },
+    {
+      content: [
+        {
+          text: JSON.stringify(
+            {
+              evidence: {
+                audioCues: input.cues.map((cue, index) => ({
+                  endMs: cue.endMs,
+                  index,
+                  startMs: cue.startMs,
+                  text: cue.text,
+                })),
+                minimumSegments: Math.max(
+                  3,
+                  extractSourceTopics(input.cues).size,
+                ),
+                requiredSourceTopics: buildRequiredSourceTopicEvidence(
+                  input.cues,
+                ),
+                sceneCutCandidatesMs: input.sceneCutCandidatesMs,
+                sourceTitle: input.sourceTitle,
+                sourceUrl: input.sourceUrl,
+                videoDurationMs: input.videoProbe.durationMs,
+              },
+              outputRules: [
+                'hazardType must be one of earthquake, fire, heavy_rain, typhoon, unknown.',
+                'The final scenario must include at least minimumSegments segments.',
+                'Every requiredSourceTopics item must appear in at least one segment teacherGuide.script and be reflected in learnerPrompt, learnerExplanation, actionSteps, doNot, or actionReasons.',
+                'Each segment startMs/endMs must use 10ms precision and stay inside evidence time ranges.',
+                'Intro/outro segments may have no action cards. Action scenes must have 1-3 actionSteps, doNot, actionReasons, and exactly one correct answer option.',
+                'Use answer questions as reinforcement, not a trick test. Still exactly one option must be correct.',
+                'learnerSequence must start with one situation card, then action cards in order.',
+                'teacherGuide.script should preserve the relevant transcript meaning in Korean.',
+              ],
+              validationFeedback: validationFeedback || null,
+            },
+            null,
+            2,
+          ),
+          type: 'input_text',
+        },
+      ],
+      role: 'user',
+    },
+  ]
+}
+
+function buildSegmentFromLlmPlan(input: {
+  hazard: HazardProfile
+  index: number
+  jobId: string
+  plan: LlmScenarioSegment
+  sourceTitle: string
+  sourceUrl: string
+}): GeneratedPracticeSegment {
+  const startMs = quantizeBoundaryMs(input.plan.startMs)
+  const endMs = quantizeBoundaryMs(input.plan.endMs)
+  const actionSteps = input.plan.actionSteps.slice(0, 3)
+  const practiceMode =
+    input.plan.practiceMode === 'action' && actionSteps.length > 0
+      ? 'action'
+      : 'intro'
+  const segmentId = `${input.jobId}-segment-${input.index + 1}`
+  const narrationText = input.plan.teacherGuide.script
+  const teachBack =
+    practiceMode === 'action'
+      ? buildTeachBackFromPlan(input.plan, input.hazard)
+      : null
+  const answerOptions =
+    teachBack?.options.map((option) => ({
+      ...option,
+      correct: option.id === teachBack.correctOptionId,
+    })) ?? []
+  const packet: PerceptionPacket = {
+    asrText: narrationText,
+    keyframes: [],
+    objectHints: [],
+    ocrTokens: [],
+    sessionId: input.jobId,
+    tEndMs: endMs,
+    tStartMs: startMs,
+    uiElements: [],
+  }
+  const segment: Segment = {
+    confidence: 0.88,
+    endMs,
+    hazard: input.hazard.hazard,
+    id: segmentId,
+    officialRuleIds: [input.hazard.ruleId],
+    phase: input.hazard.phase,
+    sessionId: input.jobId,
+    startMs,
+  }
+  const explanation: SegmentExplanation = {
+    doNot: practiceMode === 'action' ? input.plan.doNot : undefined,
+    overlayTargets: [],
+    safetyMode: 'grounded',
+    segmentId,
+    tracks: {
+      action: actionSteps.join(' / ') || undefined,
+      basic: narrationText,
+      easy: input.plan.learnerExplanation,
+      reason: input.plan.actionReasons[0] ?? input.hazard.reason,
+    },
+  }
+  const structuredExplanation: StructuredLearningExplanation = {
+    evidence: {
+      asrEvidence: [
+        {
+          confidence: 0.9,
+          endMs,
+          startMs,
+          text: narrationText,
+        },
+      ],
+      modelInference: [
+        {
+          basedOn: ['asr', 'visual-scene-cut', 'gpt-5.5'],
+          claim: 'GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다.',
+        },
+      ],
+      ocrEvidence: [],
+      ruleEvidence: [
+        {
+          matchedText: narrationText.slice(0, 180),
+          ruleId: input.hazard.ruleId,
+          sourceName: '입력 영상 자막과 GPT-5.5 구조화 결과',
+          sourceUrl: input.sourceUrl,
+          title: input.sourceTitle,
+        },
+      ],
+      visualEvidence: [],
+    },
+    segment: {
+      confidence: 0.88,
+      decisionPoint: input.plan.learnerExplanation,
+      endMs,
+      hazard: input.hazard.hazard,
+      phase: input.hazard.phase,
+      segmentId,
+      sessionId: input.jobId,
+      sourceId: input.sourceUrl,
+      startMs,
+      status: practiceMode === 'action' ? 'validated' : 'draft',
+    },
+    suppressedCandidates:
+      practiceMode === 'action'
+        ? [
+            {
+              candidate: input.plan.doNot,
+              category: 'unsafe_action',
+              evidenceRefs: ['gpt-5.5-plan', 'input-video-transcript'],
+              reason: 'GPT-5.5가 하지 말아야 할 행동으로 분리했습니다.',
+            },
+          ]
+        : [],
+    tracks: {
+      action:
+        practiceMode === 'action'
+          ? {
+              cards: actionSteps.map((label, actionIndex) => ({
+                label,
+                officialRuleIds: [input.hazard.ruleId],
+                order: actionIndex + 1,
+              })),
+            }
+          : undefined,
+      doNot:
+        practiceMode === 'action'
+          ? {
+              officialRuleIds: [input.hazard.ruleId],
+              text: input.plan.doNot,
+            }
+          : undefined,
+      easy: {
+        maxReadingLevel: 'very_easy',
+        text: input.plan.learnerExplanation,
+      },
+      reason: {
+        officialRuleIds: [input.hazard.ruleId],
+        text: input.plan.actionReasons[0] ?? input.hazard.reason,
+      },
+      teachBack: teachBack ?? undefined,
+    },
+    validation: {
+      hasGroundedAction: practiceMode === 'action',
+      learnerSafe: true,
+      requiresHumanReview: false,
+      schemaValid: true,
+      warnings: [
+        'GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다.',
+      ],
+    },
+    version: 'slowlearner_multitrack_v1',
+  }
+
+  return {
+    actionReasons: input.plan.actionReasons,
+    actionSteps,
+    answerOptions,
+    checkQuestion: teachBack?.prompt ?? '',
+    description: input.plan.learnerExplanation,
+    endMs,
+    explanation,
+    id: segmentId,
+    label: input.plan.learnerExplanation,
+    learnerExplanation: input.plan.learnerExplanation,
+    learnerPrompt: input.plan.learnerPrompt,
+    learnerSequence: input.plan.learnerSequence,
+    narration: [
+      {
+        endMs,
+        source: 'audio',
+        startMs,
+        text: narrationText,
+      },
+    ],
+    packet,
+    practiceMode,
+    primarySourceTitle: input.sourceTitle,
+    requiredLearnerKeywords: input.plan.requiredLearnerKeywords,
+    ruleMatches: [],
+    safetyNotice,
+    safetyWarnings: practiceMode === 'action' ? [input.plan.doNot] : [],
+    segment,
+    startMs,
+    structuredExplanation,
+    teacherGuide: input.plan.teacherGuide,
+    teachBack,
+  }
+}
+
+function buildTeachBackFromPlan(
+  plan: LlmScenarioSegment,
+  hazard: HazardProfile,
+): LearningTeachBack {
+  const options = plan.answerOptions
+  const correctIndex = options.findIndex((option) => option.correct)
+  const correctOptionId =
+    correctIndex >= 0 ? `option-${correctIndex + 1}` : 'option-1'
+
+  return {
+    correctOptionId,
+    options: options.map((option, index) => ({
+      evidenceRefs: ['gpt-5.5-plan', 'input-video-transcript'],
+      feedback: option.feedback,
+      id: `option-${index + 1}`,
+      kind: option.kind,
+      label: option.label,
+      officialRuleIds: option.correct ? [hazard.ruleId] : undefined,
+      role: option.correct ? 'correct' : 'contrast',
+    })),
+    prompt: plan.checkQuestion,
+    reviewPrompt: '같이 한 번 더 골라 봐요.',
+  }
+}
+
+function hazardProfileForType(hazardType: HazardType) {
+  return (
+    hazardProfiles.find((profile) => profile.hazard === hazardType) ??
+    hazardProfiles.at(-1)!
+  )
+}
+
+function markOpenAiGenerationComplete(
+  report: GenerationEvidenceReport,
+  generationModel: string,
+  segmentCount: number,
+): GenerationEvidenceReport {
+  return {
+    ...report,
+    generationModel,
+    segmentationEvidence: [
+      ...new Set([
+        ...report.segmentationEvidence,
+        'gpt-5.5-scenario-authoring' as const,
+      ]),
+    ],
+    stages: [
+      ...report.stages,
+      {
+        evidence: `${segmentCount} GPT-authored learning segments from strict JSON schema`,
+        name: 'gpt-5.5-scenario-authoring',
+        status: 'completed',
+      },
+    ],
+  }
+}
+
+function assertLlmScenarioPlan(plan: LlmScenarioPlan) {
+  if (!plan || !Array.isArray(plan.segments) || plan.segments.length === 0) {
+    throw new Error('GPT-5.5 제작 결과에 장면이 없습니다.')
+  }
+
+  let previousEndMs = -1
+  for (const [index, segment] of plan.segments.entries()) {
+    if (
+      !Number.isFinite(segment.startMs) ||
+      !Number.isFinite(segment.endMs) ||
+      segment.endMs <= segment.startMs
+    ) {
+      throw new Error(`GPT-5.5 장면 ${index + 1}의 시간이 올바르지 않습니다.`)
+    }
+
+    if (segment.startMs < previousEndMs - 100) {
+      throw new Error(`GPT-5.5 장면 ${index + 1}이 앞 장면과 겹칩니다.`)
+    }
+    previousEndMs = segment.endMs
+
+    if (segment.endMs - segment.startMs > 30_000) {
+      throw new Error(`GPT-5.5 장면 ${index + 1}이 30초를 넘습니다.`)
+    }
+
+    if (segment.actionSteps.length > 3) {
+      throw new Error(`GPT-5.5 장면 ${index + 1}의 행동 카드가 너무 많습니다.`)
+    }
+
+    if (segment.practiceMode === 'action') {
+      if (segment.actionSteps.length === 0) {
+        throw new Error(`GPT-5.5 장면 ${index + 1}에 행동 카드가 없습니다.`)
+      }
+
+      if (!segment.doNot.trim()) {
+        throw new Error(`GPT-5.5 장면 ${index + 1}에 하지 말아요가 없습니다.`)
+      }
+
+      const correctCount = segment.answerOptions.filter(
+        (option) => option.correct,
+      ).length
+      if (correctCount !== 1) {
+        throw new Error(`GPT-5.5 장면 ${index + 1}의 정답이 1개가 아닙니다.`)
+      }
+    }
+  }
+}
+
+function buildRequiredSourceTopicEvidence(cues: CaptionCue[]) {
+  const byTopic = new Map<
+    CaptionTopicKey,
+    Array<{ endMs: number; index: number; startMs: number; text: string }>
+  >()
+
+  cues.forEach((cue, index) => {
+    const topic = topicKeyForCueText(cue.text)
+    if (!topic) {
+      return
+    }
+
+    const entries = byTopic.get(topic) ?? []
+    entries.push({
+      endMs: cue.endMs,
+      index,
+      startMs: cue.startMs,
+      text: cue.text,
+    })
+    byTopic.set(topic, entries)
+  })
+
+  return [...byTopic.entries()].map(([topic, entries]) => ({
+    cueIndexes: entries.map((entry) => entry.index),
+    evidenceText: entries
+      .map((entry) => entry.text)
+      .join(' ')
+      .slice(0, 260),
+    topic,
+    timeRangeMs: {
+      endMs: Math.max(...entries.map((entry) => entry.endMs)),
+      startMs: Math.min(...entries.map((entry) => entry.startMs)),
+    },
+  }))
 }
 
 async function downloadVideo(sourceUrl: string, workDir: string) {
@@ -830,6 +1527,7 @@ function learnerTextProblem(text: string) {
     [/찾기해야|가기해야|지키기하는/u, '어색한 -기하다 치환'],
     [/가능할 수/u, '가능할 수'],
     [/안전합니다/u, '안전합니다'],
+    [/권장함/u, '권장함'],
   ]
   const problem = bannedPatterns.find(([pattern]) => pattern.test(text))
 

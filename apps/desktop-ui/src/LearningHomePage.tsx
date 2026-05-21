@@ -21,10 +21,11 @@ const generationSteps = [
   '음성 문장이 끝나는 지점을 찾고 있어요.',
   '영상 프레임이 바뀌는 지점을 찾고 있어요.',
   '장면 경계를 0.01초 단위로 맞추고 있어요.',
+  'GPT-5.5가 장면별 학습안을 작성하고 있어요.',
   '쉬운 말, 하지 말아요, 이유, 질문을 만들고 있어요.',
   '장면 수와 문장 품질을 검사하고 있어요.',
 ]
-const minimumGenerationDisplayMs = 10_000
+const minimumGenerationDisplayMs = 14_000
 
 export default function LearningHomePage() {
   const [sourceUrl, setSourceUrl] = useState('')
@@ -45,7 +46,7 @@ export default function LearningHomePage() {
       const elapsedMs = Date.now() - generationStartedAt
       setGenerationElapsedSeconds(Math.floor(elapsedMs / 1000))
       setGenerationStepIndex(
-        Math.min(generationSteps.length - 1, Math.floor(elapsedMs / 2_000)),
+        Math.min(generationSteps.length - 1, Math.floor(elapsedMs / 2_500)),
       )
     }
     updateProgress()
