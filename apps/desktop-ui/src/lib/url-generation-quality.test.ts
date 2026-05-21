@@ -72,6 +72,12 @@ const typhoonPreparednessVtt = `WEBVTT
 태풍피해 없이 휴가를 보낼 수 있었다
 `
 
+const longUnknownCaptionVtt = `WEBVTT
+
+00:00:00.000 --> 00:01:12.000
+재난안전 영상을 보고 있어요. 먼저 안내 방송을 듣고 주변을 살펴요. 다음에는 선생님이나 보호자와 함께 움직여요. 혼자 급하게 뛰지 말고 안전한 곳에서 기다려요.
+`
+
 describe('URL practice generation quality gate', () => {
   it('splits short caption-heavy disaster videos by learning topic', () => {
     const cues = __testGeneratePracticeFromUrl.parseVtt(stormSafetyVtt)
@@ -142,6 +148,36 @@ describe('URL practice generation quality gate', () => {
     ).not.toContain('문을 닫으면 위험한 연기가 덜 퍼져요.')
     expect(report.passed).toBe(true)
     expect(report.issues).toHaveLength(0)
+  })
+
+  it('splits long caption blocks even when topic keywords are unknown', () => {
+    const cues = __testGeneratePracticeFromUrl.parseVtt(longUnknownCaptionVtt)
+    const hazard = __testGeneratePracticeFromUrl.detectHazard(
+      cues.map((cue) => cue.text).join('\n'),
+    )
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      hazard,
+      jobId: 'generated-test-long-caption',
+      sourceTitle: '새 재난안전 영상',
+      sourceUrl: 'https://www.youtube.com/watch?v=aaaaaaaaaaa',
+      videoSrc: '/generated/generated-test-long-caption/source.mp4',
+    })
+    const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
+      scenario,
+      cues,
+    )
+
+    expect(scenario.generatedTopicLabel).toBe('재난안전 영상 학습')
+    expect(scenario.segments.length).toBeGreaterThan(1)
+    expect(
+      scenario.segments.every(
+        (segment) => segment.endMs - segment.startMs <= 30_000,
+      ),
+    ).toBe(true)
+    expect(report.issues.map((issue) => issue.code)).not.toContain(
+      'segment_too_long',
+    )
   })
 
   it('blocks outputs that collapse multiple audio topics into too few scenes', () => {

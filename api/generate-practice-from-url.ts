@@ -139,6 +139,7 @@ const publicGeneratedDir = join(rootDir, 'apps/desktop-ui/public/generated')
 const distGeneratedDir = join(rootDir, 'apps/desktop-ui/dist/generated')
 const safetyNotice =
   '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.'
+const maximumGeneratedSegmentMs = 18_000
 
 const hazardProfiles: HazardProfile[] = [
   {
@@ -176,6 +177,15 @@ const hazardProfiles: HazardProfile[] = [
     phase: 'generated_typhoon_practice',
     reason: '강한 바람에 유리나 물건이 깨질 수 있어요.',
     ruleId: 'LOCAL_TYPHOON_GENERATED',
+  },
+  {
+    doNot: '혼자 급하게 움직이지 않아요.',
+    fallbackAction: '어른과 함께 확인해요',
+    hazard: 'unknown',
+    label: '재난안전',
+    phase: 'generated_general_safety_practice',
+    reason: '재난 상황은 혼자 판단하면 위험할 수 있어요.',
+    ruleId: 'LOCAL_GENERAL_GENERATED',
   },
 ]
 
@@ -814,7 +824,9 @@ function buildSegment(input: {
 }
 
 function groupCues(cues: CaptionCue[]) {
-  const normalized = cues.filter((cue) => cue.text.trim().length > 0)
+  const normalized = expandLongCaptionCues(
+    cues.filter((cue) => cue.text.trim().length > 0),
+  )
   if (normalized.length === 0) {
     return buildFallbackCues('재난안전 영상을 보고 있어요.').map((cue) => [cue])
   }
@@ -831,7 +843,7 @@ function groupCues(cues: CaptionCue[]) {
     const currentStart = current[0]?.startMs ?? cue.startMs
     const previous = current.at(-1)
     const gap = previous ? cue.startMs - previous.endMs : 0
-    const wouldBeLong = cue.endMs - currentStart > 24_000
+    const wouldBeLong = cue.endMs - currentStart > maximumGeneratedSegmentMs
 
     if (current.length > 0 && (gap > 6_000 || wouldBeLong)) {
       groups.push(current)
@@ -846,6 +858,76 @@ function groupCues(cues: CaptionCue[]) {
   }
 
   return groups.slice(0, 28)
+}
+
+function expandLongCaptionCues(cues: CaptionCue[]) {
+  return cues.flatMap((cue) => {
+    const durationMs = cue.endMs - cue.startMs
+
+    if (durationMs <= maximumGeneratedSegmentMs || cue.text.length < 18) {
+      return [cue]
+    }
+
+    const parts = splitCaptionTextIntoParts(
+      cue.text,
+      Math.ceil(durationMs / maximumGeneratedSegmentMs),
+    )
+
+    if (parts.length <= 1) {
+      return [cue]
+    }
+
+    const totalWeight = parts.reduce(
+      (sum, part) => sum + Math.max(part.length, 1),
+      0,
+    )
+    let cursorMs = cue.startMs
+
+    return parts.map((part, index) => {
+      const isLast = index === parts.length - 1
+      const partDuration = isLast
+        ? cue.endMs - cursorMs
+        : Math.max(
+            900,
+            Math.round((durationMs * Math.max(part.length, 1)) / totalWeight),
+          )
+      const startMs = cursorMs
+      const endMs = isLast ? cue.endMs : Math.min(cue.endMs, startMs + partDuration)
+      cursorMs = endMs
+
+      return {
+        endMs,
+        startMs,
+        text: part,
+      }
+    })
+  })
+}
+
+function splitCaptionTextIntoParts(text: string, targetParts: number) {
+  const normalized = normalizeCueText(text)
+  const sentenceParts = normalized
+    .split(/(?<=[.!?。！？요다])\s+/u)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (sentenceParts.length >= targetParts) {
+    return sentenceParts
+  }
+
+  const words = normalized.split(/\s+/u).filter(Boolean)
+  if (words.length < 2) {
+    return [normalized]
+  }
+
+  const wordsPerPart = Math.max(5, Math.ceil(words.length / targetParts))
+  const parts: string[] = []
+
+  for (let index = 0; index < words.length; index += wordsPerPart) {
+    parts.push(words.slice(index, index + wordsPerPart).join(' '))
+  }
+
+  return parts
 }
 
 function groupCuesByTopic(cues: CaptionCue[]) {
@@ -1373,7 +1455,7 @@ function detectHazard(text: string) {
   if (/태풍|강풍|바람/u.test(text)) return hazardProfiles[3]!
   if (/호우|비가|침수|홍수|물/u.test(text)) return hazardProfiles[2]!
 
-  return hazardProfiles[1]!
+  return hazardProfiles[4]!
 }
 
 function buildFallbackCues(title: string): CaptionCue[] {

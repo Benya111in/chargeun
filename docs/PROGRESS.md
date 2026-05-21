@@ -342,11 +342,15 @@
 - 로컬 원본 영상은 `data/eval/sources/seasonal/*` 아래 ignored 자산으로 두고, 로컬 preview용 압축 mp4/poster도 `apps/desktop-ui/public/demo-video/seasonal/*`에 ignored 자산으로 분리했다
 - GitHub Pages 체험 링크의 기본 홈과 학습 순서는 유지했다. 새 계절 재난 주제는 dev 환경의 `/local-seasonal`과 직접 `/scenario/:id` 접근에서만 확인한다
 - E2E 테스트를 갱신해 기존 공개 흐름은 `화재 -> 지진 -> 설문`으로 남고, 로컬 전용 계절 재난 페이지는 별도 경로로 열리는지 확인했다
+- URL 입력 자동 생성 경로에서 익숙한 주제 키워드가 없는 긴 자막 블록도 먼저 18초 이하 cue로 나눈 뒤 품질검사를 하도록 수정했다. 이제 새 영상이 30초를 넘는다는 이유만으로 한 덩어리 세그먼트가 되어 바로 차단되지 않는다.
+- URL 자동 생성 fallback hazard를 화재가 아니라 `재난안전` 일반 프로필로 바꿔, 새 영상에서 주제 키워드를 못 찾았을 때 화재 행동 문구가 잘못 섞이지 않게 했다.
+- URL 생성 로딩 UI가 실제 요청보다 먼저 1초 만에 모든 단계가 끝난 것처럼 보이던 흐름을 없애고, 요청은 즉시 시작하되 최소 7초 동안 경과 시간을 표시하며 단계가 순차적으로 진행되게 바꿨다.
 
 ### 검증
 
 - `pnpm --filter @ansimtrack/shared-types test`
 - `pnpm --filter desktop-ui test -- src/lib/learning-scenarios.test.ts`
+- `pnpm --filter desktop-ui test -- src/lib/url-generation-quality.test.ts src/lib/generated-scenario.test.ts`
 - `pnpm --filter desktop-ui typecheck`
 - `pnpm rules:validate`
 - `pnpm build`

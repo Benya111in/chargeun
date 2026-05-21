@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
   ArrowRight,
   CheckCircle2,
@@ -26,8 +26,30 @@ const generationSteps = [
 export default function LearningHomePage() {
   const [sourceUrl, setSourceUrl] = useState('')
   const [generationStepIndex, setGenerationStepIndex] = useState(0)
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
+    null,
+  )
+  const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
   const [urlError, setUrlError] = useState('')
+
+  useEffect(() => {
+    if (!isGenerating || !generationStartedAt) {
+      return
+    }
+
+    const updateProgress = () => {
+      const elapsedMs = Date.now() - generationStartedAt
+      setGenerationElapsedSeconds(Math.floor(elapsedMs / 1000))
+      setGenerationStepIndex(
+        Math.min(generationSteps.length - 1, Math.floor(elapsedMs / 2_500)),
+      )
+    }
+    updateProgress()
+    const intervalId = window.setInterval(updateProgress, 450)
+
+    return () => window.clearInterval(intervalId)
+  }, [generationStartedAt, isGenerating])
 
   const handleUrlSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -39,14 +61,21 @@ export default function LearningHomePage() {
     try {
       setUrlError('')
       setGenerationStepIndex(0)
+      setGenerationElapsedSeconds(0)
+      setGenerationStartedAt(Date.now())
       setIsGenerating(true)
 
-      for (let index = 0; index < generationSteps.length; index += 1) {
-        setGenerationStepIndex(index)
-        await wait(520)
+      const generationPromise = requestGeneratedPractice(sourceUrl)
+      const [generationResult] = await Promise.allSettled([
+        generationPromise,
+        wait(7_000),
+      ] as const)
+
+      if (generationResult.status === 'rejected') {
+        throw generationResult.reason
       }
 
-      const { record } = await requestGeneratedPractice(sourceUrl)
+      const { record } = generationResult.value
 
       saveGeneratedScenario(record)
       window.location.href = appHref(`/scenario/${record.id}`)
@@ -56,6 +85,7 @@ export default function LearningHomePage() {
           ? error.message
           : '링크를 확인하지 못했어요. 다시 입력해 주세요.',
       )
+      setGenerationStartedAt(null)
       setIsGenerating(false)
     }
   }
@@ -164,7 +194,10 @@ export default function LearningHomePage() {
         </div>
       </section>
       {isGenerating ? (
-        <GenerationDialog stepIndex={generationStepIndex} />
+        <GenerationDialog
+          elapsedSeconds={generationElapsedSeconds}
+          stepIndex={generationStepIndex}
+        />
       ) : null}
     </main>
   )
@@ -190,7 +223,13 @@ function IntroPoint({
   )
 }
 
-function GenerationDialog({ stepIndex }: { stepIndex: number }) {
+function GenerationDialog({
+  elapsedSeconds,
+  stepIndex,
+}: {
+  elapsedSeconds: number
+  stepIndex: number
+}) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/46 px-4">
       <section
@@ -206,6 +245,9 @@ function GenerationDialog({ stepIndex }: { stepIndex: number }) {
             <h2 className="mt-1 text-2xl font-semibold">
               잠시만 기다려 주세요.
             </h2>
+            <p className="mt-1 text-sm font-semibold text-[#596257]">
+              {elapsedSeconds}초째 처리 중입니다.
+            </p>
           </div>
         </div>
         <ol className="mt-5 grid gap-2">
