@@ -268,4 +268,71 @@ describe('URL practice generation quality gate', () => {
       }),
     ).toBeUndefined()
   })
+
+  it('aligns visual caption changes to the nearest completed narration sentence', () => {
+    const cues = __testGeneratePracticeFromUrl.parseVtt(typhoonPreparednessVtt)
+
+    expect(
+      __testGeneratePracticeFromUrl.alignVisualCaptionBoundaryToAudioSentence(
+        46_400,
+        cues,
+        100_000,
+      ),
+    ).toBe(52_120)
+  })
+
+  it('blocks a scenario that merges a high-confidence visual caption topic change', () => {
+    const cues = __testGeneratePracticeFromUrl.parseVtt(typhoonPreparednessVtt)
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('태풍')
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      hazard,
+      jobId: 'generated-test-visual-caption',
+      sourceTitle: '태풍 대비법',
+      sourceUrl: 'https://www.youtube.com/watch?v=oWu95ZitpTI',
+      videoSrc: '/generated/generated-test-visual-caption/source.mp4',
+    })
+    const evidenceReport =
+      __testGeneratePracticeFromUrl.buildGenerationEvidenceReport({
+        cues,
+        rawCues: cues,
+        sceneCutCandidatesMs: [],
+        videoProbe: { durationMs: 100_000, frameRate: null },
+        visualCaptionEvidence: {
+          boundaries: [
+            {
+              afterCaption: '밖에서는 간판 주변을 피해요',
+              beforeCaption: '집 안에서는 문과 창문을 닫아요',
+              changeType: 'new_topic',
+              confidence: 0.92,
+              reason: '화면 자막이 실내 행동에서 외출 행동으로 바뀌었습니다.',
+              recommendedBoundaryMs: 49_000,
+              timeMs: 46_400,
+            },
+          ],
+          frames: [],
+          warnings: [],
+        },
+      })
+    const mergedScenario = {
+      ...scenario,
+      segments: [
+        {
+          ...scenario.segments[0],
+          endMs: 60_000,
+        },
+        ...scenario.segments.slice(2),
+      ],
+    }
+    const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
+      mergedScenario,
+      cues,
+      evidenceReport,
+    )
+
+    expect(report.passed).toBe(false)
+    expect(report.issues.map((issue) => issue.code)).toContain(
+      'visual_caption_boundary_merged',
+    )
+  })
 })

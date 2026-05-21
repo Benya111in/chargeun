@@ -95,7 +95,10 @@ type GenerationEvidenceReport = {
   generationModel?: string
   sceneCutCandidatesMs: number[]
   segmentationEvidence: Array<
-    'audio-caption' | 'gpt-5.5-scenario-authoring' | 'visual-scene-cut'
+    | 'audio-caption'
+    | 'gpt-5.5-scenario-authoring'
+    | 'visual-caption-ocr'
+    | 'visual-scene-cut'
   >
   sentenceBoundaryCount: number
   stages: Array<{
@@ -104,12 +107,48 @@ type GenerationEvidenceReport = {
     status: 'completed' | 'skipped'
   }>
   videoDurationMs: number | null
+  visualCaptionBoundaries: VisualCaptionBoundary[]
+  visualCaptionFrameCount: number
   warnings: string[]
 }
 
 type VideoProbe = {
   durationMs: number | null
   frameRate: number | null
+}
+
+type VisualCaptionFrame = {
+  confidence: number
+  hasLearningCaption: boolean
+  index: number
+  normalizedCaption: string
+  tsMs: number
+  visibleCaption: string
+}
+
+type VisualCaptionBoundary = {
+  afterCaption: string
+  beforeCaption: string
+  changeType: 'new_topic' | 'same_topic' | 'unclear'
+  confidence: number
+  reason: string
+  recommendedBoundaryMs: number
+  timeMs: number
+}
+
+type MandatoryVisualSplitBoundary = {
+  afterCaption: string
+  beforeCaption: string
+  confidence: number
+  reason: string
+  recommendedBoundaryMs: number
+  timeMs: number
+}
+
+type VisualCaptionEvidence = {
+  boundaries: VisualCaptionBoundary[]
+  frames: VisualCaptionFrame[]
+  warnings: string[]
 }
 
 type LlmScenarioPlan = {
@@ -207,6 +246,9 @@ const boundaryPrecisionMs = 10
 const defaultGenerationModel = 'gpt-5.5'
 const generatedVisualTailGuardMs = 350
 const generatedVisualTailWindowMs = 1_800
+const maxVisualCaptionFrames = 36
+const visualCaptionBoundaryConfidenceThreshold = 0.65
+const visualCaptionBoundaryMarginMs = 900
 
 const hazardProfiles: HazardProfile[] = [
   {
@@ -368,6 +410,72 @@ const llmScenarioPlanSchema = {
   type: 'object',
 }
 
+const visualCaptionEvidenceSchema = {
+  additionalProperties: false,
+  properties: {
+    boundaries: {
+      items: {
+        additionalProperties: false,
+        properties: {
+          afterCaption: { type: 'string' },
+          beforeCaption: { type: 'string' },
+          changeType: {
+            enum: ['new_topic', 'same_topic', 'unclear'],
+            type: 'string',
+          },
+          confidence: { maximum: 1, minimum: 0, type: 'number' },
+          reason: { type: 'string' },
+          recommendedBoundaryMs: { type: 'number' },
+          timeMs: { type: 'number' },
+        },
+        required: [
+          'afterCaption',
+          'beforeCaption',
+          'changeType',
+          'confidence',
+          'reason',
+          'recommendedBoundaryMs',
+          'timeMs',
+        ],
+        type: 'object',
+      },
+      maxItems: 32,
+      type: 'array',
+    },
+    frames: {
+      items: {
+        additionalProperties: false,
+        properties: {
+          confidence: { maximum: 1, minimum: 0, type: 'number' },
+          hasLearningCaption: { type: 'boolean' },
+          index: { type: 'number' },
+          normalizedCaption: { type: 'string' },
+          tsMs: { type: 'number' },
+          visibleCaption: { type: 'string' },
+        },
+        required: [
+          'confidence',
+          'hasLearningCaption',
+          'index',
+          'normalizedCaption',
+          'tsMs',
+          'visibleCaption',
+        ],
+        type: 'object',
+      },
+      maxItems: maxVisualCaptionFrames,
+      type: 'array',
+    },
+    warnings: {
+      items: { type: 'string' },
+      maxItems: 8,
+      type: 'array',
+    },
+  },
+  required: ['boundaries', 'frames', 'warnings'],
+  type: 'object',
+}
+
 export default async function handler(req: any, res: any) {
   if (!assertMethod(req, res, ['POST']) || !assertSameOrigin(req, res)) {
     return
@@ -443,16 +551,31 @@ async function generatePracticeFromUrl(sourceUrl: string) {
     stableVideoPath,
     workDir,
   ).catch(() => [])
-  const cues = prepareEvidenceCues(rawCues, sceneCutCandidatesMs)
   const title = info.title ?? '입력한 재난안전 영상'
+  const generationModel =
+    process.env.OPENAI_GENERATION_MODEL?.trim() || defaultGenerationModel
+  const visualCaptionEvidence = await extractVisualCaptionEvidenceWithOpenAI({
+    generationModel,
+    rawCues,
+    sceneCutCandidatesMs,
+    stableVideoPath,
+    videoProbe,
+    workDir,
+  })
+  const visualCaptionBoundaryMs = visualCaptionEvidence.boundaries
+    .filter(isReliableVisualCaptionBoundary)
+    .map((boundary) => boundary.recommendedBoundaryMs)
+  const cues = prepareEvidenceCues(rawCues, [
+    ...sceneCutCandidatesMs,
+    ...visualCaptionBoundaryMs,
+  ])
   const evidenceReport = buildGenerationEvidenceReport({
     cues,
     rawCues,
     sceneCutCandidatesMs,
+    visualCaptionEvidence,
     videoProbe,
   })
-  const generationModel =
-    process.env.OPENAI_GENERATION_MODEL?.trim() || defaultGenerationModel
   let qualityFeedback = ''
   let scenarioWithQuality:
     | (ReturnType<typeof buildScenarioFromLlmPlan> & {
@@ -461,7 +584,7 @@ async function generatePracticeFromUrl(sourceUrl: string) {
     | null = null
   let lastQualityReport: GeneratedQualityReport | null = null
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
     const scenarioPlan = await generateScenarioPlanWithOpenAI({
       cues,
       evidenceReport,
@@ -502,8 +625,9 @@ async function generatePracticeFromUrl(sourceUrl: string) {
 
     qualityFeedback = [
       'Previous full scenario passed JSON validation but failed local learning-quality validation.',
-      formatQualityFailure(qualityReport),
+      formatQualityFailureForModel(qualityReport),
       'Regenerate the full scenario and preserve every source audio topic in at least one teacherGuide.script and learner-facing scene.',
+      'Do not merge any mandatory visual caption split boundary into one segment.',
     ].join('\n')
   }
 
@@ -659,6 +783,7 @@ async function generateScenarioPlanWithOpenAI(input: {
 function buildScenarioPlanPrompt(
   input: {
     cues: CaptionCue[]
+    evidenceReport: GenerationEvidenceReport
     generationModel: string
     sceneCutCandidatesMs: number[]
     sourceTitle: string
@@ -667,6 +792,15 @@ function buildScenarioPlanPrompt(
   },
   validationFeedback: string,
 ) {
+  const mandatoryVisualSplitBoundaries = buildMandatoryVisualSplitBoundaries(
+    input.evidenceReport,
+  )
+  const minimumSegments = Math.max(
+    3,
+    extractSourceTopics(input.cues).size,
+    mandatoryVisualSplitBoundaries.length + 1,
+  )
+
   return [
     {
       content: [
@@ -695,10 +829,8 @@ function buildScenarioPlanPrompt(
                   startMs: cue.startMs,
                   text: cue.text,
                 })),
-                minimumSegments: Math.max(
-                  3,
-                  extractSourceTopics(input.cues).size,
-                ),
+                mandatoryVisualSplitBoundaries,
+                minimumSegments,
                 requiredSourceTopics: buildRequiredSourceTopicEvidence(
                   input.cues,
                 ),
@@ -706,6 +838,10 @@ function buildScenarioPlanPrompt(
                 sourceTitle: input.sourceTitle,
                 sourceUrl: input.sourceUrl,
                 videoDurationMs: input.videoProbe.durationMs,
+                visualCaptionBoundaries:
+                  input.evidenceReport.visualCaptionBoundaries,
+                visualCaptionFrames:
+                  input.evidenceReport.visualCaptionFrameCount,
               },
               outputRules: [
                 'hazardType must be one of earthquake, fire, heavy_rain, typhoon, unknown.',
@@ -714,6 +850,11 @@ function buildScenarioPlanPrompt(
                 'Every segment must include sourceTopicKeys. Use only the requiredSourceTopics.topic values covered by that segment time range. Use [] only for pure intro/outro scenes.',
                 'Every requiredSourceTopics.topic must appear in at least one segment.sourceTopicKeys. Do not invent topic keys.',
                 'Every meaningful audio cue must be covered by at least one segment time window. Do not skip spoken guidance just because the caption text is noisy.',
+                'mandatoryVisualSplitBoundaries are hard scene-segmentation constraints. For each item, at least one segment boundary must be within 900ms of recommendedBoundaryMs.',
+                'Never create one segment whose startMs is more than 900ms before a mandatoryVisualSplitBoundary.recommendedBoundaryMs and whose endMs is more than 900ms after it.',
+                'If a mandatory visual split makes a short scene, keep the short scene. Do not merge it into the previous or next topic.',
+                'High-confidence visualCaptionBoundaries with changeType=new_topic are strong split points. Use recommendedBoundaryMs as a segment boundary because it has already been aligned to the nearest completed narration sentence.',
+                'If on-screen Korean captions change to a different education line while narration continues, split after the nearest completed audio sentence and preserve both caption topics in separate learner-facing scenes.',
                 'Each segment startMs/endMs must use 10ms precision and stay inside evidence time ranges.',
                 'Intro/outro segments may have no action cards. Action scenes must have 1-3 actionSteps, doNot, actionReasons, and exactly one correct answer option.',
                 'Use answer questions as reinforcement, not a trick test. Still exactly one option must be correct.',
@@ -1238,6 +1379,422 @@ async function detectSceneCuts(videoPath: string, workDir: string) {
   return compactCloseBoundaries(cuts, 1_500).slice(0, 80)
 }
 
+async function extractVisualCaptionEvidenceWithOpenAI(input: {
+  generationModel: string
+  rawCues: CaptionCue[]
+  sceneCutCandidatesMs: number[]
+  stableVideoPath: string
+  videoProbe: VideoProbe
+  workDir: string
+}): Promise<VisualCaptionEvidence> {
+  const sampleTimesMs = buildVisualCaptionSampleTimes({
+    durationMs: input.videoProbe.durationMs,
+    rawCues: input.rawCues,
+    sceneCutCandidatesMs: input.sceneCutCandidatesMs,
+  })
+
+  if (sampleTimesMs.length === 0) {
+    return {
+      boundaries: [],
+      frames: [],
+      warnings: ['화면 자막을 확인할 프레임 샘플이 없습니다.'],
+    }
+  }
+
+  const sampledFrames = await extractVisualCaptionFrames({
+    sampleTimesMs,
+    stableVideoPath: input.stableVideoPath,
+    workDir: input.workDir,
+  })
+
+  if (sampledFrames.length < 2) {
+    return {
+      boundaries: [],
+      frames: [],
+      warnings: [
+        '화면 자막 비교에 필요한 프레임을 충분히 추출하지 못했습니다.',
+      ],
+    }
+  }
+
+  try {
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+    const response = await client.responses.create({
+      input: [
+        {
+          content: [
+            'You inspect sampled frames from a Korean disaster-safety video.',
+            'Extract visible educational on-screen captions and identify caption changes that indicate a new learning topic.',
+            'Do not create safety advice. Only return visual caption evidence.',
+          ].join('\n'),
+          role: 'system',
+        },
+        {
+          content: [
+            {
+              text: JSON.stringify(
+                {
+                  audioCueEndsMs: input.rawCues.map((cue, index) => ({
+                    endMs: cue.endMs,
+                    index,
+                    startMs: cue.startMs,
+                    text: normalizeCueText(cue.text).slice(0, 140),
+                  })),
+                  instructions: [
+                    'Frames are provided in the same order as sampleFrames.',
+                    'Read large Korean text, lower-third captions, banners, and action-rule cards visible in the video frame.',
+                    'A boundary is changeType=new_topic only when the visible caption changes to a different action, place, warning, or education topic.',
+                    'If the text only animates, repeats, or moves without a topic change, use changeType=same_topic.',
+                    'For recommendedBoundaryMs, choose the nearest audio cue end at or after the visual text change when available. Otherwise use the frame change time.',
+                  ],
+                  sampleFrames: sampledFrames.map((frame) => ({
+                    index: frame.index,
+                    tsMs: frame.tsMs,
+                  })),
+                },
+                null,
+                2,
+              ),
+              type: 'input_text',
+            },
+            ...sampledFrames.map((frame) => ({
+              detail: 'low' as const,
+              image_url: frame.imageRef,
+              type: 'input_image' as const,
+            })),
+          ],
+          role: 'user',
+        },
+      ],
+      model: input.generationModel,
+      text: {
+        format: {
+          name: 'visual_caption_evidence',
+          schema: visualCaptionEvidenceSchema,
+          strict: true,
+          type: 'json_schema',
+        },
+      },
+    } as any)
+
+    const outputText =
+      (response as any).output_text ??
+      (response as any).output
+        ?.flatMap((item: any) => item.content ?? [])
+        .map((content: any) => content.text ?? '')
+        .join('\n')
+
+    if (!outputText) {
+      return {
+        boundaries: [],
+        frames: [],
+        warnings: ['GPT-5.5가 화면 자막 분석 결과를 반환하지 않았습니다.'],
+      }
+    }
+
+    const evidence = sanitizeVisualCaptionEvidence({
+      durationMs: input.videoProbe.durationMs,
+      raw: parseModelJson(outputText) as VisualCaptionEvidence,
+      rawCues: input.rawCues,
+      sampledFrames,
+    })
+    await writeFile(
+      join(input.workDir, 'visual-caption-evidence.json'),
+      JSON.stringify(evidence, null, 2),
+    )
+
+    return evidence
+  } catch (error) {
+    return {
+      boundaries: [],
+      frames: sampledFrames.map((frame) => ({
+        confidence: 0,
+        hasLearningCaption: false,
+        index: frame.index,
+        normalizedCaption: '',
+        tsMs: frame.tsMs,
+        visibleCaption: '',
+      })),
+      warnings: [
+        `화면 자막 분석을 완료하지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    }
+  }
+}
+
+function buildVisualCaptionSampleTimes(input: {
+  durationMs: number | null
+  rawCues: CaptionCue[]
+  sceneCutCandidatesMs: number[]
+}) {
+  const durationMs =
+    input.durationMs ?? Math.max(...input.rawCues.map((cue) => cue.endMs), 0)
+  const candidates: number[] = []
+
+  for (const cue of input.rawCues) {
+    if (!isMeaningfulLearningCue(cue)) {
+      continue
+    }
+
+    candidates.push(cue.startMs + 250)
+    candidates.push((cue.startMs + cue.endMs) / 2)
+    candidates.push(cue.endMs - 250)
+  }
+
+  for (const cutMs of input.sceneCutCandidatesMs) {
+    candidates.push(cutMs - 220)
+    candidates.push(cutMs + 220)
+  }
+
+  for (let ms = 1_000; ms < durationMs; ms += 2_500) {
+    candidates.push(ms)
+  }
+
+  const compacted = compactCloseBoundaries(
+    candidates
+      .map(quantizeBoundaryMs)
+      .filter((ms) => Number.isFinite(ms) && ms >= 0 && ms <= durationMs),
+    650,
+  )
+
+  return selectEvenlySpaced(compacted, maxVisualCaptionFrames)
+}
+
+async function extractVisualCaptionFrames(input: {
+  sampleTimesMs: number[]
+  stableVideoPath: string
+  workDir: string
+}) {
+  const frames: Array<{ imageRef: string; index: number; tsMs: number }> = []
+
+  for (const [index, tsMs] of input.sampleTimesMs.entries()) {
+    const outputPath = join(
+      input.workDir,
+      `visual-caption-frame-${String(index).padStart(2, '0')}.jpg`,
+    )
+
+    try {
+      await runCommand('ffmpeg', [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-nostdin',
+        '-y',
+        '-ss',
+        (tsMs / 1000).toFixed(3),
+        '-i',
+        input.stableVideoPath,
+        '-frames:v',
+        '1',
+        '-vf',
+        'scale=960:-2',
+        '-q:v',
+        '5',
+        outputPath,
+      ])
+
+      const bytes = await readFile(outputPath)
+      frames.push({
+        imageRef: `data:image/jpeg;base64,${bytes.toString('base64')}`,
+        index,
+        tsMs,
+      })
+    } catch {
+      // Individual frame extraction can fail near video edges. Keep the rest.
+    }
+  }
+
+  return frames
+}
+
+function selectEvenlySpaced(values: number[], maxItems: number) {
+  if (values.length <= maxItems) {
+    return values
+  }
+
+  const selected: number[] = []
+  for (let index = 0; index < maxItems; index += 1) {
+    const sourceIndex = Math.round(
+      (index * (values.length - 1)) / Math.max(maxItems - 1, 1),
+    )
+    selected.push(values[sourceIndex]!)
+  }
+
+  return [...new Set(selected)]
+}
+
+function sanitizeVisualCaptionEvidence(input: {
+  durationMs: number | null
+  raw: VisualCaptionEvidence
+  rawCues: CaptionCue[]
+  sampledFrames: Array<{ index: number; tsMs: number }>
+}): VisualCaptionEvidence {
+  const durationMs =
+    input.durationMs ?? Math.max(...input.rawCues.map((cue) => cue.endMs), 0)
+  const sampledFrameByIndex = new Map(
+    input.sampledFrames.map((frame) => [frame.index, frame]),
+  )
+  const frames = Array.isArray(input.raw.frames)
+    ? input.raw.frames
+        .map((frame) => {
+          const sampledFrame = sampledFrameByIndex.get(Number(frame.index))
+          const tsMs = sampledFrame?.tsMs ?? Number(frame.tsMs)
+
+          return {
+            confidence: clampConfidence(frame.confidence),
+            hasLearningCaption: Boolean(frame.hasLearningCaption),
+            index: Number(frame.index),
+            normalizedCaption: normalizeCueText(frame.normalizedCaption).slice(
+              0,
+              120,
+            ),
+            tsMs: clampMs(tsMs, durationMs),
+            visibleCaption: normalizeCueText(frame.visibleCaption).slice(
+              0,
+              160,
+            ),
+          } satisfies VisualCaptionFrame
+        })
+        .filter((frame) => Number.isFinite(frame.index))
+    : []
+
+  const boundaries = Array.isArray(input.raw.boundaries)
+    ? input.raw.boundaries
+        .map((boundary) => {
+          const timeMs = clampMs(Number(boundary.timeMs), durationMs)
+
+          return {
+            afterCaption: normalizeCueText(boundary.afterCaption).slice(0, 160),
+            beforeCaption: normalizeCueText(boundary.beforeCaption).slice(
+              0,
+              160,
+            ),
+            changeType: isVisualCaptionChangeType(boundary.changeType)
+              ? boundary.changeType
+              : 'unclear',
+            confidence: clampConfidence(boundary.confidence),
+            reason: normalizeCueText(boundary.reason).slice(0, 180),
+            recommendedBoundaryMs: alignVisualCaptionBoundaryToAudioSentence(
+              timeMs,
+              input.rawCues,
+              durationMs,
+            ),
+            timeMs,
+          } satisfies VisualCaptionBoundary
+        })
+        .filter(
+          (boundary) =>
+            boundary.beforeCaption !== boundary.afterCaption ||
+            boundary.changeType !== 'same_topic',
+        )
+    : []
+
+  return {
+    boundaries: compactVisualCaptionBoundaries(boundaries),
+    frames,
+    warnings: Array.isArray(input.raw.warnings)
+      ? input.raw.warnings
+          .map((warning) => normalizeCueText(warning))
+          .slice(0, 8)
+      : [],
+  }
+}
+
+function isVisualCaptionChangeType(
+  value: unknown,
+): value is VisualCaptionBoundary['changeType'] {
+  return value === 'new_topic' || value === 'same_topic' || value === 'unclear'
+}
+
+function compactVisualCaptionBoundaries(boundaries: VisualCaptionBoundary[]) {
+  const sorted = [...boundaries].sort(
+    (a, b) => a.recommendedBoundaryMs - b.recommendedBoundaryMs,
+  )
+  const compacted: VisualCaptionBoundary[] = []
+
+  for (const boundary of sorted) {
+    const previous = compacted.at(-1)
+    if (
+      previous &&
+      Math.abs(
+        previous.recommendedBoundaryMs - boundary.recommendedBoundaryMs,
+      ) < 700
+    ) {
+      if (boundary.confidence > previous.confidence) {
+        compacted[compacted.length - 1] = boundary
+      }
+      continue
+    }
+
+    compacted.push(boundary)
+  }
+
+  return compacted
+}
+
+function alignVisualCaptionBoundaryToAudioSentence(
+  timeMs: number,
+  rawCues: CaptionCue[],
+  durationMs: number,
+) {
+  const futureCueEnd = rawCues
+    .map((cue) => cue.endMs)
+    .filter((endMs) => endMs >= timeMs - 250 && endMs <= timeMs + 7_000)
+    .sort((a, b) => a - b)[0]
+
+  if (futureCueEnd !== undefined) {
+    return quantizeBoundaryMs(clampMs(futureCueEnd, durationMs))
+  }
+
+  const nearestCueEnd = rawCues
+    .map((cue) => cue.endMs)
+    .filter((endMs) => Math.abs(endMs - timeMs) <= 900)
+    .sort((a, b) => Math.abs(a - timeMs) - Math.abs(b - timeMs))[0]
+
+  return quantizeBoundaryMs(clampMs(nearestCueEnd ?? timeMs, durationMs))
+}
+
+function isReliableVisualCaptionBoundary(boundary: VisualCaptionBoundary) {
+  return (
+    boundary.changeType === 'new_topic' &&
+    boundary.confidence >= visualCaptionBoundaryConfidenceThreshold
+  )
+}
+
+function buildMandatoryVisualSplitBoundaries(
+  evidenceReport: GenerationEvidenceReport,
+): MandatoryVisualSplitBoundary[] {
+  return evidenceReport.visualCaptionBoundaries
+    .filter(isReliableVisualCaptionBoundary)
+    .map((boundary) => ({
+      afterCaption: boundary.afterCaption,
+      beforeCaption: boundary.beforeCaption,
+      confidence: boundary.confidence,
+      reason: boundary.reason,
+      recommendedBoundaryMs: boundary.recommendedBoundaryMs,
+      timeMs: boundary.timeMs,
+    }))
+}
+
+function clampConfidence(value: unknown) {
+  const numberValue = Number(value)
+  if (!Number.isFinite(numberValue)) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(1, numberValue))
+}
+
+function clampMs(value: number, durationMs: number) {
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(durationMs, Math.round(value)))
+}
+
 function parseFrameRate(input?: string) {
   if (!input || input === '0/0') {
     return null
@@ -1276,6 +1833,7 @@ function buildGenerationEvidenceReport(input: {
   cues: CaptionCue[]
   rawCues: CaptionCue[]
   sceneCutCandidatesMs: number[]
+  visualCaptionEvidence?: VisualCaptionEvidence
   videoProbe: VideoProbe
 }): GenerationEvidenceReport {
   const sceneCutCandidatesMs = compactCloseBoundaries(
@@ -1288,6 +1846,17 @@ function buildGenerationEvidenceReport(input: {
   if (sceneCutCandidatesMs.length > 0) {
     segmentationEvidence.push('visual-scene-cut')
   }
+  if ((input.visualCaptionEvidence?.boundaries.length ?? 0) > 0) {
+    segmentationEvidence.push('visual-caption-ocr')
+  }
+  const warnings = [
+    ...(sceneCutCandidatesMs.length === 0
+      ? [
+          '프레임 장면 변화 후보가 약해서 자막/오디오 문장 경계를 우선 사용했습니다.',
+        ]
+      : []),
+    ...(input.visualCaptionEvidence?.warnings ?? []),
+  ]
 
   return {
     audioCueCount: input.rawCues.length,
@@ -1320,14 +1889,24 @@ function buildGenerationEvidenceReport(input: {
         name: 'boundary-precision-quantize',
         status: 'completed',
       },
+      {
+        evidence:
+          input.visualCaptionEvidence?.frames.length &&
+          input.visualCaptionEvidence.frames.length > 0
+            ? `${input.visualCaptionEvidence.frames.length} sampled frames, ${input.visualCaptionEvidence.boundaries.length} visual caption boundary candidates`
+            : 'no sampled visual caption evidence',
+        name: 'visual-caption-ocr',
+        status:
+          input.visualCaptionEvidence?.frames.length &&
+          input.visualCaptionEvidence.frames.length > 0
+            ? 'completed'
+            : 'skipped',
+      },
     ],
     videoDurationMs: input.videoProbe.durationMs,
-    warnings:
-      sceneCutCandidatesMs.length === 0
-        ? [
-            '프레임 장면 변화 후보가 약해서 자막/오디오 문장 경계를 우선 사용했습니다.',
-          ]
-        : [],
+    visualCaptionBoundaries: input.visualCaptionEvidence?.boundaries ?? [],
+    visualCaptionFrameCount: input.visualCaptionEvidence?.frames.length ?? 0,
+    warnings,
   }
 }
 
@@ -1465,6 +2044,27 @@ function auditGeneratedScenario(
         'blocker',
         'missing_audio_topic',
         `자막/오디오 주제 ${topicLabelForPrompt(topicEvidence.topic)}가 학습 장면에 남지 않았습니다.`,
+      )
+    }
+  }
+
+  for (const boundary of evidenceReport.visualCaptionBoundaries.filter(
+    isReliableVisualCaptionBoundary,
+  )) {
+    const mergedSegment = scenario.segments.find(
+      (segment) =>
+        segment.startMs <
+          boundary.recommendedBoundaryMs - visualCaptionBoundaryMarginMs &&
+        segment.endMs >
+          boundary.recommendedBoundaryMs + visualCaptionBoundaryMarginMs,
+    )
+
+    if (mergedSegment) {
+      addIssue(
+        'blocker',
+        'visual_caption_boundary_merged',
+        `화면 자막이 "${boundary.beforeCaption}"에서 "${boundary.afterCaption}"로 바뀌는 지점이 한 장면 안에 묶였습니다.`,
+        mergedSegment.id,
       )
     }
   }
@@ -1728,6 +2328,35 @@ function formatQualityFailure(report: GeneratedQualityReport) {
     ...blockers,
     '이 영상은 바로 학습 화면으로 보여 주기 전에 더 세밀한 분할이나 자막 보정이 필요합니다.',
   ].join(' ')
+}
+
+function formatQualityFailureForModel(report: GeneratedQualityReport) {
+  const blockers = report.issues
+    .filter((issue) => issue.severity === 'blocker')
+    .map((issue) => ({
+      code: issue.code,
+      message: issue.message,
+      segmentId: issue.segmentId ?? null,
+    }))
+
+  return JSON.stringify(
+    {
+      failedLocalQualityGate: true,
+      blockerIssues: blockers,
+      mandatoryVisualSplitBoundaries: buildMandatoryVisualSplitBoundaries(
+        report.analysisDepth,
+      ),
+      repairRules: [
+        'Return the full scenario again, not a patch.',
+        'Every mandatoryVisualSplitBoundary.recommendedBoundaryMs must be represented by a segment boundary within 900ms.',
+        'Do not allow one segment to contain the beforeCaption and afterCaption of the same mandatory visual split.',
+        'If the issue code is visual_caption_boundary_merged, split the referenced segment into separate learner-facing scenes.',
+        'Keep every audio topic and every important source noun in at least one teacherGuide.script and learner-facing text.',
+      ],
+    },
+    null,
+    2,
+  )
 }
 
 function buildSegment(input: {
@@ -2850,6 +3479,7 @@ function hashText(text: string) {
 }
 
 export const __testGeneratePracticeFromUrl = {
+  alignVisualCaptionBoundaryToAudioSentence,
   auditGeneratedScenario,
   buildGeneratedPauseMs,
   buildGenerationEvidenceReport,
