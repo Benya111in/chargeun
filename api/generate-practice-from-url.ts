@@ -63,6 +63,22 @@ type CaptionTopicKey =
   | 'outro_review'
   | 'stay_away_from_low_water'
 
+type GeneratedQualityIssue = {
+  code: string
+  message: string
+  segmentId?: string
+  severity: 'blocker' | 'warning'
+}
+
+type GeneratedQualityReport = {
+  checkedAt: string
+  issues: GeneratedQualityIssue[]
+  passed: boolean
+  score: number
+  sourceTopicCount: number
+  version: 'url_generation_lrs_v1'
+}
+
 type GeneratedPracticeSegment = {
   actionReasons: string[]
   actionSteps: string[]
@@ -223,10 +239,19 @@ async function generatePracticeFromUrl(sourceUrl: string) {
     sourceUrl,
     videoSrc: `/generated/${jobId}/source.mp4`,
   })
+  const qualityReport = auditGeneratedScenario(scenario, cues)
+  const scenarioWithQuality = {
+    ...scenario,
+    generationQualityReport: qualityReport,
+  }
+
+  if (!qualityReport.passed) {
+    throw new Error(formatQualityFailure(qualityReport))
+  }
 
   await writeFile(
     join(workDir, 'scenario.json'),
-    JSON.stringify(scenario, null, 2),
+    JSON.stringify(scenarioWithQuality, null, 2),
   )
   await copyToDistIfPresent(workDir, jobId)
 
@@ -234,7 +259,7 @@ async function generatePracticeFromUrl(sourceUrl: string) {
     record: {
       baseScenarioId: 'local-generated-video',
       createdAt: new Date().toISOString(),
-      customScenario: scenario,
+      customScenario: scenarioWithQuality,
       id: jobId,
       matchBasis: 'metadata',
       sourceTitle: title,
@@ -304,6 +329,264 @@ function buildScenario(input: {
     title: 'URL로 만든 연습',
     videoSrc: input.videoSrc,
   }
+}
+
+function auditGeneratedScenario(
+  scenario: ReturnType<typeof buildScenario>,
+  cues: CaptionCue[],
+): GeneratedQualityReport {
+  const issues: GeneratedQualityIssue[] = []
+  const sourceTopics = extractSourceTopics(cues)
+  const sourceDurationMs =
+    Math.max(...cues.map((cue) => cue.endMs), 0) -
+    Math.min(...cues.map((cue) => cue.startMs), 0)
+  const expectedMinimumSegments =
+    sourceTopics.size >= 3
+      ? Math.min(12, Math.max(sourceTopics.size, Math.floor(sourceDurationMs / 15_000)))
+      : 1
+
+  const addIssue = (
+    severity: GeneratedQualityIssue['severity'],
+    code: string,
+    message: string,
+    segmentId?: string,
+  ) => {
+    issues.push({ code, message, segmentId, severity })
+  }
+
+  if (sourceTopics.size >= 3 && scenario.segments.length < expectedMinimumSegments) {
+    addIssue(
+      'blocker',
+      'too_few_segments_for_audio_topics',
+      `자막/오디오 주제가 ${sourceTopics.size}개인데 장면이 ${scenario.segments.length}개뿐입니다.`,
+    )
+  }
+
+  for (const topic of sourceTopics) {
+    const found = scenario.segments.some((segment) =>
+      segmentTopics(segment).has(topic),
+    )
+
+    if (!found) {
+      addIssue(
+        'blocker',
+        'missing_audio_topic',
+        `자막/오디오 주제 ${topic}가 학습 장면에 남지 않았습니다.`,
+      )
+    }
+  }
+
+  for (const segment of scenario.segments) {
+    const durationMs = segment.endMs - segment.startMs
+    const topics = segmentTopics(segment)
+    const learnerTexts = learnerVisibleTexts(segment)
+
+    if (durationMs <= 0) {
+      addIssue(
+        'blocker',
+        'invalid_time_window',
+        '장면 시간이 뒤집혔거나 비어 있습니다.',
+        segment.id,
+      )
+    }
+
+    if (durationMs > 30_000) {
+      addIssue(
+        'blocker',
+        'segment_too_long',
+        '한 장면이 30초를 넘습니다. 긴 음성 설명은 더 잘게 나눠야 합니다.',
+        segment.id,
+      )
+    }
+
+    if (segment.actionSteps.length > 3) {
+      addIssue(
+        'blocker',
+        'too_many_actions',
+        '한 장면에 행동 카드가 4개 이상입니다.',
+        segment.id,
+      )
+    }
+
+    if (segment.practiceMode === 'action' && segment.actionSteps.length === 0) {
+      addIssue(
+        'blocker',
+        'missing_action_card',
+        '행동 장면인데 행동 카드가 없습니다.',
+        segment.id,
+      )
+    }
+
+    if (
+      segment.practiceMode === 'action' &&
+      !hasGeneratedDoNotTrack(segment)
+    ) {
+      addIssue(
+        'blocker',
+        'missing_do_not_track',
+        '행동 장면인데 하지 말아요 트랙이 없습니다.',
+        segment.id,
+      )
+    }
+
+    if (segment.practiceMode === 'action' && !segment.teachBack) {
+      addIssue(
+        'blocker',
+        'missing_teach_back',
+        '행동 장면인데 확인 질문이 없습니다.',
+        segment.id,
+      )
+    }
+
+    if (new Set(segment.actionSteps).size !== segment.actionSteps.length) {
+      addIssue(
+        'blocker',
+        'duplicate_action_cards',
+        '같은 행동 카드가 한 장면에 반복됩니다.',
+        segment.id,
+      )
+    }
+
+    const correctOptions =
+      segment.answerOptions?.filter((option) => option.correct) ?? []
+    if (segment.practiceMode === 'action' && correctOptions.length !== 1) {
+      addIssue(
+        'blocker',
+        'ambiguous_question',
+        '확인 질문의 정답이 정확히 1개가 아닙니다.',
+        segment.id,
+      )
+    }
+
+    for (const text of learnerTexts) {
+      const bannedTerm = learnerTextProblem(text)
+      if (bannedTerm) {
+        addIssue(
+          'blocker',
+          'learner_text_not_easy',
+          `학습자 화면 문구에 쓰면 안 되는 표현이 있습니다: ${bannedTerm}`,
+          segment.id,
+        )
+      }
+    }
+
+    for (const action of segment.actionSteps) {
+      if (/말해요/u.test(action) && !/(가스 냄새|새는 소리|119|어른|선생님|보호자)/u.test(action)) {
+        addIssue(
+          'blocker',
+          'unclear_tell_action',
+          '말해요 행동에는 무엇을 누구에게 말하는지 들어가야 합니다.',
+          segment.id,
+        )
+      }
+
+      if (/알려요/u.test(action) && !/(119|어른|선생님|보호자)/u.test(action)) {
+        addIssue(
+          'blocker',
+          'unclear_report_action',
+          '알려요 행동에는 누구에게 알리는지 들어가야 합니다.',
+          segment.id,
+        )
+      }
+    }
+
+    if (topics.size > 2) {
+      addIssue(
+        'warning',
+        'mixed_topic_segment',
+        '한 장면 안에 여러 판단 주제가 섞였을 수 있습니다.',
+        segment.id,
+      )
+    }
+  }
+
+  const blockerCount = issues.filter((issue) => issue.severity === 'blocker').length
+  const warningCount = issues.filter((issue) => issue.severity === 'warning').length
+
+  return {
+    checkedAt: new Date().toISOString(),
+    issues,
+    passed: blockerCount === 0,
+    score: Math.max(0, 100 - blockerCount * 25 - warningCount * 5),
+    sourceTopicCount: sourceTopics.size,
+    version: 'url_generation_lrs_v1',
+  }
+}
+
+function hasGeneratedDoNotTrack(segment: GeneratedPracticeSegment) {
+  const structuredExplanation = segment.structuredExplanation as {
+    tracks?: { doNot?: unknown }
+  }
+
+  return Boolean(structuredExplanation.tracks?.doNot)
+}
+
+function extractSourceTopics(cues: CaptionCue[]) {
+  return new Set(
+    cues
+      .map((cue) => topicKeyForCueText(cue.text))
+      .filter((topic): topic is CaptionTopicKey => Boolean(topic)),
+  )
+}
+
+function segmentTopics(segment: GeneratedPracticeSegment) {
+  return extractSourceTopics(
+    segment.narration.map((cue) => ({
+      endMs: cue.endMs,
+      startMs: cue.startMs,
+      text: cue.text,
+    })),
+  )
+}
+
+function learnerVisibleTexts(segment: GeneratedPracticeSegment) {
+  return [
+    segment.learnerPrompt,
+    segment.learnerExplanation,
+    ...segment.actionSteps,
+    ...segment.actionReasons,
+    ...segment.safetyWarnings,
+    segment.checkQuestion,
+    ...(segment.answerOptions ?? []).flatMap((option) => [
+      option.feedback,
+      option.label,
+    ]),
+  ].filter(Boolean)
+}
+
+function learnerTextProblem(text: string) {
+  const bannedPatterns: Array<[RegExp, string]> = [
+    [/유입/u, '유입'],
+    [/차단/u, '차단'],
+    [/숙지/u, '숙지'],
+    [/저지대/u, '저지대'],
+    [/고립되어/u, '고립되어'],
+    [/나리/u, '나리'],
+    [/훈화/u, '훈화'],
+    [/채소/u, '채소'],
+    [/왜 신고/u, '왜 신고'],
+    [/정도 마고/u, '정도 마고'],
+    [/나가자 였습니다/u, '나가자 였습니다'],
+    [/찾기해야|가기해야|지키기하는/u, '어색한 -기하다 치환'],
+    [/가능할 수/u, '가능할 수'],
+    [/안전합니다/u, '안전합니다'],
+  ]
+  const problem = bannedPatterns.find(([pattern]) => pattern.test(text))
+
+  return problem?.[1] ?? null
+}
+
+function formatQualityFailure(report: GeneratedQualityReport) {
+  const blockers = report.issues
+    .filter((issue) => issue.severity === 'blocker')
+    .slice(0, 3)
+    .map((issue) => issue.message)
+
+  return [
+    '자동 생성 품질 검사에서 막혔습니다.',
+    ...blockers,
+    '이 영상은 바로 학습 화면으로 보여 주기 전에 더 세밀한 분할이나 자막 보정이 필요합니다.',
+  ].join(' ')
 }
 
 function buildSegment(input: {
@@ -811,7 +1094,7 @@ function contrastForOption(
 }
 
 function situationFromText(text: string, hazard: HazardProfile) {
-  if (/여름철|호우|태풍|비바람/u.test(text)) return '호우와 태풍 안전수칙을 배워요.'
+  if (/여름철|호우|태풍|비바람/u.test(text)) return '비와 태풍 안전수칙을 배워요.'
   if (/산행|캠핑/u.test(text)) return '비와 태풍이 올 수 있어요.'
   if (/갑자기 비|쏟아질/u.test(text)) return '비가 갑자기 많이 와요.'
   if (/낮은|나리|다리|건너지|건너/u.test(text)) return '물이 찬 낮은 곳이 있어요.'
@@ -836,7 +1119,7 @@ function shortenLearnerText(text: string, fallback: string) {
   const cleaned = normalizeCueText(text)
     .replace(/하십시오|하세요/gu, '해요')
   if (/여름철|호우|태풍|비바람/u.test(cleaned)) {
-    return '호우와 태풍 안전수칙을 배워요.'
+    return '비와 태풍 안전수칙을 배워요.'
   }
   if (/안전수칙|챙겨주세요|챙기/u.test(cleaned)) {
     return '안전수칙을 다시 기억해요.'
@@ -987,6 +1270,13 @@ function isYouTubeHost(hostname: string) {
 
 function hashText(text: string) {
   return createHash('sha256').update(text).digest('hex')
+}
+
+export const __testGeneratePracticeFromUrl = {
+  auditGeneratedScenario,
+  buildScenario,
+  detectHazard,
+  parseVtt,
 }
 
 function runCommand(command: string, args: string[]) {

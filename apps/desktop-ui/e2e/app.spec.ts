@@ -87,7 +87,10 @@ test('generates a practice page from a video URL', async ({ page }) => {
 
   await expect(page.getByText('학습 화면을 만들고 있어요')).toBeVisible()
   await expect(
-    page.getByText('타임스탬프를 보고 장면을 나누고 있어요.'),
+    page.getByText('자막 주제가 바뀌는 지점을 찾고 있어요.'),
+  ).toBeVisible()
+  await expect(
+    page.getByText('장면 수와 문장 품질을 검사하고 있어요.'),
   ).toBeVisible()
   await expect(page).toHaveURL(/#\/scenario\/generated-e2e$/, {
     timeout: 6_000,
