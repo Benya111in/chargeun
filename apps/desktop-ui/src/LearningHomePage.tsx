@@ -18,10 +18,13 @@ const safetyNotice =
   '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
 const generationSteps = [
   '영상 파일과 자막을 가져오고 있어요.',
-  '자막 주제가 바뀌는 지점을 찾고 있어요.',
+  '음성 문장이 끝나는 지점을 찾고 있어요.',
+  '영상 프레임이 바뀌는 지점을 찾고 있어요.',
+  '장면 경계를 0.01초 단위로 맞추고 있어요.',
   '쉬운 말, 하지 말아요, 이유, 질문을 만들고 있어요.',
   '장면 수와 문장 품질을 검사하고 있어요.',
 ]
+const minimumGenerationDisplayMs = 10_000
 
 export default function LearningHomePage() {
   const [sourceUrl, setSourceUrl] = useState('')
@@ -42,7 +45,7 @@ export default function LearningHomePage() {
       const elapsedMs = Date.now() - generationStartedAt
       setGenerationElapsedSeconds(Math.floor(elapsedMs / 1000))
       setGenerationStepIndex(
-        Math.min(generationSteps.length - 1, Math.floor(elapsedMs / 2_500)),
+        Math.min(generationSteps.length - 1, Math.floor(elapsedMs / 2_000)),
       )
     }
     updateProgress()
@@ -68,7 +71,7 @@ export default function LearningHomePage() {
       const generationPromise = requestGeneratedPractice(sourceUrl)
       const [generationResult] = await Promise.allSettled([
         generationPromise,
-        wait(7_000),
+        wait(minimumGenerationDisplayMs),
       ] as const)
 
       if (generationResult.status === 'rejected') {
@@ -131,8 +134,8 @@ export default function LearningHomePage() {
                 재난안전 영상 링크로 연습 만들기
               </label>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#596257]">
-                유튜브나 공공기관 영상 주소를 넣으면 영상 자막과 시간을 읽고
-                새 장면별 학습 화면을 바로 만들어요.
+                유튜브나 공공기관 영상 주소를 넣으면 영상 자막과 시간을 읽고 새
+                장면별 학습 화면을 바로 만들어요.
               </p>
               <div className="mt-3 flex gap-2">
                 <div className="relative min-w-0 flex-1">

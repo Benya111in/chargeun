@@ -438,3 +438,8 @@
 
 - 이유: 새 영상은 기존 주제 키워드와 정확히 맞지 않을 수 있다. 이때 긴 자막을 그대로 품질검사에 넣으면 “30초 초과”만 보고 모두 실패해, 품질 게이트가 안전장치가 아니라 생성 불능 장치가 된다.
 - 영향: `groupCues`는 topic grouping 전에 긴 caption cue를 문장/단어 기준으로 18초 이하 하위 cue로 나눈다. fallback hazard는 화재가 아니라 `재난안전` 일반 프로필을 사용한다. 품질 게이트는 계속 유지하지만, 새 영상은 먼저 안전한 시간 단위로 분할된 뒤 검사된다.
+
+### D-078 URL 자동 생성은 증거 없는 fallback 결과를 만들지 않는다
+
+- 이유: 화재/지진 샘플 수준의 품질은 자막/오디오 문장, 프레임 변화, 장면 경계 보정, 품질검사를 모두 거쳐야 나온다. 자막이 없는 영상에 fallback 문장을 붙여 바로 학습 화면으로 보내면 “AI가 분석했다”는 사용자의 기대와 실제 구현이 어긋난다.
+- 영향: `/api/generate-practice-from-url`은 자막/오디오 텍스트 근거가 없으면 결과를 만들지 않는다. 통과한 결과에는 caption cue 수, sentence split 수, ffmpeg scene-cut 후보, 0.01초 boundary quantization, 사용한 evidence type을 `generationQualityReport.analysisDepth`에 남긴다.

@@ -345,6 +345,9 @@
 - URL 입력 자동 생성 경로에서 익숙한 주제 키워드가 없는 긴 자막 블록도 먼저 18초 이하 cue로 나눈 뒤 품질검사를 하도록 수정했다. 이제 새 영상이 30초를 넘는다는 이유만으로 한 덩어리 세그먼트가 되어 바로 차단되지 않는다.
 - URL 자동 생성 fallback hazard를 화재가 아니라 `재난안전` 일반 프로필로 바꿔, 새 영상에서 주제 키워드를 못 찾았을 때 화재 행동 문구가 잘못 섞이지 않게 했다.
 - URL 생성 로딩 UI가 실제 요청보다 먼저 1초 만에 모든 단계가 끝난 것처럼 보이던 흐름을 없애고, 요청은 즉시 시작하되 최소 7초 동안 경과 시간을 표시하며 단계가 순차적으로 진행되게 바꿨다.
+- URL 자동 생성이 더 이상 fallback 문장만으로 결과를 만들지 않도록 바꿨다. 자막/오디오 텍스트 근거가 없으면 실패시키고, 생성 결과에는 `audio-caption-parse`, `audio-sentence-boundary-split`, `visual-scene-probe`, `boundary-precision-quantize` 단계와 0.01초 경계 보정 리포트를 저장한다.
+- 로컬 생성 API가 `ffprobe`로 영상 길이를 읽고 `ffmpeg` scene detection으로 프레임 변화 후보를 뽑아 자막/오디오 문장 경계와 함께 쓰도록 보강했다. 태풍 URL 실호출 기준 32개 caption/audio cue, 33개 scene 후보, 10개 학습 장면, 품질 100점을 확인했다.
+- URL 생성 로딩 UI 문구도 실제 처리 단계에 맞춰 `음성 문장 끝`, `영상 프레임 변화`, `0.01초 경계 보정`, `문장 품질 검사`를 순서대로 보여 주도록 바꾸고 최소 표시 시간을 10초로 늘렸다.
 
 ### 검증
 
@@ -352,6 +355,7 @@
 - `pnpm --filter desktop-ui test -- src/lib/learning-scenarios.test.ts`
 - `pnpm --filter desktop-ui test -- src/lib/url-generation-quality.test.ts src/lib/generated-scenario.test.ts`
 - `pnpm --filter desktop-ui typecheck`
+- `pnpm --filter desktop-ui lint`
 - `pnpm rules:validate`
 - `pnpm build`
 - `pnpm --filter desktop-ui test:e2e -- app.spec.ts`

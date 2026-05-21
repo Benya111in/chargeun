@@ -110,6 +110,8 @@ describe('URL practice generation quality gate', () => {
     expect(report.issues).toEqual([])
     expect(report.passed).toBe(true)
     expect(report.score).toBe(100)
+    expect(report.analysisDepth.segmentationEvidence).toContain('audio-caption')
+    expect(report.analysisDepth.frameBoundaryPrecisionMs).toBe(10)
   })
 
   it('keeps a longer typhoon guidance video split into one-decision scenes', () => {
@@ -148,6 +150,9 @@ describe('URL practice generation quality gate', () => {
     ).not.toContain('문을 닫으면 위험한 연기가 덜 퍼져요.')
     expect(report.passed).toBe(true)
     expect(report.issues).toHaveLength(0)
+    expect(report.analysisDepth.expandedCueCount).toBeGreaterThanOrEqual(
+      cues.length,
+    )
   })
 
   it('splits long caption blocks even when topic keywords are unknown', () => {

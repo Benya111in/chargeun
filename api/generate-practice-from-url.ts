@@ -19,12 +19,7 @@ import {
   sendJson,
 } from './_shared'
 
-type HazardType =
-  | 'earthquake'
-  | 'fire'
-  | 'heavy_rain'
-  | 'typhoon'
-  | 'unknown'
+type HazardType = 'earthquake' | 'fire' | 'heavy_rain' | 'typhoon' | 'unknown'
 
 type LearningTeachBackOption = {
   evidenceRefs: string[]
@@ -78,12 +73,34 @@ type GeneratedQualityIssue = {
 }
 
 type GeneratedQualityReport = {
+  analysisDepth: GenerationEvidenceReport
   checkedAt: string
   issues: GeneratedQualityIssue[]
   passed: boolean
   score: number
   sourceTopicCount: number
   version: 'url_generation_lrs_v1'
+}
+
+type GenerationEvidenceReport = {
+  audioCueCount: number
+  expandedCueCount: number
+  frameBoundaryPrecisionMs: 10
+  sceneCutCandidatesMs: number[]
+  segmentationEvidence: Array<'audio-caption' | 'visual-scene-cut'>
+  sentenceBoundaryCount: number
+  stages: Array<{
+    evidence: string
+    name: string
+    status: 'completed' | 'skipped'
+  }>
+  videoDurationMs: number | null
+  warnings: string[]
+}
+
+type VideoProbe = {
+  durationMs: number | null
+  frameRate: number | null
 }
 
 type GeneratedPracticeSegment = {
@@ -140,6 +157,7 @@ const distGeneratedDir = join(rootDir, 'apps/desktop-ui/dist/generated')
 const safetyNotice =
   '이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.'
 const maximumGeneratedSegmentMs = 18_000
+const boundaryPrecisionMs = 10
 
 const hazardProfiles: HazardProfile[] = [
   {
@@ -243,20 +261,49 @@ async function generatePracticeFromUrl(sourceUrl: string) {
     await copyFile(sourceVideoPath, stableVideoPath)
   }
 
-  const cues = captionFile
-    ? parseVtt(await readFile(join(workDir, captionFile), 'utf8'))
-    : buildFallbackCues(info.title ?? '입력한 재난안전 영상')
+  if (!captionFile) {
+    throw new Error(
+      '자막이나 음성 텍스트 근거가 없어 자동 생성하지 않았습니다. 이 경로는 대충 만든 fallback 설명을 보여 주지 않습니다.',
+    )
+  }
+
+  const videoProbe = await probeVideo(stableVideoPath).catch(() => ({
+    durationMs: null,
+    frameRate: null,
+  }))
+  const rawCues = parseVtt(await readFile(join(workDir, captionFile), 'utf8'))
+  if (rawCues.length === 0) {
+    throw new Error(
+      '읽을 수 있는 자막/오디오 문장이 없어 자동 생성하지 않았습니다.',
+    )
+  }
+
+  const sceneCutCandidatesMs = await detectSceneCuts(
+    stableVideoPath,
+    workDir,
+  ).catch(() => [])
+  const cues = prepareEvidenceCues(rawCues, sceneCutCandidatesMs)
   const title = info.title ?? '입력한 재난안전 영상'
-  const hazard = detectHazard(`${title}\n${cues.map((cue) => cue.text).join('\n')}`)
+  const hazard = detectHazard(
+    `${title}\n${cues.map((cue) => cue.text).join('\n')}`,
+  )
+  const evidenceReport = buildGenerationEvidenceReport({
+    cues,
+    rawCues,
+    sceneCutCandidatesMs,
+    videoProbe,
+  })
   const scenario = buildScenario({
     cues,
+    evidenceReport,
+    frameCutsMs: sceneCutCandidatesMs,
     hazard,
     jobId,
     sourceTitle: title,
     sourceUrl,
     videoSrc: `/generated/${jobId}/source.mp4`,
   })
-  const qualityReport = auditGeneratedScenario(scenario, cues)
+  const qualityReport = auditGeneratedScenario(scenario, cues, evidenceReport)
   const scenarioWithQuality = {
     ...scenario,
     generationQualityReport: qualityReport,
@@ -310,15 +357,174 @@ async function downloadVideo(sourceUrl: string, workDir: string) {
   ])
 }
 
+async function probeVideo(videoPath: string): Promise<VideoProbe> {
+  const output = await runCommandWithOutput('ffprobe', [
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-show_entries',
+    'stream=avg_frame_rate,r_frame_rate,duration',
+    '-of',
+    'json',
+    videoPath,
+  ])
+  const parsed = JSON.parse(output) as {
+    streams?: Array<{
+      avg_frame_rate?: string
+      duration?: string
+      r_frame_rate?: string
+    }>
+  }
+  const stream = parsed.streams?.[0]
+  const durationSeconds = Number(stream?.duration)
+
+  return {
+    durationMs: Number.isFinite(durationSeconds)
+      ? Math.round(durationSeconds * 1000)
+      : null,
+    frameRate:
+      parseFrameRate(stream?.avg_frame_rate) ??
+      parseFrameRate(stream?.r_frame_rate),
+  }
+}
+
+async function detectSceneCuts(videoPath: string, workDir: string) {
+  const sceneFile = join(workDir, 'scene-cuts.txt')
+
+  await runCommand('ffmpeg', [
+    '-hide_banner',
+    '-nostdin',
+    '-i',
+    videoPath,
+    '-vf',
+    `select='gt(scene,0.18)',metadata=mode=print:file=${sceneFile}`,
+    '-an',
+    '-f',
+    'null',
+    '-',
+  ])
+
+  const text = await readFile(sceneFile, 'utf8')
+  const cuts = Array.from(text.matchAll(/pts_time:([0-9.]+)/gu))
+    .map((match) => quantizeBoundaryMs(Number(match[1]) * 1000))
+    .filter((ms) => Number.isFinite(ms) && ms > 0)
+
+  return compactCloseBoundaries(cuts, 1_500).slice(0, 80)
+}
+
+function parseFrameRate(input?: string) {
+  if (!input || input === '0/0') {
+    return null
+  }
+
+  const [rawNumerator, rawDenominator] = input.split('/')
+  const numerator = Number(rawNumerator)
+  const denominator = Number(rawDenominator ?? 1)
+
+  if (
+    !Number.isFinite(numerator) ||
+    !Number.isFinite(denominator) ||
+    denominator === 0
+  ) {
+    return null
+  }
+
+  return numerator / denominator
+}
+
+function compactCloseBoundaries(boundaries: number[], minGapMs: number) {
+  const sorted = [...boundaries].sort((a, b) => a - b)
+  const compacted: number[] = []
+
+  for (const boundary of sorted) {
+    const previous = compacted.at(-1)
+    if (previous === undefined || boundary - previous >= minGapMs) {
+      compacted.push(boundary)
+    }
+  }
+
+  return compacted
+}
+
+function buildGenerationEvidenceReport(input: {
+  cues: CaptionCue[]
+  rawCues: CaptionCue[]
+  sceneCutCandidatesMs: number[]
+  videoProbe: VideoProbe
+}): GenerationEvidenceReport {
+  const sceneCutCandidatesMs = compactCloseBoundaries(
+    input.sceneCutCandidatesMs.map(quantizeBoundaryMs),
+    1_500,
+  )
+  const segmentationEvidence: GenerationEvidenceReport['segmentationEvidence'] =
+    ['audio-caption']
+
+  if (sceneCutCandidatesMs.length > 0) {
+    segmentationEvidence.push('visual-scene-cut')
+  }
+
+  return {
+    audioCueCount: input.rawCues.length,
+    expandedCueCount: input.cues.length,
+    frameBoundaryPrecisionMs: boundaryPrecisionMs,
+    sceneCutCandidatesMs,
+    segmentationEvidence,
+    sentenceBoundaryCount: countSentenceBoundaries(input.rawCues),
+    stages: [
+      {
+        evidence: `${input.rawCues.length} caption/audio cues`,
+        name: 'audio-caption-parse',
+        status: 'completed',
+      },
+      {
+        evidence: `${input.cues.length} bounded cues after sentence and boundary split`,
+        name: 'audio-sentence-boundary-split',
+        status: 'completed',
+      },
+      {
+        evidence:
+          sceneCutCandidatesMs.length > 0
+            ? `${sceneCutCandidatesMs.length} ffmpeg scene candidates`
+            : 'no strong scene cut candidate',
+        name: 'visual-scene-probe',
+        status: sceneCutCandidatesMs.length > 0 ? 'completed' : 'skipped',
+      },
+      {
+        evidence: 'segment start/end values quantized to 0.01 second',
+        name: 'boundary-precision-quantize',
+        status: 'completed',
+      },
+    ],
+    videoDurationMs: input.videoProbe.durationMs,
+    warnings:
+      sceneCutCandidatesMs.length === 0
+        ? [
+            '프레임 장면 변화 후보가 약해서 자막/오디오 문장 경계를 우선 사용했습니다.',
+          ]
+        : [],
+  }
+}
+
+function countSentenceBoundaries(cues: CaptionCue[]) {
+  return cues.reduce(
+    (count, cue) =>
+      count + Math.max(0, splitCaptionTextIntoParts(cue.text, 2).length - 1),
+    0,
+  )
+}
+
 function buildScenario(input: {
   cues: CaptionCue[]
+  evidenceReport?: GenerationEvidenceReport
+  frameCutsMs?: number[]
   hazard: HazardProfile
   jobId: string
   sourceTitle: string
   sourceUrl: string
   videoSrc: string
 }) {
-  const groups = groupCues(input.cues)
+  const groups = groupCues(input.cues, input.frameCutsMs)
   const segments = groups.map((group, index) =>
     buildSegment({
       cueGroup: group,
@@ -336,6 +542,7 @@ function buildScenario(input: {
     generatedSourceTitle: input.sourceTitle,
     generatedSourceUrl: input.sourceUrl,
     generatedTopicLabel: `${input.hazard.label} 영상 학습`,
+    generationEvidenceReport: input.evidenceReport,
     homeNote: '입력한 영상에서 새로 만든 장면별 학습 화면입니다.',
     homeTitle: 'URL로 만든 연습',
     id: input.jobId,
@@ -352,6 +559,12 @@ function buildScenario(input: {
 function auditGeneratedScenario(
   scenario: ReturnType<typeof buildScenario>,
   cues: CaptionCue[],
+  evidenceReport = buildGenerationEvidenceReport({
+    cues,
+    rawCues: cues,
+    sceneCutCandidatesMs: [],
+    videoProbe: { durationMs: null, frameRate: null },
+  }),
 ): GeneratedQualityReport {
   const issues: GeneratedQualityIssue[] = []
   const sourceTopics = extractSourceTopics(cues)
@@ -360,7 +573,10 @@ function auditGeneratedScenario(
     Math.min(...cues.map((cue) => cue.startMs), 0)
   const expectedMinimumSegments =
     sourceTopics.size >= 3
-      ? Math.min(12, Math.max(sourceTopics.size, Math.floor(sourceDurationMs / 15_000)))
+      ? Math.min(
+          12,
+          Math.max(sourceTopics.size, Math.floor(sourceDurationMs / 15_000)),
+        )
       : 1
 
   const addIssue = (
@@ -372,7 +588,18 @@ function auditGeneratedScenario(
     issues.push({ code, message, segmentId, severity })
   }
 
-  if (sourceTopics.size >= 3 && scenario.segments.length < expectedMinimumSegments) {
+  if (evidenceReport.audioCueCount === 0) {
+    addIssue(
+      'blocker',
+      'missing_audio_text_evidence',
+      '자막/오디오 문장 근거가 없습니다.',
+    )
+  }
+
+  if (
+    sourceTopics.size >= 3 &&
+    scenario.segments.length < expectedMinimumSegments
+  ) {
     addIssue(
       'blocker',
       'too_few_segments_for_audio_topics',
@@ -445,10 +672,7 @@ function auditGeneratedScenario(
       )
     }
 
-    if (
-      segment.practiceMode === 'action' &&
-      !hasGeneratedDoNotTrack(segment)
-    ) {
+    if (segment.practiceMode === 'action' && !hasGeneratedDoNotTrack(segment)) {
       addIssue(
         'blocker',
         'missing_do_not_track',
@@ -499,7 +723,10 @@ function auditGeneratedScenario(
     }
 
     for (const action of segment.actionSteps) {
-      if (/말해요/u.test(action) && !/(가스 냄새|새는 소리|119|어른|선생님|보호자)/u.test(action)) {
+      if (
+        /말해요/u.test(action) &&
+        !/(가스 냄새|새는 소리|119|어른|선생님|보호자)/u.test(action)
+      ) {
         addIssue(
           'blocker',
           'unclear_tell_action',
@@ -528,10 +755,15 @@ function auditGeneratedScenario(
     }
   }
 
-  const blockerCount = issues.filter((issue) => issue.severity === 'blocker').length
-  const warningCount = issues.filter((issue) => issue.severity === 'warning').length
+  const blockerCount = issues.filter(
+    (issue) => issue.severity === 'blocker',
+  ).length
+  const warningCount = issues.filter(
+    (issue) => issue.severity === 'warning',
+  ).length
 
   return {
+    analysisDepth: evidenceReport,
     checkedAt: new Date().toISOString(),
     issues,
     passed: blockerCount === 0,
@@ -627,14 +859,21 @@ function buildSegment(input: {
   sourceUrl: string
 }): GeneratedPracticeSegment {
   const text = normalizeCueText(input.cueGroup.map((cue) => cue.text).join(' '))
-  const startMs = input.cueGroup[0]?.startMs ?? input.index * 10_000
+  const startMs = quantizeBoundaryMs(
+    input.cueGroup[0]?.startMs ?? input.index * 10_000,
+  )
   const naturalEndMs = Math.max(
     input.cueGroup.at(-1)?.endMs ?? startMs + 8_000,
     startMs + 700,
   )
-  const endMs = input.nextStartMs
-    ? Math.min(naturalEndMs, Math.max(startMs + 500, input.nextStartMs - 10))
-    : naturalEndMs
+  const endMs = quantizeBoundaryMs(
+    input.nextStartMs
+      ? Math.min(
+          naturalEndMs,
+          Math.max(startMs + 500, input.nextStartMs - boundaryPrecisionMs),
+        )
+      : naturalEndMs,
+  )
   const actions = extractActions(text, input.hazard)
   const practiceMode = actions.length > 0 ? 'action' : 'intro'
   const actionSteps = practiceMode === 'action' ? actions.slice(0, 3) : []
@@ -680,7 +919,8 @@ function buildSegment(input: {
     startMs,
   }
   const explanation: SegmentExplanation = {
-    doNot: practiceMode === 'action' ? doNotForText(text, input.hazard) : undefined,
+    doNot:
+      practiceMode === 'action' ? doNotForText(text, input.hazard) : undefined,
     overlayTargets: [],
     safetyMode: 'grounded',
     segmentId,
@@ -792,7 +1032,10 @@ function buildSegment(input: {
     learnerPrompt,
     learnerSequence: [
       { kind: 'situation', text: learnerPrompt },
-      ...actionSteps.map((action) => ({ kind: 'action' as const, text: action })),
+      ...actionSteps.map((action) => ({
+        kind: 'action' as const,
+        text: action,
+      })),
     ],
     narration: input.cueGroup.map((cue) => ({
       endMs: cue.endMs,
@@ -814,7 +1057,8 @@ function buildSegment(input: {
     startMs,
     structuredExplanation,
     teacherGuide: {
-      correction: '자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.',
+      correction:
+        '자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.',
       observe: '학습자가 장면과 행동을 구분하는지 봅니다.',
       prompt: teachBack?.prompt ?? '무슨 내용인지 같이 말해 봅니다.',
       script: text,
@@ -823,9 +1067,10 @@ function buildSegment(input: {
   }
 }
 
-function groupCues(cues: CaptionCue[]) {
-  const normalized = expandLongCaptionCues(
-    cues.filter((cue) => cue.text.trim().length > 0),
+function groupCues(cues: CaptionCue[], frameCutsMs: number[] = []) {
+  const normalized = splitCuesAtBoundaries(
+    expandLongCaptionCues(cues.filter((cue) => cue.text.trim().length > 0)),
+    frameCutsMs,
   )
   if (normalized.length === 0) {
     return buildFallbackCues('재난안전 영상을 보고 있어요.').map((cue) => [cue])
@@ -860,12 +1105,16 @@ function groupCues(cues: CaptionCue[]) {
   return groups.slice(0, 28)
 }
 
+function prepareEvidenceCues(cues: CaptionCue[], frameCutsMs: number[]) {
+  return splitCuesAtBoundaries(expandLongCaptionCues(cues), frameCutsMs)
+}
+
 function expandLongCaptionCues(cues: CaptionCue[]) {
   return cues.flatMap((cue) => {
     const durationMs = cue.endMs - cue.startMs
 
     if (durationMs <= maximumGeneratedSegmentMs || cue.text.length < 18) {
-      return [cue]
+      return [quantizeCue(cue)]
     }
 
     const parts = splitCaptionTextIntoParts(
@@ -892,16 +1141,68 @@ function expandLongCaptionCues(cues: CaptionCue[]) {
             Math.round((durationMs * Math.max(part.length, 1)) / totalWeight),
           )
       const startMs = cursorMs
-      const endMs = isLast ? cue.endMs : Math.min(cue.endMs, startMs + partDuration)
+      const endMs = isLast
+        ? cue.endMs
+        : Math.min(cue.endMs, startMs + partDuration)
       cursorMs = endMs
 
       return {
-        endMs,
-        startMs,
+        endMs: quantizeBoundaryMs(endMs),
+        startMs: quantizeBoundaryMs(startMs),
         text: part,
       }
     })
   })
+}
+
+function splitCuesAtBoundaries(cues: CaptionCue[], boundariesMs: number[]) {
+  const sortedBoundaries = [...new Set(boundariesMs.map(quantizeBoundaryMs))]
+    .filter((boundary) => Number.isFinite(boundary))
+    .sort((a, b) => a - b)
+
+  if (sortedBoundaries.length === 0) {
+    return cues.map(quantizeCue)
+  }
+
+  return cues.flatMap((cue) => {
+    const innerBoundaries = sortedBoundaries.filter(
+      (boundary) => boundary > cue.startMs + 700 && boundary < cue.endMs - 700,
+    )
+
+    if (innerBoundaries.length === 0) {
+      return [quantizeCue(cue)]
+    }
+
+    const parts = splitCaptionTextIntoParts(
+      cue.text,
+      innerBoundaries.length + 1,
+    )
+    if (parts.length <= 1) {
+      return [quantizeCue(cue)]
+    }
+
+    const boundaryList = [cue.startMs, ...innerBoundaries, cue.endMs]
+
+    return parts.slice(0, boundaryList.length - 1).map((part, index) =>
+      quantizeCue({
+        endMs: boundaryList[index + 1]!,
+        startMs: boundaryList[index]!,
+        text: part,
+      }),
+    )
+  })
+}
+
+function quantizeCue(cue: CaptionCue): CaptionCue {
+  return {
+    ...cue,
+    endMs: quantizeBoundaryMs(cue.endMs),
+    startMs: quantizeBoundaryMs(cue.startMs),
+  }
+}
+
+function quantizeBoundaryMs(ms: number) {
+  return Math.round(ms / boundaryPrecisionMs) * boundaryPrecisionMs
 }
 
 function splitCaptionTextIntoParts(text: string, targetParts: number) {
@@ -989,14 +1290,17 @@ function trimRepeatedCueGroup(group: CaptionCue[]) {
 function topicKeyForCueText(text: string): CaptionTopicKey | null {
   const normalized = normalizeCueText(text)
 
-  if (/태풍피해 없이|안전수칙|챙겨주세요|챙기/u.test(normalized)) return 'outro_review'
+  if (/태풍피해 없이|안전수칙|챙겨주세요|챙기/u.test(normalized))
+    return 'outro_review'
   if (/바닷가|선박|배를|배는|묶어 두/u.test(normalized)) return 'coastal_boat'
   if (/농촌|물고|시설물.*묶|단단히 묶/u.test(normalized)) {
     return 'farm_facility'
   }
   if (/하천|주차|차량|운전|서행/u.test(normalized)) return 'river_car_drive'
   if (/집 주변|침수피해|배수구/u.test(normalized)) return 'home_drain'
-  if (/부득이하게 외출|외출을 해야|간판|위험 시설물|시설물 주변/u.test(normalized)) {
+  if (
+    /부득이하게 외출|외출을 해야|간판|위험 시설물|시설물 주변/u.test(normalized)
+  ) {
     return 'outdoor_signage'
   }
   if (/실내|문과 창문|창문 가까/u.test(normalized)) return 'indoor_window'
@@ -1032,8 +1336,8 @@ function parseVtt(input: string): CaptionCue[] {
       continue
     }
 
-    const [rawStart, rawEnd] = lines[timeLineIndex]!.split('-->').map((part) =>
-      part.trim().split(/\s+/u)[0],
+    const [rawStart, rawEnd] = lines[timeLineIndex]!.split('-->').map(
+      (part) => part.trim().split(/\s+/u)[0],
     )
     const startMs = parseTimestamp(rawStart)
     const endMs = parseTimestamp(rawEnd)
@@ -1089,9 +1393,15 @@ function extractActions(text: string, hazard: HazardProfile) {
     }
   }
 
-  add(/문/u.test(text) && /(닫|닫고)/u.test(text) && !/문과 창문/u.test(text), '문을 닫아요')
+  add(
+    /문/u.test(text) && /(닫|닫고)/u.test(text) && !/문과 창문/u.test(text),
+    '문을 닫아요',
+  )
   add(/계단/u.test(text), '계단으로 가요')
-  add(/엘리베이터/u.test(text) && /(타지|이용하지|말)/u.test(text), '계단을 찾아요')
+  add(
+    /엘리베이터/u.test(text) && /(타지|이용하지|말)/u.test(text),
+    '계단을 찾아요',
+  )
   add(
     hazard.hazard === 'earthquake' && /머리|방석|쿠션|가방|보호/u.test(text),
     '머리를 보호해요',
@@ -1099,10 +1409,16 @@ function extractActions(text: string, hazard: HazardProfile) {
   add(/탁자|책상/u.test(text), '탁자 아래로 들어가요')
   add(/넓은|운동장|공원|대피소/u.test(text), '넓은 곳으로 가요')
   add(/선생님|보호자|어른/u.test(text), '어른 말을 들어요')
-  add(/119|신고/u.test(text) && !isWeatherSafetyText(text), '119나 어른에게 알려요')
+  add(
+    /119|신고/u.test(text) && !isWeatherSafetyText(text),
+    '119나 어른에게 알려요',
+  )
   add(/연기|몸을 낮/u.test(text), '몸을 낮춰요')
   add(/가스|냄새/u.test(text), '가스 냄새를 어른에게 말해요')
-  add(/창문|유리/u.test(text) && /(떨어|멀리|가까이 가지)/u.test(text), '창문에서 떨어져요')
+  add(
+    /창문|유리/u.test(text) && /(떨어|멀리|가까이 가지)/u.test(text),
+    '창문에서 떨어져요',
+  )
   add(/태풍.*북상|외출을 차지|외출을 자제/u.test(text), '안전한 실내에 있어요')
   add(/문과 창문|문.*창문/u.test(text), '문과 창문을 닫아요')
   add(/간판|위험 시설물|시설물 주변/u.test(text), '간판과 위험 시설물을 피해요')
@@ -1115,11 +1431,17 @@ function extractActions(text: string, hazard: HazardProfile) {
   add(/선박|배는|배를|묶어 두/u.test(text), '배를 단단히 묶어 둬요')
   add(/산행|캠핑/u.test(text), '안전한 실내에 있어요')
   add(/갑자기 비|안전한 곳|대피/u.test(text), '안전한 곳으로 가요')
-  add(/낮은 다리|낮은 곳|물이 찬|침수.*다리|건너지|건너/u.test(text), '물이 찬 낮은 곳을 돌아가요')
+  add(
+    /낮은 다리|낮은 곳|물이 찬|침수.*다리|건너지|건너/u.test(text),
+    '물이 찬 낮은 곳을 돌아가요',
+  )
   add(/고립|신고|1\s*1|119/u.test(text), '119에 알려요')
   add(/배수로|물꼬|점검/u.test(text), '어른과 안전한 곳에 있어요')
 
-  if (candidates.length === 0 && /(하세요|해요|갑니다|가세요|대피|피하)/u.test(text)) {
+  if (
+    candidates.length === 0 &&
+    /(하세요|해요|갑니다|가세요|대피|피하)/u.test(text)
+  ) {
     candidates.push(hazard.fallbackAction)
   }
 
@@ -1167,27 +1489,39 @@ function isWeatherSafetyText(text: string) {
 }
 
 function reasonForAction(action: string, hazard: HazardProfile) {
-  if (action.includes('문과 창문')) return '문과 창문을 닫으면 비바람이 덜 들어와요.'
+  if (action.includes('문과 창문'))
+    return '문과 창문을 닫으면 비바람이 덜 들어와요.'
   if (action.includes('창문')) return '유리가 깨지면 다칠 수 있어요.'
   if (action.includes('배수구')) return '배수구가 막히면 물이 잘 빠지지 않아요.'
-  if (action.includes('하천')) return '비가 많이 오면 하천물이 갑자기 불어날 수 있어요.'
-  if (action.includes('천천히')) return '비바람 속에서는 길이 미끄럽고 앞이 잘 안 보여요.'
-  if (action.includes('시설물')) return '강한 바람에 시설물이 날아가거나 넘어질 수 있어요.'
+  if (action.includes('하천'))
+    return '비가 많이 오면 하천물이 갑자기 불어날 수 있어요.'
+  if (action.includes('천천히'))
+    return '비바람 속에서는 길이 미끄럽고 앞이 잘 안 보여요.'
+  if (action.includes('시설물'))
+    return '강한 바람에 시설물이 날아가거나 넘어질 수 있어요.'
   if (action.includes('배수로')) return '비가 오기 전에 정리해야 안전해요.'
-  if (action.includes('배를')) return '배가 떠내려가거나 부딪히지 않게 해야 해요.'
+  if (action.includes('배를'))
+    return '배가 떠내려가거나 부딪히지 않게 해야 해요.'
   if (action.includes('문')) return '문을 닫으면 위험한 연기가 덜 퍼져요.'
-  if (action.includes('계단')) return '불이나 지진 때 엘리베이터는 멈출 수 있어요.'
-  if (action.includes('머리')) return '머리를 보호하면 떨어지는 물건에 덜 다쳐요.'
+  if (action.includes('계단'))
+    return '불이나 지진 때 엘리베이터는 멈출 수 있어요.'
+  if (action.includes('머리'))
+    return '머리를 보호하면 떨어지는 물건에 덜 다쳐요.'
   if (action.includes('탁자')) return '탁자 아래는 몸을 숨기기 쉬워요.'
   if (action.includes('넓은')) return '넓은 곳은 떨어지는 물건이 적어요.'
   if (action.includes('어른')) return '혼자 판단하면 더 위험할 수 있어요.'
   if (action.includes('119')) return '위험하면 빨리 도움을 받아야 해요.'
-  if (action.includes('낮춰')) return '연기는 위로 올라가서 낮게 움직이면 숨쉬기 쉬워요.'
-  if (action.includes('가스')) return '가스 냄새는 폭발 위험을 알려 줄 수 있어요.'
-  if (action.includes('실내')) return '비바람이 강할 때 밖에 있으면 다칠 수 있어요.'
-  if (action.includes('안전한 곳')) return '비가 갑자기 많이 오면 물이 빠르게 불어날 수 있어요.'
+  if (action.includes('낮춰'))
+    return '연기는 위로 올라가서 낮게 움직이면 숨쉬기 쉬워요.'
+  if (action.includes('가스'))
+    return '가스 냄새는 폭발 위험을 알려 줄 수 있어요.'
+  if (action.includes('실내'))
+    return '비바람이 강할 때 밖에 있으면 다칠 수 있어요.'
+  if (action.includes('안전한 곳'))
+    return '비가 갑자기 많이 오면 물이 빠르게 불어날 수 있어요.'
   if (action.includes('낮은 곳')) return '물이 찬 길은 깊이를 알기 어려워요.'
-  if (action.includes('간판')) return '강한 바람에 간판이나 물건이 떨어질 수 있어요.'
+  if (action.includes('간판'))
+    return '강한 바람에 간판이나 물건이 떨어질 수 있어요.'
 
   return hazard.reason
 }
@@ -1204,7 +1538,8 @@ function doNotForText(text: string, hazard: HazardProfile) {
   if (/가스/u.test(text)) return '불을 켜거나 전기 스위치를 만지지 않아요.'
   if (/산행|캠핑/u.test(text)) return '산이나 캠핑장에 가지 않아요.'
   if (/외출을 차지|외출을 자제|북상/u.test(text)) return '밖에 나가지 않아요.'
-  if (/문과 창문|창문 가까|실내/u.test(text)) return '창문 가까이에 가지 않아요.'
+  if (/문과 창문|창문 가까|실내/u.test(text))
+    return '창문 가까이에 가지 않아요.'
   if (/간판|위험 시설물|시설물 주변/u.test(text)) {
     return '간판이나 위험한 물건 가까이에 가지 않아요.'
   }
@@ -1266,7 +1601,10 @@ function topicDoNotForText(text: string) {
   }
 }
 
-function buildTeachBack(action: string, hazard: HazardProfile): LearningTeachBack {
+function buildTeachBack(
+  action: string,
+  hazard: HazardProfile,
+): LearningTeachBack {
   const correct = optionForAction(action)
   const contrast = contrastForOption(correct, hazard)
 
@@ -1301,26 +1639,62 @@ function optionForAction(action: string): {
   label: string
   prompt: string
 } {
-  if (action.includes('문과 창문')) return { kind: 'object', label: '문과 창문', prompt: '무엇을 닫을까요?' }
-  if (action.includes('창문')) return { kind: 'object', label: '창문', prompt: '무엇에서 떨어질까요?' }
-  if (action.includes('간판')) return { kind: 'object', label: '간판', prompt: '무엇을 피할까요?' }
-  if (action.includes('배수구')) return { kind: 'object', label: '배수구', prompt: '무엇을 미리 확인할까요?' }
-  if (action.includes('하천')) return { kind: 'place', label: '하천 근처', prompt: '차를 어디에서 옮길까요?' }
-  if (action.includes('천천히')) return { kind: 'state', label: '천천히', prompt: '어떻게 운전할까요?' }
-  if (action.includes('시설물')) return { kind: 'object', label: '시설물', prompt: '무엇을 미리 묶을까요?' }
-  if (action.includes('배수로')) return { kind: 'object', label: '배수로', prompt: '무엇을 미리 정리할까요?' }
-  if (action.includes('배를')) return { kind: 'object', label: '배', prompt: '무엇을 단단히 묶을까요?' }
-  if (action.includes('문')) return { kind: 'object', label: '문', prompt: '무엇을 볼까요?' }
-  if (action.includes('계단')) return { kind: 'place', label: '계단', prompt: '어디로 갈까요?' }
-  if (action.includes('머리')) return { kind: 'object', label: '머리', prompt: '어디를 보호할까요?' }
-  if (action.includes('탁자')) return { kind: 'place', label: '탁자 아래', prompt: '어디로 들어갈까요?' }
-  if (action.includes('넓은')) return { kind: 'place', label: '넓은 곳', prompt: '어디로 갈까요?' }
-  if (action.includes('어른')) return { kind: 'person', label: '어른', prompt: '누구 말을 들을까요?' }
-  if (action.includes('119')) return { kind: 'signal', label: '119', prompt: '도움이 필요하면 무엇을 기억할까요?' }
-  if (action.includes('가스')) return { kind: 'signal', label: '가스 냄새', prompt: '무엇을 말할까요?' }
-  if (action.includes('실내')) return { kind: 'place', label: '실내', prompt: '어디에 있을까요?' }
-  if (action.includes('안전한 곳')) return { kind: 'place', label: '안전한 곳', prompt: '어디로 갈까요?' }
-  if (action.includes('낮은 곳')) return { kind: 'place', label: '높은 길', prompt: '어떤 길로 갈까요?' }
+  if (action.includes('문과 창문'))
+    return { kind: 'object', label: '문과 창문', prompt: '무엇을 닫을까요?' }
+  if (action.includes('창문'))
+    return { kind: 'object', label: '창문', prompt: '무엇에서 떨어질까요?' }
+  if (action.includes('간판'))
+    return { kind: 'object', label: '간판', prompt: '무엇을 피할까요?' }
+  if (action.includes('배수구'))
+    return {
+      kind: 'object',
+      label: '배수구',
+      prompt: '무엇을 미리 확인할까요?',
+    }
+  if (action.includes('하천'))
+    return {
+      kind: 'place',
+      label: '하천 근처',
+      prompt: '차를 어디에서 옮길까요?',
+    }
+  if (action.includes('천천히'))
+    return { kind: 'state', label: '천천히', prompt: '어떻게 운전할까요?' }
+  if (action.includes('시설물'))
+    return { kind: 'object', label: '시설물', prompt: '무엇을 미리 묶을까요?' }
+  if (action.includes('배수로'))
+    return {
+      kind: 'object',
+      label: '배수로',
+      prompt: '무엇을 미리 정리할까요?',
+    }
+  if (action.includes('배를'))
+    return { kind: 'object', label: '배', prompt: '무엇을 단단히 묶을까요?' }
+  if (action.includes('문'))
+    return { kind: 'object', label: '문', prompt: '무엇을 볼까요?' }
+  if (action.includes('계단'))
+    return { kind: 'place', label: '계단', prompt: '어디로 갈까요?' }
+  if (action.includes('머리'))
+    return { kind: 'object', label: '머리', prompt: '어디를 보호할까요?' }
+  if (action.includes('탁자'))
+    return { kind: 'place', label: '탁자 아래', prompt: '어디로 들어갈까요?' }
+  if (action.includes('넓은'))
+    return { kind: 'place', label: '넓은 곳', prompt: '어디로 갈까요?' }
+  if (action.includes('어른'))
+    return { kind: 'person', label: '어른', prompt: '누구 말을 들을까요?' }
+  if (action.includes('119'))
+    return {
+      kind: 'signal',
+      label: '119',
+      prompt: '도움이 필요하면 무엇을 기억할까요?',
+    }
+  if (action.includes('가스'))
+    return { kind: 'signal', label: '가스 냄새', prompt: '무엇을 말할까요?' }
+  if (action.includes('실내'))
+    return { kind: 'place', label: '실내', prompt: '어디에 있을까요?' }
+  if (action.includes('안전한 곳'))
+    return { kind: 'place', label: '안전한 곳', prompt: '어디로 갈까요?' }
+  if (action.includes('낮은 곳'))
+    return { kind: 'place', label: '높은 길', prompt: '어떤 길로 갈까요?' }
 
   return { kind: 'state', label: '안전', prompt: '무엇을 기억할까요?' }
 }
@@ -1329,10 +1703,12 @@ function contrastForOption(
   option: ReturnType<typeof optionForAction>,
   hazard: HazardProfile,
 ) {
-  if (option.kind === 'place') return option.label === '계단' ? '엘리베이터' : '좁은 곳'
+  if (option.kind === 'place')
+    return option.label === '계단' ? '엘리베이터' : '좁은 곳'
   if (option.kind === 'person') return '혼자'
   if (option.kind === 'object') return option.label === '문' ? '창문' : '가방'
-  if (option.kind === 'signal') return option.label === '119' ? '게임' : '냄새 없음'
+  if (option.kind === 'signal')
+    return option.label === '119' ? '게임' : '냄새 없음'
 
   return hazard.label
 }
@@ -1344,16 +1720,22 @@ function situationFromText(text: string, hazard: HazardProfile) {
   }
 
   if (/태풍피해 없이/u.test(text)) return '태풍 안전수칙을 다시 기억해요.'
-  if (/태풍.*북상|외출을 차지|외출을 자제/u.test(text)) return '태풍이 가까이 오고 있어요.'
+  if (/태풍.*북상|외출을 차지|외출을 자제/u.test(text))
+    return '태풍이 가까이 오고 있어요.'
   if (/문과 창문|창문 가까|실내/u.test(text)) return '집 안에 있어요.'
-  if (/간판|위험 시설물|시설물 주변/u.test(text)) return '밖에는 떨어질 수 있는 물건이 있어요.'
-  if (/집 주변|침수피해|배수구/u.test(text)) return '집 주변에 물이 찰 수 있어요.'
-  if (/하천|주차|차량|운전|서행/u.test(text)) return '하천 근처와 도로가 위험할 수 있어요.'
+  if (/간판|위험 시설물|시설물 주변/u.test(text))
+    return '밖에는 떨어질 수 있는 물건이 있어요.'
+  if (/집 주변|침수피해|배수구/u.test(text))
+    return '집 주변에 물이 찰 수 있어요.'
+  if (/하천|주차|차량|운전|서행/u.test(text))
+    return '하천 근처와 도로가 위험할 수 있어요.'
   if (/농촌|물고|물꼬|시설물.*묶|단단히 묶|배수로/u.test(text)) {
     return '농촌에서는 미리 준비해야 해요.'
   }
-  if (/바닷가|선박|배를|배는|묶어 두/u.test(text)) return '바닷가는 위험할 수 있어요.'
-  if (/여름철|호우|태풍|비바람/u.test(text)) return '비와 태풍 안전수칙을 배워요.'
+  if (/바닷가|선박|배를|배는|묶어 두/u.test(text))
+    return '바닷가는 위험할 수 있어요.'
+  if (/여름철|호우|태풍|비바람/u.test(text))
+    return '비와 태풍 안전수칙을 배워요.'
   if (/산행|캠핑/u.test(text)) return '비와 태풍이 올 수 있어요.'
   if (/갑자기 비|쏟아질/u.test(text)) return '비가 갑자기 많이 와요.'
   if (/낮은 다리|낮은 곳|물이 찬|침수.*다리|건너지|건너/u.test(text)) {
@@ -1413,8 +1795,7 @@ function summarizeAction(actions: string[]) {
 }
 
 function shortenLearnerText(text: string, fallback: string) {
-  const cleaned = normalizeCueText(text)
-    .replace(/하십시오|하세요/gu, '해요')
+  const cleaned = normalizeCueText(text).replace(/하십시오|하세요/gu, '해요')
   if (/태풍피해 없이|안전수칙|챙겨주세요|챙기/u.test(cleaned)) {
     return '안전수칙을 다시 기억해요.'
   }
@@ -1476,13 +1857,16 @@ async function readInfoJson(workDir: string, files: string[]) {
   }
 
   try {
-    const parsed = JSON.parse(await readFile(join(workDir, infoFile), 'utf8')) as {
+    const parsed = JSON.parse(
+      await readFile(join(workDir, infoFile), 'utf8'),
+    ) as {
       thumbnail?: unknown
       title?: unknown
     }
 
     return {
-      thumbnail: typeof parsed.thumbnail === 'string' ? parsed.thumbnail : undefined,
+      thumbnail:
+        typeof parsed.thumbnail === 'string' ? parsed.thumbnail : undefined,
       title: typeof parsed.title === 'string' ? parsed.title : undefined,
     }
   } catch {
@@ -1491,7 +1875,10 @@ async function readInfoJson(workDir: string, files: string[]) {
 }
 
 function findDownloadedVideo(files: string[]) {
-  return files.find((file) => file === 'source.mp4') ?? files.find((file) => file.endsWith('.mp4'))
+  return (
+    files.find((file) => file === 'source.mp4') ??
+    files.find((file) => file.endsWith('.mp4'))
+  )
 }
 
 function findCaptionFile(files: string[]) {
@@ -1504,8 +1891,14 @@ function findCaptionFile(files: string[]) {
 async function copyToDistIfPresent(workDir: string, jobId: string) {
   try {
     await mkdir(join(distGeneratedDir, jobId), { recursive: true })
-    await copyFile(join(workDir, 'source.mp4'), join(distGeneratedDir, jobId, 'source.mp4'))
-    await copyFile(join(workDir, 'scenario.json'), join(distGeneratedDir, jobId, 'scenario.json'))
+    await copyFile(
+      join(workDir, 'source.mp4'),
+      join(distGeneratedDir, jobId, 'source.mp4'),
+    )
+    await copyFile(
+      join(workDir, 'scenario.json'),
+      join(distGeneratedDir, jobId, 'scenario.json'),
+    )
   } catch {
     // The dev server does not need dist files. Preview builds use this when dist exists.
   }
@@ -1577,9 +1970,53 @@ function hashText(text: string) {
 
 export const __testGeneratePracticeFromUrl = {
   auditGeneratedScenario,
+  buildGenerationEvidenceReport,
   buildScenario,
   detectHazard,
   parseVtt,
+}
+
+function runCommandWithOutput(command: string, args: string[]) {
+  return new Promise<string>((resolvePromise, reject) => {
+    const child = spawn(command, args, {
+      cwd: rootDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    const timeout = setTimeout(
+      () => {
+        child.kill('SIGTERM')
+        reject(new Error(`${command} 처리 시간이 너무 오래 걸렸습니다.`))
+      },
+      10 * 60 * 1000,
+    )
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout.on('data', (chunk) => {
+      stdout = `${stdout}${String(chunk)}`
+    })
+    child.stderr.on('data', (chunk) => {
+      stderr = `${stderr}${String(chunk)}`.slice(-4000)
+    })
+    child.on('error', (error) => {
+      clearTimeout(timeout)
+      reject(error)
+    })
+    child.on('close', (code) => {
+      clearTimeout(timeout)
+      if (code === 0) {
+        resolvePromise(stdout)
+        return
+      }
+
+      reject(
+        new Error(
+          stderr.trim() ||
+            `${command} ${args.slice(0, 3).join(' ')} 실행에 실패했습니다.`,
+        ),
+      )
+    })
+  })
 }
 
 function runCommand(command: string, args: string[]) {
@@ -1588,10 +2025,13 @@ function runCommand(command: string, args: string[]) {
       cwd: rootDir,
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-    const timeout = setTimeout(() => {
-      child.kill('SIGTERM')
-      reject(new Error('영상 처리 시간이 너무 오래 걸렸습니다.'))
-    }, 10 * 60 * 1000)
+    const timeout = setTimeout(
+      () => {
+        child.kill('SIGTERM')
+        reject(new Error('영상 처리 시간이 너무 오래 걸렸습니다.'))
+      },
+      10 * 60 * 1000,
+    )
     let stderr = ''
 
     child.stdout.on('data', () => {
