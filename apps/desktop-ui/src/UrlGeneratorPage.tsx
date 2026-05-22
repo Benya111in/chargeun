@@ -15,7 +15,9 @@ import { appHref } from './lib/routes'
 import {
   clearStoredGeneratorApiBase,
   getGeneratorApiConfig,
+  loadStoredGeneratorAccessCode,
   persistGeneratorApiBase,
+  persistGeneratorAccessCode,
   requestGeneratedPracticeFromApi,
 } from './lib/url-generator-api'
 
@@ -33,6 +35,8 @@ const minimumGenerationDisplayMs = 8_000
 
 export default function UrlGeneratorPage() {
   const initialConfig = useMemo(() => getGeneratorApiConfig(), [])
+  const initialAccessCode = useMemo(() => loadStoredGeneratorAccessCode(), [])
+  const [accessCode, setAccessCode] = useState(initialAccessCode)
   const [apiBaseDraft, setApiBaseDraft] = useState(initialConfig.apiBase)
   const [apiConfig, setApiConfig] = useState(initialConfig)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -108,8 +112,12 @@ export default function UrlGeneratorPage() {
       setGenerationStartedAt(Date.now())
       setIsGenerating(true)
       setStepIndex(0)
+      persistGeneratorAccessCode(accessCode)
 
-      const generationPromise = requestGeneratedPracticeFromApi(sourceUrl)
+      const generationPromise = requestGeneratedPracticeFromApi(
+        sourceUrl,
+        accessCode,
+      )
       const [generationResult] = await Promise.allSettled([
         generationPromise,
         wait(minimumGenerationDisplayMs),
@@ -186,6 +194,25 @@ export default function UrlGeneratorPage() {
                 <ArrowRight className="size-5" />
               </button>
             </div>
+            <label
+              className="mt-4 block text-sm font-semibold text-[#596257]"
+              htmlFor="generator-access-code"
+            >
+              생성 비밀번호
+            </label>
+            <input
+              className="mt-2 min-h-12 w-full rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 text-base font-semibold text-[#151713] outline-none transition focus:border-[#151713]"
+              disabled={isGenerating}
+              id="generator-access-code"
+              onChange={(event) => setAccessCode(event.target.value)}
+              placeholder="공유받은 비밀번호를 입력하세요"
+              type="password"
+              value={accessCode}
+            />
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#596257]">
+              비밀번호가 맞으면 서버에 저장된 OpenAI API key로 생성합니다.
+              브라우저에는 API key를 저장하지 않습니다.
+            </p>
             {notice ? (
               <p className="mt-3 text-base font-semibold leading-7 text-rose-700">
                 {notice}

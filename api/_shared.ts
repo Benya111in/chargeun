@@ -98,7 +98,10 @@ export function handleCors(req: any, res: any, allowedOrigins: string[]) {
   if (isAllowed) {
     res.setHeader('access-control-allow-origin', origin)
     res.setHeader('access-control-allow-methods', 'POST, OPTIONS')
-    res.setHeader('access-control-allow-headers', 'content-type')
+    res.setHeader(
+      'access-control-allow-headers',
+      'content-type, x-generator-code',
+    )
     res.setHeader('vary', 'origin')
   }
 

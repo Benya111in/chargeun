@@ -1,6 +1,7 @@
 import type { GeneratedScenarioRecord } from './generated-scenario'
 
 const generatorApiBaseStorageKey = 'chagunchagun.generator-api-base.v1'
+const generatorAccessCodeSessionKey = 'chagunchagun.generator-access-code.v1'
 
 export type GeneratorApiConfig = {
   apiBase: string
@@ -63,8 +64,31 @@ export function clearStoredGeneratorApiBase() {
   window.localStorage.removeItem(generatorApiBaseStorageKey)
 }
 
+export function loadStoredGeneratorAccessCode() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  return window.sessionStorage.getItem(generatorAccessCodeSessionKey) ?? ''
+}
+
+export function persistGeneratorAccessCode(input: string) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const trimmed = input.trim()
+
+  if (trimmed) {
+    window.sessionStorage.setItem(generatorAccessCodeSessionKey, trimmed)
+  } else {
+    window.sessionStorage.removeItem(generatorAccessCodeSessionKey)
+  }
+}
+
 export async function requestGeneratedPracticeFromApi(
   sourceUrl: string,
+  accessCode = '',
 ): Promise<{
   record: GeneratedScenarioRecord
 }> {
@@ -82,6 +106,11 @@ export async function requestGeneratedPracticeFromApi(
       body: JSON.stringify({ sourceUrl }),
       headers: {
         'content-type': 'application/json',
+        ...(accessCode.trim()
+          ? {
+              'x-generator-code': accessCode.trim(),
+            }
+          : {}),
       },
       method: 'POST',
     },

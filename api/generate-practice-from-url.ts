@@ -492,6 +492,10 @@ export default async function handler(req: any, res: any) {
     return
   }
 
+  if (!validateGeneratorAccessCode(req, res)) {
+    return
+  }
+
   try {
     const body = await readJsonBody(req)
     const sourceUrl = normalizeUrl(body?.sourceUrl)
@@ -515,6 +519,42 @@ export default async function handler(req: any, res: any) {
           : '영상 학습 화면을 만들지 못했습니다.',
     })
   }
+}
+
+function validateGeneratorAccessCode(req: any, res: any) {
+  const configuredCodes = parseGeneratorAccessCodes()
+
+  if (configuredCodes.length === 0) {
+    return true
+  }
+
+  const accessCode = getRequestHeader(req, 'x-generator-code')?.trim() ?? ''
+
+  if (accessCode && configuredCodes.includes(accessCode)) {
+    return true
+  }
+
+  sendJson(res, 401, {
+    error: 'generator_code_required',
+    message: '생성 비밀번호가 필요합니다.',
+  })
+  return false
+}
+
+function parseGeneratorAccessCodes() {
+  return (
+    process.env.GENERATOR_ACCESS_CODES ||
+    process.env.BETA_ACCESS_CODES ||
+    ''
+  )
+    .split(',')
+    .map((code) => code.trim())
+    .filter(Boolean)
+}
+
+function getRequestHeader(req: any, name: string) {
+  const value = req.headers?.[name] ?? req.headers?.[name.toLowerCase()]
+  return Array.isArray(value) ? value[0] : value
 }
 
 async function generatePracticeFromUrl(sourceUrl: string) {

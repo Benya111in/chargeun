@@ -23,6 +23,7 @@ GitHub Pages는 정적 파일만 배포하므로 OpenAI API key를 안전하게 
 - `OPENAI_API_KEY`
 - `OPENAI_GENERATION_MODEL=gpt-5.5`
 - `GENERATOR_ALLOWED_ORIGINS=https://benya111in.github.io`
+- `GENERATOR_ACCESS_CODES=<공유할 생성 비밀번호>`
 
 ## GitHub Pages에서 API 서버 연결하기
 
@@ -44,5 +45,6 @@ https://benya111in.github.io/chargeun/?apiBase=https://<생성 API 서버 도메
 ## 보안 메모
 
 - OpenAI API key는 GitHub Pages HTML, JS, localStorage에 넣지 않는다.
+- 사용자가 입력한 생성 비밀번호는 API key가 아니라 서버 호출 권한만 확인한다.
 - 생성 API는 허용된 origin만 CORS로 받는다.
 - 품질 검사를 통과하지 못한 자동 생성 결과는 학습 화면으로 저장하지 않는다.
