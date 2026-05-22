@@ -3791,7 +3791,12 @@ function getYtDlpExtractorArgs() {
 let ytDlpJsRuntimeSupport: Promise<boolean> | null = null
 
 async function getYtDlpJsRuntimeArgs() {
-  if (!process.env.YT_DLP_JS_RUNTIME?.trim()) {
+  const runtime =
+    process.env.YT_DLP_JS_RUNTIME === undefined
+      ? 'node'
+      : process.env.YT_DLP_JS_RUNTIME.trim()
+
+  if (!runtime || runtime === '0' || runtime.toLowerCase() === 'false') {
     return []
   }
 
@@ -3801,9 +3806,7 @@ async function getYtDlpJsRuntimeArgs() {
       .then((help) => help.includes('--js-runtimes'))
       .catch(() => false)
 
-  return (await ytDlpJsRuntimeSupport)
-    ? ['--js-runtimes', process.env.YT_DLP_JS_RUNTIME.trim()]
-    : []
+  return (await ytDlpJsRuntimeSupport) ? ['--js-runtimes', runtime] : []
 }
 
 export const __testGeneratePracticeFromUrl = {
