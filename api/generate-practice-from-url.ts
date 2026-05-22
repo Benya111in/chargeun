@@ -1401,12 +1401,13 @@ function learnerKeywordsForTopic(topic: CaptionTopicKey) {
 }
 
 async function downloadVideo(sourceUrl: string, workDir: string) {
+  const jsRuntimeArgs = await getYtDlpJsRuntimeArgs()
+
   await runCommand(getPythonCommand(), [
     '-m',
     'yt_dlp',
     '--no-playlist',
-    '--js-runtimes',
-    process.env.YT_DLP_JS_RUNTIME?.trim() || 'node',
+    ...jsRuntimeArgs,
     '--write-auto-subs',
     '--write-subs',
     '--write-info-json',
@@ -3589,6 +3590,24 @@ function getFfmpegCommand() {
 
 function getFfprobeCommand() {
   return process.env.FFPROBE_PATH?.trim() || ffprobeStatic.path || 'ffprobe'
+}
+
+let ytDlpJsRuntimeSupport: Promise<boolean> | null = null
+
+async function getYtDlpJsRuntimeArgs() {
+  if (!process.env.YT_DLP_JS_RUNTIME?.trim()) {
+    return []
+  }
+
+  ytDlpJsRuntimeSupport =
+    ytDlpJsRuntimeSupport ??
+    runCommandWithOutput(getPythonCommand(), ['-m', 'yt_dlp', '--help'])
+      .then((help) => help.includes('--js-runtimes'))
+      .catch(() => false)
+
+  return (await ytDlpJsRuntimeSupport)
+    ? ['--js-runtimes', process.env.YT_DLP_JS_RUNTIME.trim()]
+    : []
 }
 
 export const __testGeneratePracticeFromUrl = {
