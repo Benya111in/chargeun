@@ -37,6 +37,10 @@ const server = createServer(async (req, res) => {
         generationModel: process.env.OPENAI_GENERATION_MODEL || 'gpt-5.5',
         hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
         publicGeneratorApiBase: process.env.PUBLIC_GENERATOR_API_BASE || null,
+        runtimeVersion:
+          process.env.RENDER_GIT_COMMIT?.slice(0, 7) ||
+          process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
+          'local',
         service: 'chagunchagun-generator-api',
         status: 'ok',
       })

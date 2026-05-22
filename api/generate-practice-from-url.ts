@@ -3963,6 +3963,10 @@ function getOpenAiApiKey() {
     .replace(/[^\x20-\x7E]/gu, '')
     .trim()
 
+  if (cleaned) {
+    process.env.OPENAI_API_KEY = cleaned
+  }
+
   return cleaned || null
 }
 
