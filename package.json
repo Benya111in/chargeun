@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter desktop-ui dev",
     "web:preview": "node --import tsx scripts/web-preview-server.ts",
-    "api:server": "node --import tsx scripts/generator-api-server.ts",
+    "api:prepare-runtime": "node --import tsx scripts/ensure-generator-runtime.ts",
+    "api:server": "pnpm api:prepare-runtime && node --import tsx scripts/generator-api-server.ts",
     "dev:desktop": "pnpm --filter desktop-ui tauri dev",
     "check-env": "bash ./scripts/check-env.sh",
     "build": "pnpm --filter @ansimtrack/shared-types build && pnpm --filter @ansimtrack/shadow-buffer build && pnpm --filter @ansimtrack/local-store build && pnpm --filter @ansimtrack/perception-pipeline build && pnpm --filter @ansimtrack/llm-orchestrator build && pnpm --filter desktop-ui build",
@@ -27,6 +28,8 @@
     "tsx": "^4.20.6"
   },
   "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "openai": "^6.37.0"
   }
 }

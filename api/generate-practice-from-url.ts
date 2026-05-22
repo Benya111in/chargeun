@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { createRequire } from 'node:module'
 import {
   copyFile,
   mkdir,
@@ -23,6 +24,10 @@ import {
   readJsonBody,
   sendJson,
 } from './_shared'
+
+const require = createRequire(import.meta.url)
+const ffmpegStaticPath = require('ffmpeg-static') as string | null
+const ffprobeStatic = require('ffprobe-static') as { path?: string }
 
 type HazardType = 'earthquake' | 'fire' | 'heavy_rain' | 'typhoon' | 'unknown'
 
@@ -1396,7 +1401,7 @@ function learnerKeywordsForTopic(topic: CaptionTopicKey) {
 }
 
 async function downloadVideo(sourceUrl: string, workDir: string) {
-  await runCommand('python3', [
+  await runCommand(getPythonCommand(), [
     '-m',
     'yt_dlp',
     '--no-playlist',
@@ -1418,7 +1423,7 @@ async function downloadVideo(sourceUrl: string, workDir: string) {
 }
 
 async function probeVideo(videoPath: string): Promise<VideoProbe> {
-  const output = await runCommandWithOutput('ffprobe', [
+  const output = await runCommandWithOutput(getFfprobeCommand(), [
     '-v',
     'error',
     '-select_streams',
@@ -1452,7 +1457,7 @@ async function probeVideo(videoPath: string): Promise<VideoProbe> {
 async function detectSceneCuts(videoPath: string, workDir: string) {
   const sceneFile = join(workDir, 'scene-cuts.txt')
 
-  await runCommand('ffmpeg', [
+  await runCommand(getFfmpegCommand(), [
     '-hide_banner',
     '-nostdin',
     '-i',
@@ -1670,7 +1675,7 @@ async function extractVisualCaptionFrames(input: {
     )
 
     try {
-      await runCommand('ffmpeg', [
+      await runCommand(getFfmpegCommand(), [
         '-hide_banner',
         '-loglevel',
         'error',
@@ -3570,6 +3575,18 @@ function isYouTubeHost(hostname: string) {
 
 function hashText(text: string) {
   return createHash('sha256').update(text).digest('hex')
+}
+
+function getPythonCommand() {
+  return process.env.GENERATOR_PYTHON_BIN?.trim() || 'python3'
+}
+
+function getFfmpegCommand() {
+  return process.env.FFMPEG_PATH?.trim() || ffmpegStaticPath || 'ffmpeg'
+}
+
+function getFfprobeCommand() {
+  return process.env.FFPROBE_PATH?.trim() || ffprobeStatic.path || 'ffprobe'
 }
 
 export const __testGeneratePracticeFromUrl = {

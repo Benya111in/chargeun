@@ -27,6 +27,7 @@ GitHub Pages는 정적 파일만 배포하므로 OpenAI API key를 안전하게 
 - `OPENAI_GENERATION_MODEL=gpt-5.5`
 - `GENERATOR_ALLOWED_ORIGINS=https://benya111in.github.io`
 - `GENERATOR_ACCESS_CODES=<공유할 생성 비밀번호>`
+- `GENERATOR_PYTHON_BIN=python3`
 - `PUBLIC_GENERATOR_API_BASE=https://<Render 서비스 도메인>`
 - `PORT=10000`
 
@@ -48,6 +49,7 @@ OPENAI_API_KEY=<Render 환경변수에만 입력>
 OPENAI_GENERATION_MODEL=gpt-5.5
 GENERATOR_ACCESS_CODES=<공유할 생성 비밀번호>
 GENERATOR_ALLOWED_ORIGINS=https://benya111in.github.io
+GENERATOR_PYTHON_BIN=python3
 PUBLIC_GENERATOR_API_BASE=https://<Render 서비스 도메인>
 ```
 
@@ -61,6 +63,11 @@ Render가 Docker 환경으로 실행되면 이미지 안에 다음 런타임이 
 - Python 3
 - `yt-dlp`
 - `ffmpeg`
+
+Render Native Node 환경으로 실행되는 경우도 서버 시작 전에
+`scripts/ensure-generator-runtime.ts`가 `python3 -m yt_dlp --version`을 확인한다.
+없으면 `python3 -m pip install --user --upgrade yt-dlp` 순서로 자동 설치를 시도한다.
+`ffmpeg`와 `ffprobe`는 `ffmpeg-static`, `ffprobe-static` npm 패키지를 우선 사용한다.
 
 생성된 mp4는 Render 서버의 `/generated/.../source.mp4` 경로로 서빙된다.
 GitHub Pages 프론트가 그 절대 URL을 받아 재생하므로 OpenAI key는 브라우저에
