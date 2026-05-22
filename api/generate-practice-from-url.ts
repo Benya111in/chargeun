@@ -499,7 +499,7 @@ export default async function handler(req: any, res: any) {
   try {
     const body = await readJsonBody(req)
     const sourceUrl = normalizeUrl(body?.sourceUrl)
-    const generated = await generatePracticeFromUrl(sourceUrl)
+    const generated = await generatePracticeFromUrl(sourceUrl, req)
 
     sendJson(res, 200, generated)
   } catch (error) {
@@ -557,9 +557,52 @@ function getRequestHeader(req: any, name: string) {
   return Array.isArray(value) ? value[0] : value
 }
 
-async function generatePracticeFromUrl(sourceUrl: string) {
+function getPublicGeneratorApiBase(req?: any) {
+  const configured = normalizePublicBaseUrl(
+    process.env.PUBLIC_GENERATOR_API_BASE,
+  )
+  if (configured) {
+    return configured
+  }
+
+  const host =
+    getRequestHeader(req, 'x-forwarded-host') || getRequestHeader(req, 'host')
+  if (!host) {
+    return ''
+  }
+
+  const forwardedProto = getRequestHeader(req, 'x-forwarded-proto')
+  const proto =
+    forwardedProto ||
+    (String(host).includes('localhost') || String(host).startsWith('127.0.0.1')
+      ? 'http'
+      : 'https')
+
+  return normalizePublicBaseUrl(`${proto}://${host}`) || ''
+}
+
+function normalizePublicBaseUrl(input: string | undefined) {
+  const trimmed = input?.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  return trimmed.replace(/\/+$/, '')
+}
+
+function buildGeneratedAssetUrl(
+  publicAssetBaseUrl: string,
+  jobId: string,
+  fileName: string,
+) {
+  const path = `/generated/${jobId}/${fileName}`
+  return publicAssetBaseUrl ? `${publicAssetBaseUrl}${path}` : path
+}
+
+async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
   const jobId = `generated-${hashText(sourceUrl).slice(0, 12)}`
   const workDir = join(publicGeneratedDir, jobId)
+  const publicAssetBaseUrl = getPublicGeneratorApiBase(req)
 
   await rm(workDir, { force: true, recursive: true })
   await mkdir(workDir, { recursive: true })
@@ -657,7 +700,7 @@ async function generatePracticeFromUrl(sourceUrl: string) {
       plan: scenarioPlan,
       sourceTitle: title,
       sourceUrl,
-      videoSrc: `/generated/${jobId}/source.mp4`,
+      videoSrc: buildGeneratedAssetUrl(publicAssetBaseUrl, jobId, 'source.mp4'),
     })
     const qualityReport = auditGeneratedScenario(
       scenario,

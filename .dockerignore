@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.env.*
+.git
+.github
+.pnpm-store
+apps/desktop-ui/dist
+apps/desktop-ui/public/generated
+apps/desktop-ui/src-tauri/target
+node_modules
+outputs
+*.pptx

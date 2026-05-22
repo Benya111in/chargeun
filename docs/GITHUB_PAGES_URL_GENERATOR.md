@@ -17,6 +17,8 @@ GitHub Pages는 정적 파일만 배포하므로 OpenAI API key를 안전하게 
 - `POST /api/generate-practice-from-url`
 - body: `{ "sourceUrl": "https://www.youtube.com/watch?v=..." }`
 - response: `{ "record": GeneratedScenarioRecord }`
+- generated media: `GET /generated/<jobId>/source.mp4`
+- health check: `GET /api/health`
 
 서버는 다음 환경변수를 사용한다.
 
@@ -24,6 +26,44 @@ GitHub Pages는 정적 파일만 배포하므로 OpenAI API key를 안전하게 
 - `OPENAI_GENERATION_MODEL=gpt-5.5`
 - `GENERATOR_ALLOWED_ORIGINS=https://benya111in.github.io`
 - `GENERATOR_ACCESS_CODES=<공유할 생성 비밀번호>`
+- `PUBLIC_GENERATOR_API_BASE=https://<Render 서비스 도메인>`
+- `PORT=10000`
+
+## Render Web Service 설정
+
+Render 서비스 ID: `srv-d87q0u8jo6nc73cr6d9g`
+
+이 저장소는 Render용 Docker 배포 파일을 포함한다.
+
+- Dockerfile: `/Dockerfile`
+- start command: `pnpm api:server`
+- listen port: Render가 주입하는 `PORT` 또는 기본 `10000`
+- health check path: `/api/health`
+
+Render 대시보드에서 다음 값을 설정한다.
+
+```text
+OPENAI_API_KEY=<Render 환경변수에만 입력>
+OPENAI_GENERATION_MODEL=gpt-5.5
+GENERATOR_ACCESS_CODES=<공유할 생성 비밀번호>
+GENERATOR_ALLOWED_ORIGINS=https://benya111in.github.io
+PUBLIC_GENERATOR_API_BASE=https://<Render 서비스 도메인>
+```
+
+`OPENAI_API_KEY`는 GitHub Pages, GitHub Actions variable, 클라이언트 코드,
+localStorage에 절대 넣지 않는다.
+
+Render가 Docker 환경으로 실행되면 이미지 안에 다음 런타임이 포함된다.
+
+- Node 22
+- pnpm 10.11.0
+- Python 3
+- `yt-dlp`
+- `ffmpeg`
+
+생성된 mp4는 Render 서버의 `/generated/.../source.mp4` 경로로 서빙된다.
+GitHub Pages 프론트가 그 절대 URL을 받아 재생하므로 OpenAI key는 브라우저에
+노출되지 않는다.
 
 ## GitHub Pages에서 API 서버 연결하기
 
