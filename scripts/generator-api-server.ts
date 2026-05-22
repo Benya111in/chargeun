@@ -417,7 +417,7 @@ function serveGeneratedAsset(
 
   setGeneratedAssetCors(req, res)
   res.setHeader('accept-ranges', 'bytes')
-  res.setHeader('cache-control', 'public, max-age=3600')
+  res.setHeader('cache-control', 'no-store')
   res.setHeader('content-type', mimeTypeForFile(filePath))
 
   const range = req.headers.range

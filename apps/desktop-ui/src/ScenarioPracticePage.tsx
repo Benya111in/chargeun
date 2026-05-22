@@ -63,26 +63,25 @@ type ScenarioReviewGroup = {
 }
 
 export default function ScenarioPracticePage() {
+  const routeScenarioId = getScenarioIdFromPath()
   const [remoteGeneratedScenario, setRemoteGeneratedScenario] =
     useState<TheaterShow | null>(null)
   const [isLoadingGeneratedScenario, setIsLoadingGeneratedScenario] =
     useState(false)
-  const scenario = selectScenarioFromPath() ?? remoteGeneratedScenario
+  const localScenario = selectScenarioFromPath()
+  const scenario = routeScenarioId.startsWith('generated-')
+    ? (remoteGeneratedScenario ?? localScenario)
+    : localScenario
 
   useEffect(() => {
-    if (scenario) {
-      return
-    }
-
-    const id = getScenarioIdFromPath()
-    if (!id.startsWith('generated-')) {
+    if (!routeScenarioId.startsWith('generated-')) {
       return
     }
 
     let isActive = true
     setIsLoadingGeneratedScenario(true)
 
-    loadGeneratedScenarioFromAsset(id)
+    loadGeneratedScenarioFromAsset(routeScenarioId)
       .then((loadedScenario) => {
         if (isActive) {
           setRemoteGeneratedScenario(loadedScenario)
@@ -102,7 +101,7 @@ export default function ScenarioPracticePage() {
     return () => {
       isActive = false
     }
-  }, [scenario])
+  }, [routeScenarioId])
 
   if (!scenario) {
     return (
@@ -185,31 +184,34 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     playbackArmTimerRef.current = null
   }, [])
 
-  const clampSegmentPlayback = useCallback((video: HTMLVideoElement) => {
-    const playbackWindow = playbackWindowRef.current
+  const clampSegmentPlayback = useCallback(
+    (video: HTMLVideoElement) => {
+      const playbackWindow = playbackWindowRef.current
 
-    if (!playbackWindow || stageRef.current !== 'playback') {
-      return false
-    }
+      if (!playbackWindow || stageRef.current !== 'playback') {
+        return false
+      }
 
-    if (!playbackWindow.armed) {
-      return false
-    }
+      if (!playbackWindow.armed) {
+        return false
+      }
 
-    if (video.currentTime < playbackWindow.pauseAtSec) {
-      return false
-    }
+      if (video.currentTime < playbackWindow.pauseAtSec) {
+        return false
+      }
 
-    video.pause()
-    video.currentTime = playbackWindow.freezeSec
-    autoPauseSegmentRef.current = playbackWindow.segmentId
-    pendingPlaybackIndexRef.current = null
-    playbackWindowRef.current = null
-    clearPlaybackArmTimer()
-    setStage('explanation')
+      video.pause()
+      video.currentTime = playbackWindow.freezeSec
+      autoPauseSegmentRef.current = playbackWindow.segmentId
+      pendingPlaybackIndexRef.current = null
+      playbackWindowRef.current = null
+      clearPlaybackArmTimer()
+      setStage('explanation')
 
-    return true
-  }, [clearPlaybackArmTimer])
+      return true
+    },
+    [clearPlaybackArmTimer],
+  )
 
   const startBoundaryMonitor = useCallback(() => {
     clearBoundaryMonitor()
@@ -278,7 +280,9 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
       } catch {
         cleanup()
         playbackWindowRef.current = null
-        setPlaybackNotice('이 장면 위치로 이동하지 못했습니다. 다시 눌러 주세요.')
+        setPlaybackNotice(
+          '이 장면 위치로 이동하지 못했습니다. 다시 눌러 주세요.',
+        )
         setStage('ready')
         return
       }
