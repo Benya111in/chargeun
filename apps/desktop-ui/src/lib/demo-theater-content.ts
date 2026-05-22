@@ -81,11 +81,19 @@ export type PracticeAnswerOption = LearningTeachBack['options'][number] & {
 
 export type TheaterShow = {
   accentClassName: string
+  generatedArtifactManifest?: {
+    provider?: 'cloudflare-r2' | 'render-local'
+    qualityVersion?: string
+    scenarioJsonUrl?: string
+    sourceVideoUrl?: string
+  }
   generatedSourceTitle?: string
   generatedSourceUrl?: string
   generatedThumbnailUrl?: string
   generatedTopicLabel?: string
   generationEvidenceReport?: {
+    issues?: Array<{ code?: string; message?: string; severity?: string }>
+    passed?: boolean
     warnings?: string[]
   }
   homeNote?: string

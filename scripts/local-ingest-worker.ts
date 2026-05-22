@@ -4,6 +4,14 @@ import { basename, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { generatePracticeFromUrl } from '../api/generate-practice-from-url'
+import {
+  buildGeneratedArtifactKey,
+  buildGeneratedArtifactManifest,
+  contentTypeForGeneratedArtifact,
+  getR2ConfigFromEnv,
+  uploadFileToR2,
+  verifyPublicArtifactUrl,
+} from './generated-artifact-store'
 
 const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const generatedDir = join(rootDir, 'apps/desktop-ui/public/generated')
@@ -74,12 +82,44 @@ async function processJob(job: WorkerJob) {
     if (!record.customScenario) {
       throw new Error('customScenario 생성 결과가 없습니다.')
     }
+
+    const fileNames = await collectGeneratedFiles(job.id)
+    const r2Config = getR2ConfigFromEnv()
+    const artifactManifest = r2Config
+      ? buildGeneratedArtifactManifest({
+          baseUrl: r2Config.publicBaseUrl,
+          fileNames,
+          jobId: job.id,
+          provider: 'cloudflare-r2',
+        })
+      : buildGeneratedArtifactManifest({
+          baseUrl: apiBase,
+          fileNames,
+          jobId: job.id,
+          provider: 'render-local',
+        })
+
+    if (record.customScenario.videoPlaybackKind !== 'youtube') {
+      record.customScenario.videoSrc = artifactManifest.sourceVideoUrl
+    }
+    const customScenarioRecord = record.customScenario as Record<
+      string,
+      unknown
+    >
+    customScenarioRecord.generatedArtifactManifest = artifactManifest
+
     await writeFile(
       join(generatedDir, job.id, 'scenario.json'),
       JSON.stringify(record.customScenario, null, 2),
     )
 
-    await uploadGeneratedFiles(job.id)
+    if (r2Config) {
+      await uploadGeneratedFilesToR2(job.id, fileNames, r2Config)
+      await verifyManifestArtifacts(artifactManifest)
+    } else {
+      await uploadGeneratedFiles(job.id, fileNames)
+    }
+
     await postWorkerJson(`/api/worker/jobs/${job.id}/complete`, {
       record,
     })
@@ -90,9 +130,10 @@ async function processJob(job: WorkerJob) {
       error instanceof Error
         ? error.message
         : '로컬 worker가 생성 작업을 실패했습니다.'
-    await postWorkerJson(`/api/worker/jobs/${job.id}/fail`, { message }).catch(
-      () => undefined,
-    )
+    const endpoint = isQualityGateFailure(message) ? 'block' : 'fail'
+    await postWorkerJson(`/api/worker/jobs/${job.id}/${endpoint}`, {
+      message,
+    }).catch(() => undefined)
     console.error(`Failed ${job.id}: ${message}`)
   }
 }
@@ -118,7 +159,7 @@ async function fetchNextJob(): Promise<WorkerJob | null> {
   return payload.job ?? null
 }
 
-async function uploadGeneratedFiles(jobId: string) {
+async function collectGeneratedFiles(jobId: string) {
   const jobDir = join(generatedDir, jobId)
   const files = await readdir(jobDir)
   const uploadable = files.filter(isUploadableGeneratedFile)
@@ -131,8 +172,45 @@ async function uploadGeneratedFiles(jobId: string) {
     throw new Error('source.mp4 생성 파일이 없습니다.')
   }
 
-  for (const fileName of uploadable) {
+  return uploadable
+}
+
+async function uploadGeneratedFiles(jobId: string, fileNames: string[]) {
+  const jobDir = join(generatedDir, jobId)
+
+  for (const fileName of fileNames) {
     await uploadGeneratedFile(jobId, join(jobDir, fileName))
+  }
+}
+
+async function uploadGeneratedFilesToR2(
+  jobId: string,
+  fileNames: string[],
+  config: NonNullable<ReturnType<typeof getR2ConfigFromEnv>>,
+) {
+  const jobDir = join(generatedDir, jobId)
+
+  for (const fileName of fileNames) {
+    await uploadFileToR2({
+      config,
+      contentType: contentTypeForGeneratedArtifact(fileName),
+      filePath: join(jobDir, fileName),
+      key: buildGeneratedArtifactKey(jobId, fileName),
+    })
+  }
+}
+
+async function verifyManifestArtifacts(manifest: {
+  scenarioJsonUrl: string
+  sourceVideoUrl: string
+}) {
+  const [scenarioOk, videoOk] = await Promise.all([
+    verifyPublicArtifactUrl(manifest.scenarioJsonUrl),
+    verifyPublicArtifactUrl(manifest.sourceVideoUrl),
+  ])
+
+  if (!scenarioOk || !videoOk) {
+    throw new Error('R2 공개 artifact HEAD 확인에 실패했습니다.')
   }
 }
 
@@ -210,6 +288,12 @@ function contentTypeForFile(fileName: string) {
   }
 
   return 'application/octet-stream'
+}
+
+function isQualityGateFailure(message: string) {
+  return /자동 생성 품질 검사|학습 품질 검사|local learning-quality validation/iu.test(
+    message,
+  )
 }
 
 function normalizeApiBase(input: string) {

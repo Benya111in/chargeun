@@ -335,4 +335,75 @@ describe('URL practice generation quality gate', () => {
       'visual_caption_boundary_merged',
     )
   })
+
+  it('blocks action scenes without an explicit reason track', () => {
+    const cues = __testGeneratePracticeFromUrl.parseVtt(stormSafetyVtt)
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('호우 태풍')
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      hazard,
+      jobId: 'generated-test-missing-reason',
+      sourceTitle: '호우·태풍 안전예방수칙',
+      sourceUrl: 'https://www.youtube.com/watch?v=IiVsojHcoEo',
+      videoSrc: '/generated/generated-test-missing-reason/source.mp4',
+    })
+    const firstActionIndex = scenario.segments.findIndex(
+      (segment) => segment.practiceMode === 'action',
+    )
+    const missingReasonScenario = {
+      ...scenario,
+      segments: scenario.segments.map((segment, index) =>
+        index === firstActionIndex
+          ? {
+              ...segment,
+              actionReasons: [],
+            }
+          : segment,
+      ),
+    }
+    const report =
+      __testGeneratePracticeFromUrl.validateGeneratedScenarioForPublish(
+        missingReasonScenario,
+        cues,
+      )
+
+    expect(report.passed).toBe(false)
+    expect(report.issues.map((issue) => issue.code)).toContain(
+      'missing_action_reason',
+    )
+  })
+
+  it('blocks scenes that drop required source keywords from learner and teacher text', () => {
+    const cues = __testGeneratePracticeFromUrl.parseVtt(stormSafetyVtt)
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('호우 태풍')
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      hazard,
+      jobId: 'generated-test-missing-keyword',
+      sourceTitle: '호우·태풍 안전예방수칙',
+      sourceUrl: 'https://www.youtube.com/watch?v=IiVsojHcoEo',
+      videoSrc: '/generated/generated-test-missing-keyword/source.mp4',
+    })
+    const missingKeywordScenario = {
+      ...scenario,
+      segments: scenario.segments.map((segment, index) =>
+        index === 0
+          ? {
+              ...segment,
+              requiredLearnerKeywords: ['반드시남아야할단어'],
+            }
+          : segment,
+      ),
+    }
+    const report =
+      __testGeneratePracticeFromUrl.validateGeneratedScenarioForPublish(
+        missingKeywordScenario,
+        cues,
+      )
+
+    expect(report.passed).toBe(false)
+    expect(report.issues.map((issue) => issue.code)).toContain(
+      'missing_required_keyword',
+    )
+  })
 })

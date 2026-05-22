@@ -7,6 +7,7 @@ export type GeneratedScenarioRecord = {
   baseScenarioId: string
   createdAt: string
   customScenario?: TheaterShow
+  generatedArtifactManifest?: TheaterShow['generatedArtifactManifest']
   id: string
   matchBasis: 'metadata' | 'url'
   sourceUrl: string
@@ -135,7 +136,9 @@ export function matchUrlToScenario(
 
     if (
       metadataHaystack &&
-      item.keywords.some((keyword) => includesKeyword(metadataHaystack, keyword))
+      item.keywords.some((keyword) =>
+        includesKeyword(metadataHaystack, keyword),
+      )
     ) {
       return normalizeMatch({ ...item.match, matchBasis: 'metadata' })
     }
@@ -187,7 +190,9 @@ export function saveGeneratedScenario(record: GeneratedScenarioRecord) {
 }
 
 export function loadGeneratedScenario(id: string) {
-  return loadGeneratedScenarioRecords().find((record) => record.id === id) ?? null
+  return (
+    loadGeneratedScenarioRecords().find((record) => record.id === id) ?? null
+  )
 }
 
 export function loadGeneratedScenarioRecords(): GeneratedScenarioRecord[] {
@@ -278,7 +283,8 @@ function normalizeMatch(match: UrlScenarioMatch): UrlScenarioMatch | null {
 }
 
 function resolveBaseScenario(scenarioId: string) {
-  const scenario = learningScenarios.find((item) => item.id === scenarioId) ?? null
+  const scenario =
+    learningScenarios.find((item) => item.id === scenarioId) ?? null
 
   if (scenario?.localOnly && !isLocalSeasonalEnabled()) {
     return null

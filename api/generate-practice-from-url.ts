@@ -840,7 +840,7 @@ export async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
       videoSrc: videoSource.videoSrc,
       youtubeVideoId: videoSource.youtubeVideoId,
     })
-    const qualityReport = auditGeneratedScenario(
+    const qualityReport = validateGeneratedScenarioForPublish(
       scenario,
       cues,
       scenario.generationEvidenceReport,
@@ -2376,6 +2376,8 @@ function auditGeneratedScenario(
     const durationMs = segment.endMs - segment.startMs
     const topics = segmentTopics(segment)
     const learnerTexts = learnerVisibleTexts(segment)
+    const learnerText = learnerTexts.join(' ')
+    const teacherText = segment.teacherGuide?.script ?? ''
     const previous = scenario.segments[index - 1]
 
     if (durationMs <= 0) {
@@ -2423,11 +2425,47 @@ function auditGeneratedScenario(
       )
     }
 
+    if (
+      segment.practiceMode === 'action' &&
+      segment.actionReasons.length === 0
+    ) {
+      addIssue(
+        'blocker',
+        'missing_action_reason',
+        '행동 장면인데 이유 설명이 없습니다.',
+        segment.id,
+      )
+    }
+
     if (segment.practiceMode === 'action' && !hasGeneratedDoNotTrack(segment)) {
       addIssue(
         'blocker',
         'missing_do_not_track',
         '행동 장면인데 하지 말아요 트랙이 없습니다.',
+        segment.id,
+      )
+    }
+
+    if (
+      segment.practiceMode === 'action' &&
+      !segment.learnerSequence.some((step) => step.kind === 'situation')
+    ) {
+      addIssue(
+        'blocker',
+        'missing_situation_track',
+        '행동 장면인데 상황 카드가 없습니다.',
+        segment.id,
+      )
+    }
+
+    if (
+      segment.practiceMode === 'action' &&
+      !segment.learnerSequence.some((step) => step.kind === 'action')
+    ) {
+      addIssue(
+        'blocker',
+        'missing_action_track',
+        '행동 장면인데 해야 할 일 카드가 없습니다.',
         segment.id,
       )
     }
@@ -2459,6 +2497,20 @@ function auditGeneratedScenario(
         '확인 질문의 정답이 정확히 1개가 아닙니다.',
         segment.id,
       )
+    }
+
+    for (const keyword of segment.requiredLearnerKeywords ?? []) {
+      if (
+        keyword.trim() &&
+        !textContainsKeyword(`${learnerText} ${teacherText}`, keyword)
+      ) {
+        addIssue(
+          'blocker',
+          'missing_required_keyword',
+          `핵심 단어 "${keyword}"가 학습자 문구나 진행자 설명에 남지 않았습니다.`,
+          segment.id,
+        )
+      }
     }
 
     for (const text of learnerTexts) {
@@ -2524,6 +2576,19 @@ function auditGeneratedScenario(
   }
 }
 
+function validateGeneratedScenarioForPublish(
+  scenario: ReturnType<typeof buildScenario>,
+  cues: CaptionCue[],
+  evidenceReport = buildGenerationEvidenceReport({
+    cues,
+    rawCues: cues,
+    sceneCutCandidatesMs: [],
+    videoProbe: { durationMs: null, frameRate: null },
+  }),
+) {
+  return auditGeneratedScenario(scenario, cues, evidenceReport)
+}
+
 function hasGeneratedDoNotTrack(segment: GeneratedPracticeSegment) {
   const structuredExplanation = segment.structuredExplanation as {
     tracks?: { doNot?: unknown }
@@ -2576,6 +2641,22 @@ function learnerVisibleTexts(segment: GeneratedPracticeSegment) {
       option.label,
     ]),
   ].filter(Boolean)
+}
+
+function textContainsKeyword(text: string, keyword: string) {
+  const normalizedText = normalizeForKeywordSearch(text)
+  const normalizedKeyword = normalizeForKeywordSearch(keyword)
+
+  return Boolean(
+    normalizedKeyword && normalizedText.includes(normalizedKeyword),
+  )
+}
+
+function normalizeForKeywordSearch(text: string) {
+  return normalizeCueText(text)
+    .replace(/\s+/gu, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .toLowerCase()
 }
 
 function isMeaningfulLearningCue(cue: CaptionCue) {
@@ -3936,6 +4017,7 @@ export const __testGeneratePracticeFromUrl = {
   detectHazard,
   parseVtt,
   topicKeyForCueText,
+  validateGeneratedScenarioForPublish,
 }
 
 function runCommandWithOutput(command: string, args: string[]) {

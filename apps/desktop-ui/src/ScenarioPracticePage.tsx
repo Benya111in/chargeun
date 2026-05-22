@@ -24,8 +24,6 @@ import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 import { appHref, getAppRoute, publicAssetSrc } from './lib/routes'
 import { cn } from './lib/utils'
 import {
-  loadGeneratedScenario,
-  saveGeneratedScenario,
   toGeneratedTheaterShow,
   type GeneratedScenarioRecord,
 } from './lib/generated-scenario'
@@ -39,6 +37,7 @@ const segmentStartGuardSec = 0.02
 const scenarioAliases: Record<string, string> = {
   'earthquake-review-flow': 'earthquake-protect-flow',
 }
+const generatedQualityVersion = 'quality-v1'
 const defaultSurveyFormUrl = 'https://forms.gle/nzCofnS9KosQ3X566'
 const surveyFormUrl =
   import.meta.env.VITE_SURVEY_FORM_URL?.trim() || defaultSurveyFormUrl
@@ -1523,12 +1522,13 @@ function getReviewSituationText(segment: TheaterSegment) {
 
 function selectScenarioFromPath() {
   const id = getScenarioIdFromPath()
+  if (id.startsWith('generated-')) {
+    return null
+  }
 
   const canonicalId = scenarioAliases[id] ?? id
 
-  const scenario =
-    learningScenarios.find((item) => item.id === canonicalId) ??
-    loadGeneratedScenarioFromId(canonicalId)
+  const scenario = learningScenarios.find((item) => item.id === canonicalId)
 
   if (scenario?.localOnly && !isLocalSeasonalEnabled()) {
     return null
@@ -1547,35 +1547,18 @@ function getScenarioIdFromPath() {
       : defaultScenarioId
 }
 
-function loadGeneratedScenarioFromId(id: string) {
-  if (!id.startsWith('generated-')) {
-    return null
-  }
-
-  const record = loadGeneratedScenario(id)
-
-  if (!record) {
-    return null
-  }
-
-  return toGeneratedTheaterShow(record)
-}
-
 async function loadGeneratedScenarioFromAsset(id: string) {
   const config = getGeneratorApiConfig()
   const apiBase = config.apiBase.replace(/\/+$/u, '')
-  const assetPath = `/generated/${encodeURIComponent(id)}/scenario.json`
-  const response = await fetchGeneratedScenarioAsset(assetPath, apiBase)
+  const response = await fetchGeneratedScenarioAsset(id, apiBase)
 
   if (!response) {
     return null
   }
 
   const customScenario = response.scenario
-  if (response.source === 'static') {
-    customScenario.videoSrc = publicAssetSrc(
-      `/generated/${encodeURIComponent(id)}/source.mp4`,
-    )
+  if (!isAbsoluteHttpUrl(customScenario.videoSrc)) {
+    customScenario.videoSrc = response.sourceVideoUrl
   }
   const record: GeneratedScenarioRecord = {
     baseScenarioId: 'local-generated-video',
@@ -1589,24 +1572,52 @@ async function loadGeneratedScenarioFromAsset(id: string) {
     topicLabel: customScenario.generatedTopicLabel ?? '재난안전 영상 학습',
     version: 1,
   }
-  saveGeneratedScenario(record)
 
   return toGeneratedTheaterShow(record)
 }
 
-async function fetchGeneratedScenarioAsset(assetPath: string, apiBase: string) {
+async function fetchGeneratedScenarioAsset(id: string, apiBase: string) {
+  const encodedId = encodeURIComponent(id)
+  const qualityScenarioPath = `/generated/${encodedId}/${generatedQualityVersion}/scenario.json`
+  const qualityVideoPath = `/generated/${encodedId}/${generatedQualityVersion}/source.mp4`
+  const legacyScenarioPath = `/generated/${encodedId}/scenario.json`
+  const legacyVideoPath = `/generated/${encodedId}/source.mp4`
+  const generatedAssetBase = normalizeGeneratedAssetBase(
+    import.meta.env.VITE_GENERATED_ASSET_BASE,
+  )
   const urls = [
-    {
-      source: 'static' as const,
-      url: publicAssetSrc(assetPath),
-    },
-    apiBase
-      ? {
-          source: 'remote' as const,
-          url: `${apiBase}${assetPath}`,
-        }
+    generatedAssetBase
+      ? buildScenarioAssetCandidate(
+          `${generatedAssetBase}${qualityScenarioPath}`,
+          `${generatedAssetBase}${qualityVideoPath}`,
+          'canonical',
+        )
       : null,
-  ].filter((item) => item !== null)
+    apiBase
+      ? buildScenarioAssetCandidate(
+          `${apiBase}${qualityScenarioPath}`,
+          `${apiBase}${qualityVideoPath}`,
+          'remote',
+        )
+      : null,
+    buildScenarioAssetCandidate(
+      publicAssetSrc(qualityScenarioPath),
+      publicAssetSrc(qualityVideoPath),
+      'static',
+    ),
+    apiBase
+      ? buildScenarioAssetCandidate(
+          `${apiBase}${legacyScenarioPath}`,
+          `${apiBase}${legacyVideoPath}`,
+          'legacy',
+        )
+      : null,
+    buildScenarioAssetCandidate(
+      publicAssetSrc(legacyScenarioPath),
+      publicAssetSrc(legacyVideoPath),
+      'legacy',
+    ),
+  ].filter((item): item is ScenarioAssetCandidate => item !== null)
 
   for (const candidate of urls) {
     const assetUrl = new URL(
@@ -1624,6 +1635,7 @@ async function fetchGeneratedScenarioAsset(assetPath: string, apiBase: string) {
       return {
         scenario: (await response.json()) as TheaterShow,
         source: candidate.source,
+        sourceVideoUrl: candidate.sourceVideoUrl,
       }
     } catch {
       continue
@@ -1631,6 +1643,36 @@ async function fetchGeneratedScenarioAsset(assetPath: string, apiBase: string) {
   }
 
   return null
+}
+
+type ScenarioAssetCandidate = {
+  source: 'canonical' | 'legacy' | 'remote' | 'static'
+  sourceVideoUrl: string
+  url: string
+}
+
+function buildScenarioAssetCandidate(
+  url: string,
+  sourceVideoUrl: string,
+  source: ScenarioAssetCandidate['source'],
+): ScenarioAssetCandidate {
+  return {
+    source,
+    sourceVideoUrl,
+    url,
+  }
+}
+
+function normalizeGeneratedAssetBase(input: unknown) {
+  if (typeof input !== 'string') {
+    return ''
+  }
+
+  return input.trim().replace(/\/+$/u, '')
+}
+
+function isAbsoluteHttpUrl(input: string) {
+  return /^https?:\/\//iu.test(input)
 }
 
 function getNextScenario(currentScenario: TheaterShow) {

@@ -1,6 +1,7 @@
 # KNOWN_ISSUES
 
 - 새 학습 MVP는 실제 느린학습자/보호자/교사 대상 사용성 검증 전이다. 현재는 리서치 기반 제품 방향과 구현된 학습 흐름까지만 갖췄다.
+- URL 생성물은 이제 `published` 상태만 학습 화면으로 열도록 막았지만, 실제 운영에서 canonical R2 저장을 쓰려면 Render/worker에 `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL`을 설정해야 한다. R2가 없으면 현재 worker는 개발/임시용 Render local artifact 경로로만 fallback한다.
 - 공개 체험 링크 마지막 설문 모달은 기본 구글폼 URL에 연결됐다. 배포마다 다른 설문을 쓰려면 `VITE_SURVEY_FORM_URL`로 덮어써야 한다.
 - 6개 분야별 에이전트 QA와 Chromium/Playwright 재검증은 통과했지만, 실제 느린학습자 대상 이해도·불안·일반화 검증은 아직 남아 있다.
 - `StructuredLearningExplanation v1`은 deterministic adapter와 schema 검증까지 연결됐지만, 실제 LLM structured output 생성 경로는 아직 내부 QA 실험 단계로 남아 있다.

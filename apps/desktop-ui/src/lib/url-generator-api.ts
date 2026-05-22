@@ -154,7 +154,19 @@ async function queueGeneratedPracticeJob(
     )
   }
 
-  if (payload.record) {
+  if (payload.job.status === 'blocked' || payload.job.status === 'failed') {
+    throw new Error(
+      payload.job.message ||
+        '이 영상은 자동 생성 품질 검사에서 막혀 학습 화면으로 열지 않습니다.',
+    )
+  }
+
+  if (
+    payload.record &&
+    (payload.job.status === 'published' ||
+      payload.job.status === 'approved' ||
+      payload.job.status === 'completed')
+  ) {
     return {
       completedRecord: payload.record,
       id: payload.job.id,
@@ -194,7 +206,15 @@ async function pollGeneratedPracticeJob(
     const payload = (await response.json().catch(() => ({}))) as {
       job?: {
         message?: string | null
-        status?: 'completed' | 'failed' | 'processing' | 'queued'
+        status?:
+          | 'approved'
+          | 'blocked'
+          | 'completed'
+          | 'failed'
+          | 'needs_repair'
+          | 'processing'
+          | 'published'
+          | 'queued'
       }
       message?: string
       record?: GeneratedScenarioRecord | null
@@ -206,14 +226,19 @@ async function pollGeneratedPracticeJob(
       )
     }
 
-    if (payload.job?.status === 'completed' && payload.record) {
+    if (
+      (payload.job?.status === 'published' ||
+        payload.job?.status === 'approved' ||
+        payload.job?.status === 'completed') &&
+      payload.record
+    ) {
       return { record: payload.record }
     }
 
-    if (payload.job?.status === 'failed') {
+    if (payload.job?.status === 'failed' || payload.job?.status === 'blocked') {
       throw new Error(
         payload.job.message ||
-          '생성 작업이 실패했습니다. 맥북 worker 로그를 확인해 주세요.',
+          '생성 작업이 품질 검사에서 막혔습니다. 실패한 결과는 학습 화면으로 열지 않습니다.',
       )
     }
   }

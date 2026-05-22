@@ -1,5 +1,20 @@
 # PROGRESS
 
+## 2026-05-22
+
+### 완료
+
+- `docs/GENERATED_SCENARIO_QUALITY_CONTRACT.md`를 추가해 URL 생성물 공개 기준을 `Generated Scenario Quality Contract v1`로 고정했다.
+- 생성 job 상태를 `queued`, `processing`, `needs_repair`, `blocked`, `approved`, `published` 중심으로 정리하고, worker 완료 시 `generationQualityReport.passed`와 artifact HEAD 확인을 통과해야만 `published`로 바꾸도록 했다.
+- local ingest worker가 Cloudflare R2 환경변수(`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL`)가 있으면 `/generated/{id}/quality-v1/...` 경로로 `source.mp4`, `scenario.json`, VTT/evidence 파일을 업로드하도록 추가했다.
+- `/scenario/generated-*`는 더 이상 브라우저 localStorage를 학습 화면 source of truth로 쓰지 않고, `quality-v1` canonical artifact 또는 published 서버 artifact를 우선 읽는다.
+- URL 생성 품질 게이트에 행동 장면의 이유 누락과 핵심 단어 누락을 blocker로 추가하고 회귀 테스트를 붙였다.
+
+### 검증
+
+- `pnpm --filter desktop-ui test -- src/lib/url-generation-quality.test.ts src/lib/generated-scenario.test.ts`
+- `pnpm --filter desktop-ui typecheck`
+
 ## 2026-05-21
 
 ### 완료

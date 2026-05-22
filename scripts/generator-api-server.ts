@@ -18,19 +18,33 @@ import { fileURLToPath } from 'node:url'
 import generatePracticeFromUrl, {
   buildGeneratedPracticeId,
 } from '../api/generate-practice-from-url'
+import {
+  generatedQualityVersion,
+  isR2Configured,
+  type GeneratedArtifactManifest,
+  verifyPublicArtifactUrl,
+} from './generated-artifact-store'
 
 const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const generatedDir = join(rootDir, 'apps/desktop-ui/public/generated')
 const port = Number(process.env.PORT || 10000)
 const processingLeaseMs = 45 * 60 * 1000
 
-type GenerationJobStatus = 'completed' | 'failed' | 'processing' | 'queued'
+type GenerationJobStatus =
+  | 'approved'
+  | 'blocked'
+  | 'failed'
+  | 'needs_repair'
+  | 'processing'
+  | 'published'
+  | 'queued'
 
 type GenerationJob = {
   clientToken: string
   createdAt: string
   id: string
   message?: string
+  qualityReport?: Record<string, unknown>
   record?: Record<string, unknown>
   sourceUrl: string
   status: GenerationJobStatus
@@ -65,6 +79,8 @@ const server = createServer(async (req, res) => {
         generationModel: process.env.OPENAI_GENERATION_MODEL || 'gpt-5.5',
         hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
         publicGeneratorApiBase: process.env.PUBLIC_GENERATOR_API_BASE || null,
+        qualityVersion: generatedQualityVersion,
+        r2Configured: isR2Configured(),
         runtimeVersion:
           process.env.RENDER_GIT_COMMIT?.slice(0, 7) ||
           process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
@@ -332,14 +348,104 @@ async function handleWorkerJobs(
       })
     }
 
+    try {
+      await assertPublishableRecord(jobId, record)
+    } catch (error) {
+      job.record = record
+      job.qualityReport = extractQualityReport(record)
+      job.status = 'blocked'
+      job.updatedAt = new Date().toISOString()
+      job.message =
+        error instanceof Error
+          ? error.message
+          : '생성 결과가 공개 품질 검사를 통과하지 못했습니다.'
+
+      return sendApiJson(req, res, 422, {
+        error: 'publish_gate_failed',
+        job: publicGenerationJob(job, false),
+        message: job.message,
+      })
+    }
+
     job.record = record
-    job.status = 'completed'
+    job.qualityReport = extractQualityReport(record)
+    job.status = 'published'
     job.updatedAt = new Date().toISOString()
     job.message = undefined
 
     return sendApiJson(req, res, 200, {
       job: publicGenerationJob(job, false),
       record: job.record,
+    })
+  }
+
+  const needsRepairMatch = url.pathname.match(
+    /^\/api\/worker\/jobs\/([^/]+)\/needs-repair$/,
+  )
+  if (needsRepairMatch) {
+    if (req.method !== 'POST') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    const jobId = decodeURIComponent(needsRepairMatch[1])
+    const job = generationJobs.get(jobId)
+    if (!job) {
+      return sendApiJson(req, res, 404, {
+        error: 'job_not_found',
+        message: '생성 작업을 찾지 못했습니다.',
+      })
+    }
+
+    const body = await readJsonBody(req).catch(() => ({}))
+    job.message =
+      typeof body?.message === 'string' && body.message.trim()
+        ? body.message.trim()
+        : '자동 품질 검사에서 재생성이 필요합니다.'
+    job.qualityReport = isRecord(body?.qualityReport)
+      ? body.qualityReport
+      : undefined
+    job.status = 'needs_repair'
+    job.updatedAt = new Date().toISOString()
+
+    return sendApiJson(req, res, 200, {
+      job: publicGenerationJob(job, false),
+    })
+  }
+
+  const blockMatch = url.pathname.match(/^\/api\/worker\/jobs\/([^/]+)\/block$/)
+  if (blockMatch) {
+    if (req.method !== 'POST') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    const jobId = decodeURIComponent(blockMatch[1])
+    const job = generationJobs.get(jobId)
+    if (!job) {
+      return sendApiJson(req, res, 404, {
+        error: 'job_not_found',
+        message: '생성 작업을 찾지 못했습니다.',
+      })
+    }
+
+    const body = await readJsonBody(req).catch(() => ({}))
+    job.message =
+      typeof body?.message === 'string' && body.message.trim()
+        ? body.message.trim()
+        : '자동 생성 품질 검사에서 막혔습니다.'
+    job.qualityReport = isRecord(body?.qualityReport)
+      ? body.qualityReport
+      : undefined
+    job.status = 'blocked'
+    job.updatedAt = new Date().toISOString()
+
+    return sendApiJson(req, res, 200, {
+      job: publicGenerationJob(job, false),
     })
   }
 
@@ -605,11 +711,90 @@ function publicGenerationJob(job: GenerationJob, includeClientToken: boolean) {
     createdAt: job.createdAt,
     id: job.id,
     message: job.message ?? null,
+    qualityReport: job.qualityReport ?? null,
     sourceUrl: job.sourceUrl,
     status: job.status,
     updatedAt: job.updatedAt,
     ...(includeClientToken ? { clientToken: job.clientToken } : {}),
   }
+}
+
+async function assertPublishableRecord(
+  jobId: string,
+  record: Record<string, unknown>,
+) {
+  const customScenario = isRecord(record.customScenario)
+    ? record.customScenario
+    : null
+  if (!customScenario) {
+    throw new Error('생성 결과에 학습 시나리오가 없습니다.')
+  }
+
+  const qualityReport = extractQualityReport(record)
+  if (!qualityReport || qualityReport.passed !== true) {
+    throw new Error('생성 결과가 품질 검사를 통과하지 못했습니다.')
+  }
+
+  const artifactManifest = extractArtifactManifest(record)
+  if (artifactManifest) {
+    const [scenarioOk, videoOk] = await Promise.all([
+      verifyPublicArtifactUrl(artifactManifest.scenarioJsonUrl),
+      verifyPublicArtifactUrl(artifactManifest.sourceVideoUrl),
+    ])
+
+    if (!scenarioOk || !videoOk) {
+      throw new Error('생성 artifact 공개 URL 확인에 실패했습니다.')
+    }
+
+    return
+  }
+
+  const scenarioPath = safeGeneratedUploadPath(jobId, 'scenario.json')
+  const sourcePath = safeGeneratedUploadPath(jobId, 'source.mp4')
+  if (
+    !scenarioPath ||
+    !sourcePath ||
+    !existsSync(scenarioPath) ||
+    !existsSync(sourcePath)
+  ) {
+    throw new Error('생성 artifact가 서버에 없습니다.')
+  }
+}
+
+function extractQualityReport(record: Record<string, unknown>) {
+  const customScenario = isRecord(record.customScenario)
+    ? record.customScenario
+    : null
+  const qualityReport = isRecord(customScenario?.generationQualityReport)
+    ? customScenario.generationQualityReport
+    : null
+
+  return qualityReport
+}
+
+function extractArtifactManifest(
+  record: Record<string, unknown>,
+): GeneratedArtifactManifest | null {
+  const customScenario = isRecord(record.customScenario)
+    ? record.customScenario
+    : null
+  const manifest = isRecord(customScenario?.generatedArtifactManifest)
+    ? customScenario.generatedArtifactManifest
+    : null
+
+  if (
+    !manifest ||
+    typeof manifest.scenarioJsonUrl !== 'string' ||
+    typeof manifest.sourceVideoUrl !== 'string'
+  ) {
+    return null
+  }
+
+  return manifest as GeneratedArtifactManifest
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
 }
 
 function requeueExpiredProcessingJobs() {

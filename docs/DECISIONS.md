@@ -1,5 +1,17 @@
 # DECISIONS
 
+## 2026-05-22
+
+### D-080 URL 생성물 공개 여부는 deterministic validator가 결정한다
+
+- 이유: GPT-5.5가 좋은 결과를 만들 수 있어도, 장면 경계 누락, 핵심 단어 삭제, 애매한 질문, 영상/설명 불일치가 한 번이라도 학습 화면으로 공개되면 같은 문제가 반복된다.
+- 영향: URL 생성 job은 `published` 상태가 되기 전까지 학습 화면으로 열지 않는다. GPT-5.5는 생성과 재생성만 맡고, 공개 여부는 `validateGeneratedScenarioForPublish`와 서버 publish gate가 결정한다. 품질 실패는 `blocked` 또는 `needs_repair` 상태와 `qualityReport.issues[]`로 남긴다.
+
+### D-081 generated artifact의 canonical path는 `quality-v1`로 고정한다
+
+- 이유: Render 로컬 파일, GitHub Pages 정적 캐시, 브라우저 localStorage가 서로 다른 버전의 `scenario.json`과 `source.mp4`를 보여 주면 영상과 설명이 어긋난다.
+- 영향: R2가 설정된 worker는 생성물을 `/generated/{id}/quality-v1/...`에 올리고, scenario 내부 `videoSrc`도 canonical `source.mp4` URL로 고정한다. 프론트는 `VITE_GENERATED_ASSET_BASE`, API 서버의 `quality-v1`, 기존 정적 approved asset 순서로 읽되, localStorage custom scenario를 generated 학습 화면의 원본으로 쓰지 않는다.
+
 ## 2026-05-20
 
 ### D-057 browser live frame clock은 세션 기준으로 정규화한다

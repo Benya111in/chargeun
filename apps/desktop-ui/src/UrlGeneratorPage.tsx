@@ -10,7 +10,6 @@ import {
   Sparkles,
 } from 'lucide-react'
 
-import { saveGeneratedScenario } from './lib/generated-scenario'
 import { appHref } from './lib/routes'
 import {
   clearStoredGeneratorApiBase,
@@ -129,7 +128,6 @@ export default function UrlGeneratorPage() {
       }
 
       const { record } = generationResult.value
-      saveGeneratedScenario(record)
       window.location.href = appHref(`/scenario/${record.id}`)
     } catch (error) {
       setNotice(
