@@ -920,14 +920,15 @@ async function generateScenarioPlanWithOpenAI(input: {
   sourceUrl: string
   videoProbe: VideoProbe
 }): Promise<LlmScenarioPlan> {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = getOpenAiApiKey()
+  if (!apiKey) {
     throw new Error(
       'OPENAI_API_KEY가 설정되어 있지 않아 GPT-5.5 제작 에이전트를 실행하지 않았습니다.',
     )
   }
 
   const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey,
   })
   let validationFeedback = ''
   const requiredSourceTopics = buildRequiredSourceTopicEvidence(input.cues)
@@ -1826,8 +1827,13 @@ async function extractVisualCaptionEvidenceWithOpenAI(input: {
   }
 
   try {
+    const apiKey = getOpenAiApiKey()
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is missing.')
+    }
+
     const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
     })
     const response = await client.responses.create({
       input: [
@@ -3943,6 +3949,21 @@ function hashText(text: string) {
 
 function getPythonCommand() {
   return process.env.GENERATOR_PYTHON_BIN?.trim() || 'python3'
+}
+
+function getOpenAiApiKey() {
+  const raw = process.env.OPENAI_API_KEY
+  if (!raw) {
+    return null
+  }
+
+  const cleaned = raw
+    .trim()
+    .replace(/^[`'"“”‘’]+|[`'"“”‘’]+$/gu, '')
+    .replace(/[^\x20-\x7E]/gu, '')
+    .trim()
+
+  return cleaned || null
 }
 
 function getFfmpegCommand() {
