@@ -95,7 +95,9 @@ export type TheaterShow = {
   segments: TheaterSegment[]
   showOnHome?: boolean
   title: string
+  videoPlaybackKind?: 'file' | 'youtube'
   videoSrc: string
+  youtubeVideoId?: string
 }
 
 type SegmentSeed = {
@@ -3414,10 +3416,7 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
       },
       {
         actionReasons: ['물이 차면 차와 집이 위험해요.'],
-        actionSteps: [
-          '차를 높은 곳에 세워요',
-          '가스와 전기는 어른과 봐요',
-        ],
+        actionSteps: ['차를 높은 곳에 세워요', '가스와 전기는 어른과 봐요'],
         asrText:
           '차량은 높은 곳으로 옮기고 연료를 채워 둡니다. 집이 잠길 수 있으면 가스밸브와 전기 차단기는 어른이 미리 봅니다.',
         description: '차와 집도 미리 준비해요.',
@@ -3663,7 +3662,11 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
           prompt: '물이 빠진 뒤 어떤 물을 마실까요?',
           ruleIds: ['KR_HR_04'],
         }),
-        uiElements: ['가스 환기', '수돗물과 저장식수 안전 확인', '침수 음식물 금지'],
+        uiElements: [
+          '가스 환기',
+          '수돗물과 저장식수 안전 확인',
+          '침수 음식물 금지',
+        ],
       },
       {
         actionReasons: ['망가진 길은 다른 사람도 다칠 수 있어요.'],
@@ -3701,7 +3704,7 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
           },
           kind: 'person',
           prompt: '망가진 길은 누구에게 말할까요?',
-            ruleIds: ['KR_HR_05'],
+          ruleIds: ['KR_HR_05'],
         }),
         uiElements: ['관청이나 119에 신고'],
       },
@@ -3746,7 +3749,11 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
       },
       {
         actionReasons: ['바람에 물건이 날아올 수 있어요.'],
-        actionSteps: ['문과 창문을 닫아요', '집 안에 있어요', '날씨 알림을 봐요'],
+        actionSteps: [
+          '문과 창문을 닫아요',
+          '집 안에 있어요',
+          '날씨 알림을 봐요',
+        ],
         asrText:
           '태풍이 발생하면 실내에서는 문과 창문을 닫고, 외출을 하지 말며, 수시로 기상상황을 확인합니다.',
         description: '집 안에서는 문과 창문을 닫아요.',
@@ -3868,8 +3875,7 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
       {
         actionReasons: ['계곡 물은 빨리 불어날 수 있어요.'],
         actionSteps: ['산과 계곡에서 나와요', '안전한 곳으로 가요'],
-        asrText:
-          '산이나 계곡에 있는 사람은 빨리 안전한 곳으로 이동합니다.',
+        asrText: '산이나 계곡에 있는 사람은 빨리 안전한 곳으로 이동합니다.',
         description: '산과 계곡에서 나와요.',
         endMs: 75_000,
         id: 'typhoon-mountain-valley',
@@ -4025,8 +4031,7 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
       {
         actionReasons: ['밖에 오래 있으면 몸이 뜨거워져요.'],
         actionSteps: ['밖 활동을 줄여요', '시원한 곳에서 쉬어요'],
-        asrText:
-          '폭염이 발생하면 되도록 야외활동을 자제합니다.',
+        asrText: '폭염이 발생하면 되도록 야외활동을 자제합니다.',
         description: '밖 활동을 줄여요.',
         endMs: 45_000,
         id: 'heatwave-reduce-outdoor',
@@ -4351,7 +4356,11 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
       },
       {
         actionReasons: ['넘어질 때 손으로 몸을 지켜요.'],
-        actionSteps: ['따뜻한 옷을 입어요', '장갑을 껴요', '작게 천천히 걸어요'],
+        actionSteps: [
+          '따뜻한 옷을 입어요',
+          '장갑을 껴요',
+          '작게 천천히 걸어요',
+        ],
         asrText:
           '외출 시에는 내복, 목도리, 장갑 등 방한용품을 착용해 보온에 유의하고, 굽이 낮고 미끄럼이 방지되는 신발을 신은 후 평소보다 보폭을 줄여 걷는 것이 좋습니다.',
         description: '따뜻하게 입고 천천히 걸어요.',
@@ -4868,7 +4877,7 @@ function getRefinedSeasonalScenarioSeeds(): SeasonalScenarioSeed[] {
           },
           kind: 'object',
           prompt: '눈이 많이 오면 비닐하우스는 무엇을 볼까요?',
-            ruleIds: ['KR_SN_05'],
+          ruleIds: ['KR_SN_05'],
         }),
         uiElements: ['비닐하우스', '양식장 관리'],
       },

@@ -92,10 +92,13 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   const playbackWindowRef = useRef<PlaybackWindow | null>(null)
   const stageRef = useRef<PracticeStage>('ready')
   const boundaryMonitorRef = useRef<number | null>(null)
+  const youtubePlaybackTimerRef = useRef<number | null>(null)
   const [playRequestId, setPlayRequestId] = useState(0)
+  const [youtubePlaybackRequestId, setYoutubePlaybackRequestId] = useState(0)
   const [showSurveyDialog, setShowSurveyDialog] = useState(false)
   const segment = scenario.segments[segmentIndex]
   const nextPractice = getNextScenario(scenario)
+  const usesYouTubePlayback = isYouTubePlaybackScenario(scenario)
   const isFinalSegment = segmentIndex === scenario.segments.length - 1
   const reviewGroups = isFinalSegment
     ? buildScenarioReviewGroups(scenario, segmentIndex)
@@ -111,6 +114,15 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 
     window.cancelAnimationFrame(boundaryMonitorRef.current)
     boundaryMonitorRef.current = null
+  }, [])
+
+  const clearYoutubePlaybackTimer = useCallback(() => {
+    if (youtubePlaybackTimerRef.current === null) {
+      return
+    }
+
+    window.clearTimeout(youtubePlaybackTimerRef.current)
+    youtubePlaybackTimerRef.current = null
   }, [])
 
   const clampSegmentPlayback = useCallback((video: HTMLVideoElement) => {
@@ -166,6 +178,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 
   useEffect(() => {
     if (
+      usesYouTubePlayback ||
       stage !== 'playback' ||
       pendingPlaybackIndexRef.current !== segmentIndex
     ) {
@@ -216,10 +229,11 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     segmentIndex,
     stage,
     startBoundaryMonitor,
+    usesYouTubePlayback,
   ])
 
   useEffect(() => {
-    if (stage !== 'ready') {
+    if (usesYouTubePlayback || stage !== 'ready') {
       return
     }
 
@@ -232,7 +246,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 
     video.pause()
     video.currentTime = getSegmentPreviewSec(targetSegment)
-  }, [scenario.segments, segmentIndex, stage])
+  }, [scenario.segments, segmentIndex, stage, usesYouTubePlayback])
 
   useEffect(() => {
     if (stage !== 'explanation') {
@@ -247,13 +261,18 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   }, [segment.id, stage])
 
   useEffect(() => {
-    return () => clearBoundaryMonitor()
-  }, [clearBoundaryMonitor])
+    return () => {
+      clearBoundaryMonitor()
+      clearYoutubePlaybackTimer()
+    }
+  }, [clearBoundaryMonitor, clearYoutubePlaybackTimer])
 
   const playSegment = (nextIndex: number) => {
     const targetSegment = scenario.segments[nextIndex]
     const nextRequestId = playbackRequestIdRef.current + 1
 
+    clearBoundaryMonitor()
+    clearYoutubePlaybackTimer()
     playbackRequestIdRef.current = nextRequestId
     playbackWindowRef.current = buildPlaybackWindow({
       index: nextIndex,
@@ -266,6 +285,25 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     setPlaybackNotice('')
     pendingPlaybackIndexRef.current = nextIndex
     autoPauseSegmentRef.current = null
+
+    if (usesYouTubePlayback) {
+      setYoutubePlaybackRequestId(nextRequestId)
+      const playbackWindow = playbackWindowRef.current
+      const durationMs = playbackWindow
+        ? Math.max(
+            2200,
+            (playbackWindow.pauseAtSec - playbackWindow.startSec) * 1000 + 650,
+          )
+        : 5000
+
+      youtubePlaybackTimerRef.current = window.setTimeout(() => {
+        pendingPlaybackIndexRef.current = null
+        playbackWindowRef.current = null
+        setStage('explanation')
+      }, durationMs)
+      return
+    }
+
     setPlayRequestId(nextRequestId)
   }
 
@@ -274,6 +312,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     const video = videoRef.current
 
     clearBoundaryMonitor()
+    clearYoutubePlaybackTimer()
     setSegmentIndex(nextIndex)
     setStage('ready')
     setSelectedAnswerId(null)
@@ -282,7 +321,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
     pendingPlaybackIndexRef.current = null
     playbackWindowRef.current = null
 
-    if (!video) {
+    if (usesYouTubePlayback || !video) {
       return
     }
 
@@ -292,6 +331,7 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
 
   const rest = () => {
     clearBoundaryMonitor()
+    clearYoutubePlaybackTimer()
     videoRef.current?.pause()
     playbackWindowRef.current = null
     pendingPlaybackIndexRef.current = null
@@ -317,39 +357,56 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
           <section className="flex min-w-0 flex-col gap-3">
             <section className="overflow-hidden rounded-md border border-[#dfe4da] bg-black">
               <div className="relative h-[clamp(280px,39vh,520px)] bg-black">
-                <video
-                  key={scenario.id}
-                  ref={videoRef}
-                  className="h-full w-full object-contain"
-                  onEnded={(event) => {
-                    if (!clampSegmentPlayback(event.currentTarget)) {
-                      playbackWindowRef.current = null
-                      pendingPlaybackIndexRef.current = null
-                      setStage('explanation')
-                    }
-                  }}
-                  onLoadedMetadata={(event) => {
-                    event.currentTarget.currentTime =
-                      getSegmentPreviewSec(segment)
-                  }}
-                  onTimeUpdate={(event) => {
-                    if (
-                      stage === 'playback' &&
-                      autoPauseSegmentRef.current !==
-                        playbackWindowRef.current?.segmentId
-                    ) {
-                      clampSegmentPlayback(event.currentTarget)
-                    }
-                  }}
-                  playsInline
-                  poster={publicAssetSrc(scenario.posterSrc)}
-                  preload="auto"
-                >
-                  <source
-                    src={publicAssetSrc(scenario.videoSrc)}
-                    type="video/mp4"
+                {usesYouTubePlayback ? (
+                  <iframe
+                    key={`${scenario.id}-${segment.id}-${stage}-${youtubePlaybackRequestId}`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="h-full w-full"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    src={buildYouTubeFrameSrc({
+                      requestId: youtubePlaybackRequestId,
+                      scenario,
+                      segment,
+                      stage,
+                    })}
+                    title={scenario.generatedSourceTitle ?? scenario.title}
                   />
-                </video>
+                ) : (
+                  <video
+                    key={scenario.id}
+                    ref={videoRef}
+                    className="h-full w-full object-contain"
+                    onEnded={(event) => {
+                      if (!clampSegmentPlayback(event.currentTarget)) {
+                        playbackWindowRef.current = null
+                        pendingPlaybackIndexRef.current = null
+                        setStage('explanation')
+                      }
+                    }}
+                    onLoadedMetadata={(event) => {
+                      event.currentTarget.currentTime =
+                        getSegmentPreviewSec(segment)
+                    }}
+                    onTimeUpdate={(event) => {
+                      if (
+                        stage === 'playback' &&
+                        autoPauseSegmentRef.current !==
+                          playbackWindowRef.current?.segmentId
+                      ) {
+                        clampSegmentPlayback(event.currentTarget)
+                      }
+                    }}
+                    playsInline
+                    poster={publicAssetSrc(scenario.posterSrc)}
+                    preload="auto"
+                  >
+                    <source
+                      src={publicAssetSrc(scenario.videoSrc)}
+                      type="video/mp4"
+                    />
+                  </video>
+                )}
 
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/76 via-black/10 to-black/44" />
 
@@ -1207,6 +1264,76 @@ function getSegmentPreviewSec(segment: TheaterSegment) {
   }
 
   return Math.min(segment.endMs / 1000, previewMs / 1000)
+}
+
+function isYouTubePlaybackScenario(scenario: TheaterShow) {
+  return Boolean(
+    scenario.videoPlaybackKind === 'youtube' ||
+    scenario.youtubeVideoId ||
+    extractYouTubeEmbedId(scenario.videoSrc),
+  )
+}
+
+function buildYouTubeFrameSrc({
+  scenario,
+  segment,
+  stage,
+}: {
+  requestId: number
+  scenario: TheaterShow
+  segment: TheaterSegment
+  stage: PracticeStage
+}) {
+  const videoId =
+    scenario.youtubeVideoId ?? extractYouTubeEmbedId(scenario.videoSrc)
+  if (!videoId) {
+    return scenario.videoSrc
+  }
+
+  const params = new URLSearchParams({
+    controls: '1',
+    end: String(
+      Math.max(1, Math.ceil((segment.pauseMs ?? segment.endMs) / 1000)),
+    ),
+    modestbranding: '1',
+    playsinline: '1',
+    rel: '0',
+    start: String(Math.max(0, Math.floor(getSegmentStartSec(segment)))),
+  })
+
+  if (stage === 'playback') {
+    params.set('autoplay', '1')
+  }
+
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
+}
+
+function extractYouTubeEmbedId(src: string) {
+  try {
+    const url = new URL(src)
+    const host = url.hostname.toLowerCase().replace(/^www\./u, '')
+
+    if (host === 'youtu.be') {
+      return normalizeYouTubeVideoId(url.pathname.split('/').filter(Boolean)[0])
+    }
+
+    if (host !== 'youtube.com') {
+      return null
+    }
+
+    const pathParts = url.pathname.split('/').filter(Boolean)
+    const embeddedId = ['embed', 'shorts', 'live'].includes(pathParts[0] ?? '')
+      ? pathParts[1]
+      : url.searchParams.get('v')
+
+    return normalizeYouTubeVideoId(embeddedId)
+  } catch {
+    return null
+  }
+}
+
+function normalizeYouTubeVideoId(value: string | null | undefined) {
+  return value && /^[a-zA-Z0-9_-]{11}$/u.test(value) ? value : null
 }
 
 function buildScenarioReviewGroups(

@@ -124,6 +124,20 @@ type VideoProbe = {
   frameRate: number | null
 }
 
+type VideoSource =
+  | {
+      kind: 'file'
+      stableVideoPath: string
+      videoSrc: string
+      youtubeVideoId?: undefined
+    }
+  | {
+      kind: 'youtube'
+      stableVideoPath: null
+      videoSrc: string
+      youtubeVideoId: string
+    }
+
 type VisualCaptionFrame = {
   confidence: number
   hasLearningCaption: boolean
@@ -604,29 +618,101 @@ function buildGeneratedAssetUrl(
   return publicAssetBaseUrl ? `${publicAssetBaseUrl}${path}` : path
 }
 
+function buildYouTubeEmbedUrl(videoId: string) {
+  return `https://www.youtube.com/embed/${videoId}`
+}
+
+async function readCachedGeneratedRecord(
+  workDir: string,
+  jobId: string,
+  sourceUrl: string,
+) {
+  if (process.env.GENERATOR_DISABLE_CACHE === '1') {
+    return null
+  }
+
+  try {
+    const customScenario = JSON.parse(
+      await readFile(join(workDir, 'scenario.json'), 'utf8'),
+    )
+
+    return {
+      baseScenarioId: 'local-generated-video',
+      createdAt: new Date().toISOString(),
+      customScenario,
+      id: jobId,
+      matchBasis: 'metadata' as const,
+      sourceTitle: customScenario.generatedSourceTitle ?? '입력한 재난안전 영상',
+      sourceUrl,
+      thumbnailUrl: customScenario.generatedThumbnailUrl,
+      topicLabel: customScenario.generatedTopicLabel ?? '재난안전 영상 학습',
+      version: 1 as const,
+    }
+  } catch {
+    return null
+  }
+}
+
 async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
   const jobId = `generated-${hashText(sourceUrl).slice(0, 12)}`
   const workDir = join(publicGeneratedDir, jobId)
   const publicAssetBaseUrl = getPublicGeneratorApiBase(req)
+  const youtubeVideoId = extractYouTubeVideoId(sourceUrl)
+  const cachedRecord = await readCachedGeneratedRecord(workDir, jobId, sourceUrl)
+
+  if (cachedRecord) {
+    return { record: cachedRecord }
+  }
 
   await rm(workDir, { force: true, recursive: true })
   await mkdir(workDir, { recursive: true })
 
-  await downloadVideo(sourceUrl, workDir)
+  let useYouTubeEmbedFallback = Boolean(
+    youtubeVideoId && process.env.GENERATOR_FORCE_YOUTUBE_EMBED === '1',
+  )
+  if (useYouTubeEmbedFallback) {
+    await downloadYouTubeCaptionsOnly(sourceUrl, workDir)
+  } else {
+    try {
+      await downloadVideo(sourceUrl, workDir)
+    } catch (error) {
+      if (!youtubeVideoId || !isRecoverableYouTubeDownloadError(error)) {
+        throw error
+      }
+
+      await rm(workDir, { force: true, recursive: true })
+      await mkdir(workDir, { recursive: true })
+      await downloadYouTubeCaptionsOnly(sourceUrl, workDir)
+      useYouTubeEmbedFallback = true
+    }
+  }
 
   const files = await readdir(workDir)
   const info = await readInfoJson(workDir, files)
   const videoFile = findDownloadedVideo(files)
   const captionFile = findCaptionFile(files)
+  let videoSource: VideoSource
 
-  if (!videoFile) {
+  if (useYouTubeEmbedFallback && youtubeVideoId) {
+    videoSource = {
+      kind: 'youtube',
+      stableVideoPath: null,
+      videoSrc: buildYouTubeEmbedUrl(youtubeVideoId),
+      youtubeVideoId,
+    }
+  } else if (!videoFile) {
     throw new Error('다운로드한 영상 파일을 찾지 못했습니다.')
-  }
-
-  const sourceVideoPath = join(workDir, videoFile)
-  const stableVideoPath = join(workDir, 'source.mp4')
-  if (basename(sourceVideoPath) !== 'source.mp4') {
-    await copyFile(sourceVideoPath, stableVideoPath)
+  } else {
+    const sourceVideoPath = join(workDir, videoFile)
+    const stableVideoPath = join(workDir, 'source.mp4')
+    if (basename(sourceVideoPath) !== 'source.mp4') {
+      await copyFile(sourceVideoPath, stableVideoPath)
+    }
+    videoSource = {
+      kind: 'file',
+      stableVideoPath,
+      videoSrc: buildGeneratedAssetUrl(publicAssetBaseUrl, jobId, 'source.mp4'),
+    }
   }
 
   if (!captionFile) {
@@ -635,10 +721,6 @@ async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
     )
   }
 
-  const videoProbe = await probeVideo(stableVideoPath).catch(() => ({
-    durationMs: null,
-    frameRate: null,
-  }))
   const rawCues = parseVtt(await readFile(join(workDir, captionFile), 'utf8'))
   if (rawCues.length === 0) {
     throw new Error(
@@ -646,21 +728,35 @@ async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
     )
   }
 
-  const sceneCutCandidatesMs = await detectSceneCuts(
-    stableVideoPath,
-    workDir,
-  ).catch(() => [])
+  const videoProbe = videoSource.stableVideoPath
+    ? await probeVideo(videoSource.stableVideoPath).catch(() => ({
+        durationMs: null,
+        frameRate: null,
+      }))
+    : {
+        durationMs: inferDurationFromCues(rawCues),
+        frameRate: null,
+      }
+  const sceneCutCandidatesMs = videoSource.stableVideoPath
+    ? await detectSceneCuts(videoSource.stableVideoPath, workDir).catch(
+        () => [],
+      )
+    : []
   const title = info.title ?? '입력한 재난안전 영상'
   const generationModel =
     process.env.OPENAI_GENERATION_MODEL?.trim() || defaultGenerationModel
-  const visualCaptionEvidence = await extractVisualCaptionEvidenceWithOpenAI({
-    generationModel,
-    rawCues,
-    sceneCutCandidatesMs,
-    stableVideoPath,
-    videoProbe,
-    workDir,
-  })
+  const visualCaptionEvidence = videoSource.stableVideoPath
+    ? await extractVisualCaptionEvidenceWithOpenAI({
+        generationModel,
+        rawCues,
+        sceneCutCandidatesMs,
+        stableVideoPath: videoSource.stableVideoPath,
+        videoProbe,
+        workDir,
+      })
+    : buildEmptyVisualCaptionEvidence(
+        'YouTube 영상 다운로드가 막혀 자막 기준으로 장면을 만들고, 영상은 YouTube 플레이어로 보여 줍니다.',
+      )
   const visualCaptionBoundaryMs = visualCaptionEvidence.boundaries
     .filter(isReliableVisualCaptionBoundary)
     .map((boundary) => boundary.recommendedBoundaryMs)
@@ -705,7 +801,9 @@ async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
       plan: scenarioPlan,
       sourceTitle: title,
       sourceUrl,
-      videoSrc: buildGeneratedAssetUrl(publicAssetBaseUrl, jobId, 'source.mp4'),
+      videoPlaybackKind: videoSource.kind,
+      videoSrc: videoSource.videoSrc,
+      youtubeVideoId: videoSource.youtubeVideoId,
     })
     const qualityReport = auditGeneratedScenario(
       scenario,
@@ -767,7 +865,9 @@ function buildScenarioFromLlmPlan(input: {
   plan: LlmScenarioPlan
   sourceTitle: string
   sourceUrl: string
+  videoPlaybackKind: VideoSource['kind']
   videoSrc: string
+  youtubeVideoId?: string
 }) {
   const segments = input.plan.segments.map((segment, index) =>
     buildSegmentFromLlmPlan({
@@ -798,7 +898,9 @@ function buildScenarioFromLlmPlan(input: {
     segments,
     showOnHome: false,
     title: input.plan.title || 'URL로 만든 연습',
+    videoPlaybackKind: input.videoPlaybackKind,
     videoSrc: input.videoSrc,
+    youtubeVideoId: input.youtubeVideoId,
   }
 }
 
@@ -1408,6 +1510,7 @@ async function downloadVideo(sourceUrl: string, workDir: string) {
     'yt_dlp',
     '--no-playlist',
     ...jsRuntimeArgs,
+    ...getYtDlpExtractorArgs(),
     '--write-auto-subs',
     '--write-subs',
     '--write-info-json',
@@ -1423,6 +1526,37 @@ async function downloadVideo(sourceUrl: string, workDir: string) {
     join(workDir, 'source.%(ext)s'),
     sourceUrl,
   ])
+}
+
+async function downloadYouTubeCaptionsOnly(sourceUrl: string, workDir: string) {
+  const jsRuntimeArgs = await getYtDlpJsRuntimeArgs()
+
+  await runCommand(getPythonCommand(), [
+    '-m',
+    'yt_dlp',
+    '--skip-download',
+    '--no-playlist',
+    ...jsRuntimeArgs,
+    ...getYtDlpExtractorArgs(),
+    '--write-auto-subs',
+    '--write-subs',
+    '--write-info-json',
+    '--sub-langs',
+    'ko,ko-KR,ko.*',
+    '--convert-subs',
+    'vtt',
+    '-o',
+    join(workDir, 'source.%(ext)s'),
+    sourceUrl,
+  ])
+}
+
+function isRecoverableYouTubeDownloadError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+
+  return /confirm you're not a bot|sign in to confirm|cookies|HTTP Error 429|requested format is not available|no title found in player responses/iu.test(
+    message,
+  )
 }
 
 async function probeVideo(videoPath: string): Promise<VideoProbe> {
@@ -3500,13 +3634,68 @@ function findCaptionFile(files: string[]) {
   )
 }
 
+function inferDurationFromCues(cues: CaptionCue[]) {
+  const durationMs = Math.max(...cues.map((cue) => cue.endMs), 0)
+  return Number.isFinite(durationMs) && durationMs > 0 ? durationMs : null
+}
+
+function buildEmptyVisualCaptionEvidence(
+  warning: string,
+): VisualCaptionEvidence {
+  return {
+    boundaries: [],
+    frames: [],
+    warnings: [warning],
+  }
+}
+
+function extractYouTubeVideoId(sourceUrl: string) {
+  try {
+    const url = new URL(sourceUrl)
+    const host = url.hostname.toLowerCase().replace(/^www\./u, '')
+
+    if (host === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0]
+      return isValidYouTubeVideoId(id) ? id : null
+    }
+
+    if (host === 'youtube.com') {
+      const fromWatch = url.searchParams.get('v')
+      if (isValidYouTubeVideoId(fromWatch)) {
+        return fromWatch
+      }
+
+      const pathParts = url.pathname.split('/').filter(Boolean)
+      const embeddedId = ['embed', 'shorts', 'live'].includes(
+        pathParts[0] ?? '',
+      )
+        ? pathParts[1]
+        : null
+
+      return isValidYouTubeVideoId(embeddedId) ? embeddedId : null
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
+function isValidYouTubeVideoId(value: string | null | undefined) {
+  return Boolean(value && /^[a-zA-Z0-9_-]{11}$/u.test(value))
+}
+
 async function copyToDistIfPresent(workDir: string, jobId: string) {
   try {
     await mkdir(join(distGeneratedDir, jobId), { recursive: true })
-    await copyFile(
-      join(workDir, 'source.mp4'),
-      join(distGeneratedDir, jobId, 'source.mp4'),
-    )
+    try {
+      await copyFile(
+        join(workDir, 'source.mp4'),
+        join(distGeneratedDir, jobId, 'source.mp4'),
+      )
+    } catch {
+      // YouTube embed fallback scenarios do not create a local mp4.
+    }
     await copyFile(
       join(workDir, 'scenario.json'),
       join(distGeneratedDir, jobId, 'scenario.json'),
@@ -3590,6 +3779,13 @@ function getFfmpegCommand() {
 
 function getFfprobeCommand() {
   return process.env.FFPROBE_PATH?.trim() || ffprobeStatic.path || 'ffprobe'
+}
+
+function getYtDlpExtractorArgs() {
+  const extractorArgs =
+    process.env.YT_DLP_EXTRACTOR_ARGS?.trim() || 'youtube:player_client=android'
+
+  return extractorArgs ? ['--extractor-args', extractorArgs] : []
 }
 
 let ytDlpJsRuntimeSupport: Promise<boolean> | null = null
