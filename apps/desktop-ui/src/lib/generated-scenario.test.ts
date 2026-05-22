@@ -70,4 +70,34 @@ describe('generated scenario URL flow', () => {
     expect(scenario?.segments.length).toBeGreaterThan(0)
     expect(scenario?.practiceSequence).toBe(false)
   })
+
+  it('does not render generated scenarios made without real timing evidence', () => {
+    const record = createGeneratedScenarioRecord(
+      'https://www.youtube.com/watch?v=oWu95ZitpTI',
+      {
+        title: '태풍 대비법',
+      },
+    )
+
+    expect(
+      toGeneratedTheaterShow({
+        ...record,
+        customScenario: {
+          accentClassName: 'bg-emerald-400',
+          generationEvidenceReport: {
+            warnings: [
+              'YouTube가 서버의 자막 접근을 막아 제목과 공식 안전 주제 기준의 검토용 초안을 만들고, 영상은 YouTube 플레이어로 보여 줍니다.',
+            ],
+          },
+          id: record.id,
+          note: '',
+          posterSrc: '',
+          segments: [],
+          title: '잘못 만든 연습',
+          videoPlaybackKind: 'youtube',
+          videoSrc: 'https://www.youtube.com/embed/oWu95ZitpTI',
+        },
+      }),
+    ).toBeNull()
+  })
 })

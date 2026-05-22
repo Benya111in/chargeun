@@ -214,6 +214,10 @@ export function loadGeneratedScenarioRecords(): GeneratedScenarioRecord[] {
 
 export function toGeneratedTheaterShow(record: GeneratedScenarioRecord) {
   if (record.customScenario) {
+    if (isUnsafeGeneratedCustomScenario(record.customScenario)) {
+      return null
+    }
+
     return {
       ...record.customScenario,
       generatedSourceTitle:
@@ -252,6 +256,15 @@ export function toGeneratedTheaterShow(record: GeneratedScenarioRecord) {
     showOnHome: false,
     title: 'URL로 만든 연습',
   } satisfies TheaterShow
+}
+
+function isUnsafeGeneratedCustomScenario(scenario: TheaterShow) {
+  const report = scenario.generationEvidenceReport
+  const warnings = report?.warnings ?? []
+
+  return warnings.some((warning) =>
+    /제목과 공식 안전 주제|자막 접근을 막아|title_only|oembed/iu.test(warning),
+  )
 }
 
 function normalizeMatch(match: UrlScenarioMatch): UrlScenarioMatch | null {

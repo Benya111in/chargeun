@@ -85,6 +85,9 @@ export type TheaterShow = {
   generatedSourceUrl?: string
   generatedThumbnailUrl?: string
   generatedTopicLabel?: string
+  generationEvidenceReport?: {
+    warnings?: string[]
+  }
   homeNote?: string
   homeTitle?: string
   id: string

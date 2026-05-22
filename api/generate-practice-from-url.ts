@@ -635,6 +635,9 @@ async function readCachedGeneratedRecord(
     const customScenario = JSON.parse(
       await readFile(join(workDir, 'scenario.json'), 'utf8'),
     )
+    if (isUnsafeGeneratedScenarioCache(customScenario)) {
+      return null
+    }
 
     return {
       baseScenarioId: 'local-generated-video',
@@ -1564,164 +1567,24 @@ async function prepareYouTubeEmbedFallbackSource(
 ) {
   try {
     await downloadYouTubeCaptionsOnly(sourceUrl, workDir)
-
-    return {
-      warning:
-        'YouTube 영상 파일 다운로드가 막혀 자막 기준으로 장면을 만들고, 영상은 YouTube 플레이어로 보여 줍니다.',
-    }
   } catch (error) {
     if (!isRecoverableYouTubeDownloadError(error)) {
       throw error
     }
 
-    await writeYouTubeMetadataOnlyFallback(sourceUrl, workDir, error)
-
-    return {
-      warning:
-        'YouTube가 서버의 자막 접근을 막아 제목과 공식 안전 주제 기준의 검토용 초안을 만들고, 영상은 YouTube 플레이어로 보여 줍니다.',
-    }
-  }
-}
-
-async function writeYouTubeMetadataOnlyFallback(
-  sourceUrl: string,
-  workDir: string,
-  error: unknown,
-) {
-  const metadata = await fetchYouTubeOembedMetadata(sourceUrl).catch(() => null)
-  const title = metadata?.title ?? '입력한 재난안전 영상'
-  const cues = buildSyntheticYoutubeCues(title, sourceUrl)
-
-  await writeFile(
-    join(workDir, 'source.info.json'),
-    JSON.stringify(
-      {
-        extractorFallback: 'youtube_oembed_title_only',
-        extractionError:
-          error instanceof Error
-            ? error.message.slice(0, 500)
-            : String(error).slice(0, 500),
-        thumbnail: metadata?.thumbnail_url,
-        title,
-        webpage_url: sourceUrl,
-      },
-      null,
-      2,
-    ),
-    'utf8',
-  )
-  await writeFile(join(workDir, 'source.ko.vtt'), cuesToVtt(cues), 'utf8')
-}
-
-async function fetchYouTubeOembedMetadata(sourceUrl: string) {
-  const response = await fetch(
-    `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(
-      sourceUrl,
-    )}`,
-  )
-
-  if (!response.ok) {
-    throw new Error(`YouTube oEmbed failed: ${response.status}`)
+    throw new Error(
+      [
+        'YouTube가 서버에서 영상 파일과 자막 접근을 막아 자동 생성하지 않았습니다.',
+        '장면과 설명이 어긋나는 자료는 만들지 않습니다.',
+        '같은 영상을 파일로 업로드하거나, 자막을 가져올 수 있는 공개 영상 링크를 사용해 주세요.',
+      ].join(' '),
+    )
   }
 
-  return (await response.json()) as {
-    thumbnail_url?: string
-    title?: string
+  return {
+    warning:
+      'YouTube 영상 파일 다운로드가 막혀 자막 기준으로 장면을 만들고, 영상은 YouTube 플레이어로 보여 줍니다.',
   }
-}
-
-function buildSyntheticYoutubeCues(title: string, sourceUrl: string) {
-  const hazard = detectHazard(`${title} ${sourceUrl}`)
-  const topicSentences = syntheticCueTextsForHazard(hazard)
-
-  return topicSentences.map((text, index) => ({
-    endMs: (index + 1) * 6_000,
-    startMs: index * 6_000,
-    text,
-  }))
-}
-
-function syntheticCueTextsForHazard(hazard: HazardProfile) {
-  switch (hazard.hazard) {
-    case 'earthquake':
-      return [
-        '지진이 나면 흔들림이 아주 세질 수 있어요.',
-        '흔들릴 때는 방석이나 가방으로 머리를 보호해요.',
-        '책상이나 탁자 아래로 들어가 몸을 낮춰요.',
-        '창문과 유리에서 떨어져요.',
-        '흔들림이 멈추면 선생님이나 어른 말을 들어요.',
-        '엘리베이터를 타지 말고 계단을 찾아요.',
-        '밖에서는 건물과 담장에서 멀리 떨어져 넓은 곳으로 가요.',
-        '다치거나 위험하면 119나 어른에게 알려요.',
-      ]
-    case 'fire':
-      return [
-        '불이 나면 연기와 불길이 빠르게 퍼질 수 있어요.',
-        '방에서 나갈 수 있으면 문을 닫고 나와요.',
-        '엘리베이터를 타지 말고 계단으로 가요.',
-        '연기가 많으면 몸을 낮춰요.',
-        '밖으로 나가기 어려우면 문틈을 막고 기다려요.',
-        '119나 어른에게 어디에 있는지 알려요.',
-      ]
-    case 'heavy_rain':
-      return [
-        '비가 많이 오면 물이 갑자기 불어날 수 있어요.',
-        '물이 찬 낮은 곳은 건너지 않아요.',
-        '갑자기 비가 세지면 안전한 곳으로 가요.',
-        '하천 근처 차는 어른이 미리 옮겨요.',
-        '배수로와 물길은 어른과 미리 확인해요.',
-        '위험하거나 고립되면 119에 알려요.',
-      ]
-    case 'typhoon':
-      return [
-        '태풍이 오면 비와 바람이 아주 세져요.',
-        '태풍 소식이 있으면 안전한 실내에 있어요.',
-        '집 안에서는 문과 창문을 닫고 창문에서 떨어져요.',
-        '밖에 나가야 하면 간판과 위험한 물건을 피해요.',
-        '집 주변 배수구는 어른과 미리 확인해요.',
-        '하천 근처 차는 어른이 미리 옮겨요.',
-        '농촌에서는 시설물과 배수로를 어른과 확인해요.',
-        '바닷가에서는 안전한 곳으로 대피하고 배를 묶어 둬요.',
-        '위험하거나 고립되면 119에 알려요.',
-      ]
-    default:
-      return [
-        '재난 상황에서는 혼자 급하게 움직이지 않아요.',
-        '먼저 주변 어른이나 선생님에게 알려요.',
-        '현장 안내를 듣고 안전한 곳으로 가요.',
-        '위험하거나 다치면 119에 알려요.',
-      ]
-  }
-}
-
-function cuesToVtt(cues: CaptionCue[]) {
-  return [
-    'WEBVTT',
-    '',
-    ...cues.flatMap((cue) => [
-      `${formatVttTimestamp(cue.startMs)} --> ${formatVttTimestamp(cue.endMs)}`,
-      cue.text,
-      '',
-    ]),
-  ].join('\n')
-}
-
-function formatVttTimestamp(ms: number) {
-  const totalMs = Math.max(0, Math.round(ms))
-  const milliseconds = totalMs % 1000
-  const totalSeconds = Math.floor(totalMs / 1000)
-  const seconds = totalSeconds % 60
-  const totalMinutes = Math.floor(totalSeconds / 60)
-  const minutes = totalMinutes % 60
-  const hours = Math.floor(totalMinutes / 60)
-
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
-    2,
-    '0',
-  )}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(
-    3,
-    '0',
-  )}`
 }
 
 function isRecoverableYouTubeDownloadError(error: unknown) {
@@ -3825,6 +3688,37 @@ function buildEmptyVisualCaptionEvidence(
     frames: [],
     warnings: [warning],
   }
+}
+
+function isUnsafeGeneratedScenarioCache(customScenario: unknown) {
+  if (!customScenario || typeof customScenario !== 'object') {
+    return true
+  }
+
+  const report = (customScenario as { generationEvidenceReport?: unknown })
+    .generationEvidenceReport as
+    | {
+        audioCueCount?: unknown
+        segmentationEvidence?: unknown
+        warnings?: unknown
+      }
+    | undefined
+  const warnings = Array.isArray(report?.warnings) ? report.warnings : []
+  const segmentationEvidence = Array.isArray(report?.segmentationEvidence)
+    ? report.segmentationEvidence
+    : []
+
+  return (
+    warnings.some(
+      (warning) =>
+        typeof warning === 'string' &&
+        /제목과 공식 안전 주제|자막 접근을 막아|title_only|oembed/iu.test(
+          warning,
+        ),
+    ) ||
+    Number(report?.audioCueCount ?? 0) <= 0 ||
+    !segmentationEvidence.includes('audio-caption')
+  )
 }
 
 function extractYouTubeVideoId(sourceUrl: string) {
