@@ -22,7 +22,8 @@ import {
 } from './lib/url-generator-api'
 
 const generationSteps = [
-  '유튜브 영상과 자막을 가져옵니다.',
+  '생성 작업을 서버에 등록합니다.',
+  '맥북 작업자가 유튜브 영상과 자막을 가져옵니다.',
   '음성이 끝나는 지점을 찾습니다.',
   '화면 자막과 장면이 바뀌는 지점을 봅니다.',
   'GPT-5.5가 장면별 학습 화면을 작성합니다.',
@@ -156,9 +157,9 @@ export default function UrlGeneratorPage() {
             새로 만듭니다.
           </h1>
           <p className="mt-6 max-w-3xl text-xl font-semibold leading-9 text-[#596257]">
-            기존 체험 페이지와 분리된 생성 전용 화면입니다. 서버에 저장된 API
-            key로 영상 자막과 프레임 근거를 읽고, GPT-5.5가 느린학습자용 학습
-            화면을 만듭니다.
+            기존 체험 페이지와 분리된 생성 전용 화면입니다. API key를 브라우저에
+            보내지 않고, 연결된 작업자가 영상 자막과 프레임 근거를 읽어
+            느린학습자용 학습 화면을 만듭니다.
           </p>
 
           <form
@@ -210,8 +211,8 @@ export default function UrlGeneratorPage() {
               value={accessCode}
             />
             <p className="mt-2 text-sm font-semibold leading-6 text-[#596257]">
-              비밀번호가 맞으면 서버에 저장된 OpenAI API key로 생성합니다.
-              브라우저에는 API key를 저장하지 않습니다.
+              비밀번호가 맞으면 연결된 작업자가 생성합니다. 브라우저에는 API
+              key를 저장하지 않습니다.
             </p>
             {notice ? (
               <p className="mt-3 text-base font-semibold leading-7 text-rose-700">

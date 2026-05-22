@@ -25,8 +25,11 @@ import { appHref, getAppRoute, publicAssetSrc } from './lib/routes'
 import { cn } from './lib/utils'
 import {
   loadGeneratedScenario,
+  saveGeneratedScenario,
   toGeneratedTheaterShow,
+  type GeneratedScenarioRecord,
 } from './lib/generated-scenario'
+import { getGeneratorApiConfig } from './lib/url-generator-api'
 
 type PracticeStage = 'explanation' | 'playback' | 'ready' | 'rest'
 
@@ -58,15 +61,60 @@ type ScenarioReviewGroup = {
 }
 
 export default function ScenarioPracticePage() {
-  const scenario = selectScenarioFromPath()
+  const [remoteGeneratedScenario, setRemoteGeneratedScenario] =
+    useState<TheaterShow | null>(null)
+  const [isLoadingGeneratedScenario, setIsLoadingGeneratedScenario] =
+    useState(false)
+  const scenario = selectScenarioFromPath() ?? remoteGeneratedScenario
+
+  useEffect(() => {
+    if (scenario) {
+      return
+    }
+
+    const id = getScenarioIdFromPath()
+    if (!id.startsWith('generated-')) {
+      return
+    }
+
+    let isActive = true
+    setIsLoadingGeneratedScenario(true)
+
+    loadGeneratedScenarioFromAsset(id)
+      .then((loadedScenario) => {
+        if (isActive) {
+          setRemoteGeneratedScenario(loadedScenario)
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setRemoteGeneratedScenario(null)
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingGeneratedScenario(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [scenario])
 
   if (!scenario) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f7f8f4] px-4 text-[#151713]">
         <section className="max-w-lg rounded-md border border-[#dfe4da] bg-white p-6">
-          <h1 className="text-2xl font-semibold">연습 장면을 찾지 못했어요.</h1>
+          <h1 className="text-2xl font-semibold">
+            {isLoadingGeneratedScenario
+              ? '연습 장면을 불러오고 있어요.'
+              : '연습 장면을 찾지 못했어요.'}
+          </h1>
           <p className="mt-3 text-sm leading-6 text-[#596257]">
-            다시 홈으로 가서 연습할 장면을 골라 주세요.
+            {isLoadingGeneratedScenario
+              ? '생성된 학습 화면을 서버에서 확인하고 있습니다.'
+              : '다시 홈으로 가서 연습할 장면을 골라 주세요.'}
           </p>
           <a className="link-button mt-4" href={appHref('/')}>
             홈으로 가기
@@ -1360,13 +1408,7 @@ function getReviewSituationText(segment: TheaterSegment) {
 }
 
 function selectScenarioFromPath() {
-  const pathname = getAppRoute()
-  const id =
-    pathname === '/demo'
-      ? defaultScenarioId
-      : pathname.startsWith('/scenario/')
-        ? decodeURIComponent(pathname.replace('/scenario/', ''))
-        : defaultScenarioId
+  const id = getScenarioIdFromPath()
 
   const canonicalId = scenarioAliases[id] ?? id
 
@@ -1381,6 +1423,16 @@ function selectScenarioFromPath() {
   return scenario
 }
 
+function getScenarioIdFromPath() {
+  const pathname = getAppRoute()
+
+  return pathname === '/demo'
+    ? defaultScenarioId
+    : pathname.startsWith('/scenario/')
+      ? decodeURIComponent(pathname.replace('/scenario/', ''))
+      : defaultScenarioId
+}
+
 function loadGeneratedScenarioFromId(id: string) {
   if (!id.startsWith('generated-')) {
     return null
@@ -1391,6 +1443,35 @@ function loadGeneratedScenarioFromId(id: string) {
   if (!record) {
     return null
   }
+
+  return toGeneratedTheaterShow(record)
+}
+
+async function loadGeneratedScenarioFromAsset(id: string) {
+  const config = getGeneratorApiConfig()
+  const apiBase = config.apiBase.replace(/\/+$/u, '')
+  const response = await fetch(
+    `${apiBase}/generated/${encodeURIComponent(id)}/scenario.json`,
+  )
+
+  if (!response.ok) {
+    return null
+  }
+
+  const customScenario = (await response.json()) as TheaterShow
+  const record: GeneratedScenarioRecord = {
+    baseScenarioId: 'local-generated-video',
+    createdAt: new Date().toISOString(),
+    customScenario,
+    id,
+    matchBasis: 'metadata',
+    sourceTitle: customScenario.generatedSourceTitle,
+    sourceUrl: customScenario.generatedSourceUrl ?? '',
+    thumbnailUrl: customScenario.generatedThumbnailUrl,
+    topicLabel: customScenario.generatedTopicLabel ?? '재난안전 영상 학습',
+    version: 1,
+  }
+  saveGeneratedScenario(record)
 
   return toGeneratedTheaterShow(record)
 }

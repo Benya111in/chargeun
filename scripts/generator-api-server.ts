@@ -1,17 +1,45 @@
-import { createReadStream, existsSync, mkdirSync, statSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  statSync,
+} from 'node:fs'
 import {
   createServer,
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http'
 import { extname, join, normalize, resolve, sep } from 'node:path'
+import { pipeline } from 'node:stream/promises'
 import { fileURLToPath } from 'node:url'
 
-import generatePracticeFromUrl from '../api/generate-practice-from-url'
+import generatePracticeFromUrl, {
+  buildGeneratedPracticeId,
+} from '../api/generate-practice-from-url'
 
 const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const generatedDir = join(rootDir, 'apps/desktop-ui/public/generated')
 const port = Number(process.env.PORT || 10000)
+const processingLeaseMs = 45 * 60 * 1000
+
+type GenerationJobStatus = 'completed' | 'failed' | 'processing' | 'queued'
+
+type GenerationJob = {
+  clientToken: string
+  createdAt: string
+  id: string
+  message?: string
+  record?: Record<string, unknown>
+  sourceUrl: string
+  status: GenerationJobStatus
+  updatedAt: string
+  workerStartedAt?: string
+}
+
+const generationJobs = new Map<string, GenerationJob>()
+const queuedJobIds: string[] = []
 
 mkdirSync(generatedDir, { recursive: true })
 
@@ -50,6 +78,14 @@ const server = createServer(async (req, res) => {
       return void generatePracticeFromUrl(req, res)
     }
 
+    if (url.pathname.startsWith('/api/generation-jobs')) {
+      return void handleGenerationJobs(req, res, url)
+    }
+
+    if (url.pathname.startsWith('/api/worker/jobs')) {
+      return void handleWorkerJobs(req, res, url)
+    }
+
     if (url.pathname.startsWith('/generated/')) {
       return serveGeneratedAsset(req, res, url.pathname)
     }
@@ -69,6 +105,280 @@ const server = createServer(async (req, res) => {
 server.listen(port, '0.0.0.0', () => {
   console.log(`Generator API listening on 0.0.0.0:${port}`)
 })
+
+async function handleGenerationJobs(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+) {
+  if (req.method === 'OPTIONS') {
+    setApiCors(req, res)
+    res.statusCode = 204
+    res.end()
+    return
+  }
+
+  if (url.pathname === '/api/generation-jobs') {
+    if (req.method !== 'POST') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    if (!validateGeneratorAccessCode(req, res)) {
+      return
+    }
+
+    try {
+      const body = await readJsonBody(req)
+      const { id, sourceUrl } = buildGeneratedPracticeId(body?.sourceUrl)
+      const existing = generationJobs.get(id)
+
+      if (existing && existing.status !== 'failed') {
+        return sendApiJson(req, res, 200, {
+          job: publicGenerationJob(existing, true),
+          record: existing.record ?? null,
+        })
+      }
+
+      const now = new Date().toISOString()
+      const job: GenerationJob = {
+        clientToken: randomUUID(),
+        createdAt: now,
+        id,
+        sourceUrl,
+        status: 'queued',
+        updatedAt: now,
+      }
+
+      generationJobs.set(id, job)
+      queuedJobIds.push(id)
+
+      return sendApiJson(req, res, 202, {
+        job: publicGenerationJob(job, true),
+      })
+    } catch (error) {
+      return sendApiJson(req, res, 400, {
+        error: 'invalid_generation_job',
+        message:
+          error instanceof Error
+            ? error.message
+            : '생성 작업을 만들지 못했습니다.',
+      })
+    }
+  }
+
+  const statusMatch = url.pathname.match(/^\/api\/generation-jobs\/([^/]+)$/)
+  if (statusMatch) {
+    if (req.method !== 'GET') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    const jobId = decodeURIComponent(statusMatch[1])
+    const job = generationJobs.get(jobId)
+    if (!job) {
+      return sendApiJson(req, res, 404, {
+        error: 'job_not_found',
+        message: '생성 작업을 찾지 못했습니다.',
+      })
+    }
+
+    const token =
+      url.searchParams.get('token') ||
+      getRequestHeader(req, 'x-job-token') ||
+      ''
+    if (token !== job.clientToken) {
+      return sendApiJson(req, res, 401, {
+        error: 'job_token_required',
+        message: '생성 작업 확인 토큰이 필요합니다.',
+      })
+    }
+
+    return sendApiJson(req, res, 200, {
+      job: publicGenerationJob(job, false),
+      record: job.record ?? null,
+    })
+  }
+
+  return sendApiJson(req, res, 404, {
+    error: 'not_found',
+    message: 'Not found.',
+  })
+}
+
+async function handleWorkerJobs(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+) {
+  if (req.method === 'OPTIONS') {
+    setApiCors(req, res)
+    res.statusCode = 204
+    res.end()
+    return
+  }
+
+  if (!validateWorkerAccess(req, res)) {
+    return
+  }
+
+  if (url.pathname === '/api/worker/jobs/next') {
+    if (req.method !== 'GET') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    requeueExpiredProcessingJobs()
+
+    while (queuedJobIds.length > 0) {
+      const jobId = queuedJobIds.shift()
+      if (!jobId) {
+        continue
+      }
+
+      const job = generationJobs.get(jobId)
+      if (!job || job.status !== 'queued') {
+        continue
+      }
+
+      const now = new Date().toISOString()
+      job.status = 'processing'
+      job.updatedAt = now
+      job.workerStartedAt = now
+
+      return sendApiJson(req, res, 200, {
+        job: {
+          id: job.id,
+          sourceUrl: job.sourceUrl,
+        },
+      })
+    }
+
+    return sendApiJson(req, res, 200, {
+      job: null,
+    })
+  }
+
+  const assetMatch = url.pathname.match(
+    /^\/api\/worker\/jobs\/([^/]+)\/assets\/([^/]+)$/,
+  )
+  if (assetMatch) {
+    if (req.method !== 'PUT') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    const jobId = decodeURIComponent(assetMatch[1])
+    const fileName = decodeURIComponent(assetMatch[2])
+    const job = generationJobs.get(jobId)
+    if (!job) {
+      return sendApiJson(req, res, 404, {
+        error: 'job_not_found',
+        message: '생성 작업을 찾지 못했습니다.',
+      })
+    }
+
+    const filePath = safeGeneratedUploadPath(jobId, fileName)
+    if (!filePath) {
+      return sendApiJson(req, res, 400, {
+        error: 'invalid_asset_name',
+        message: '업로드할 수 없는 생성 파일 이름입니다.',
+      })
+    }
+
+    mkdirSync(join(generatedDir, jobId), { recursive: true })
+    await pipeline(req, createWriteStream(filePath))
+    job.updatedAt = new Date().toISOString()
+
+    return sendApiJson(req, res, 200, {
+      ok: true,
+    })
+  }
+
+  const completeMatch = url.pathname.match(
+    /^\/api\/worker\/jobs\/([^/]+)\/complete$/,
+  )
+  if (completeMatch) {
+    if (req.method !== 'POST') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    const jobId = decodeURIComponent(completeMatch[1])
+    const job = generationJobs.get(jobId)
+    if (!job) {
+      return sendApiJson(req, res, 404, {
+        error: 'job_not_found',
+        message: '생성 작업을 찾지 못했습니다.',
+      })
+    }
+
+    const body = await readJsonBody(req)
+    const record = body?.record as Record<string, unknown> | undefined
+    if (!record || record.id !== jobId) {
+      return sendApiJson(req, res, 400, {
+        error: 'invalid_record',
+        message: '생성 결과 record가 작업 id와 맞지 않습니다.',
+      })
+    }
+
+    job.record = record
+    job.status = 'completed'
+    job.updatedAt = new Date().toISOString()
+    job.message = undefined
+
+    return sendApiJson(req, res, 200, {
+      job: publicGenerationJob(job, false),
+      record: job.record,
+    })
+  }
+
+  const failMatch = url.pathname.match(/^\/api\/worker\/jobs\/([^/]+)\/fail$/)
+  if (failMatch) {
+    if (req.method !== 'POST') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    const jobId = decodeURIComponent(failMatch[1])
+    const job = generationJobs.get(jobId)
+    if (!job) {
+      return sendApiJson(req, res, 404, {
+        error: 'job_not_found',
+        message: '생성 작업을 찾지 못했습니다.',
+      })
+    }
+
+    const body = await readJsonBody(req).catch(() => ({}))
+    job.message =
+      typeof body?.message === 'string' && body.message.trim()
+        ? body.message.trim()
+        : '맥북 worker가 생성 작업을 완료하지 못했습니다.'
+    job.status = 'failed'
+    job.updatedAt = new Date().toISOString()
+
+    return sendApiJson(req, res, 200, {
+      job: publicGenerationJob(job, false),
+    })
+  }
+
+  return sendApiJson(req, res, 404, {
+    error: 'not_found',
+    message: 'Not found.',
+  })
+}
 
 function serveGeneratedAsset(
   req: IncomingMessage,
@@ -159,6 +469,34 @@ function safeGeneratedAssetPath(pathname: string) {
   return filePath
 }
 
+function safeGeneratedUploadPath(jobId: string, fileName: string) {
+  if (!/^generated-[a-f0-9]{12}$/u.test(jobId)) {
+    return null
+  }
+
+  if (!isAllowedGeneratedUploadName(fileName)) {
+    return null
+  }
+
+  const filePath = normalize(join(generatedDir, jobId, fileName))
+  const jobDir = normalize(join(generatedDir, jobId))
+  if (filePath !== jobDir && !filePath.startsWith(`${jobDir}${sep}`)) {
+    return null
+  }
+
+  return filePath
+}
+
+function isAllowedGeneratedUploadName(fileName: string) {
+  return (
+    fileName === 'scenario.json' ||
+    fileName === 'source.mp4' ||
+    fileName === 'source.info.json' ||
+    /^source\.[a-z0-9-]+(?:-orig)?\.vtt$/iu.test(fileName) ||
+    /^visual-caption-frame-\d{2}\.jpg$/u.test(fileName)
+  )
+}
+
 function parseRangeHeader(range: string, size: number) {
   const match = range.match(/^bytes=(\d*)-(\d*)$/)
   if (!match) {
@@ -192,8 +530,46 @@ function parseRangeHeader(range: string, size: number) {
   }
 }
 
+function setApiCors(req: IncomingMessage, res: ServerResponse) {
+  const origin = req.headers.origin
+
+  if (typeof origin === 'string' && isAllowedOrigin(origin)) {
+    res.setHeader('access-control-allow-origin', origin)
+    res.setHeader('access-control-allow-methods', 'GET, POST, PUT, OPTIONS')
+    res.setHeader(
+      'access-control-allow-headers',
+      'content-type, x-generator-code, x-job-token, x-worker-token',
+    )
+    res.setHeader('vary', 'origin')
+  }
+}
+
 function setGeneratedAssetCors(req: IncomingMessage, res: ServerResponse) {
-  const allowedOrigins = [
+  const origin = req.headers.origin
+
+  if (typeof origin === 'string' && isAllowedOrigin(origin)) {
+    res.setHeader('access-control-allow-origin', origin)
+    res.setHeader('access-control-allow-methods', 'GET, HEAD, OPTIONS')
+    res.setHeader('access-control-allow-headers', 'range')
+    res.setHeader('vary', 'origin')
+  }
+}
+
+function isAllowedOrigin(origin: string) {
+  try {
+    const url = new URL(origin)
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return true
+    }
+  } catch {
+    return false
+  }
+
+  return getAllowedOrigins().includes(origin)
+}
+
+function getAllowedOrigins() {
+  return [
     'http://localhost:1420',
     'http://localhost:4173',
     'http://127.0.0.1:1420',
@@ -204,14 +580,6 @@ function setGeneratedAssetCors(req: IncomingMessage, res: ServerResponse) {
       .map((origin) => origin.trim())
       .filter(Boolean),
   ]
-  const origin = req.headers.origin
-
-  if (typeof origin === 'string' && allowedOrigins.includes(origin)) {
-    res.setHeader('access-control-allow-origin', origin)
-    res.setHeader('access-control-allow-methods', 'GET, HEAD, OPTIONS')
-    res.setHeader('access-control-allow-headers', 'range')
-    res.setHeader('vary', 'origin')
-  }
 }
 
 function mimeTypeForFile(filePath: string) {
@@ -230,6 +598,132 @@ function mimeTypeForFile(filePath: string) {
     default:
       return 'application/octet-stream'
   }
+}
+
+function publicGenerationJob(job: GenerationJob, includeClientToken: boolean) {
+  return {
+    createdAt: job.createdAt,
+    id: job.id,
+    message: job.message ?? null,
+    sourceUrl: job.sourceUrl,
+    status: job.status,
+    updatedAt: job.updatedAt,
+    ...(includeClientToken ? { clientToken: job.clientToken } : {}),
+  }
+}
+
+function requeueExpiredProcessingJobs() {
+  const now = Date.now()
+
+  for (const job of generationJobs.values()) {
+    if (job.status !== 'processing' || !job.workerStartedAt) {
+      continue
+    }
+
+    const startedAt = Date.parse(job.workerStartedAt)
+    if (!Number.isFinite(startedAt) || now - startedAt <= processingLeaseMs) {
+      continue
+    }
+
+    job.status = 'queued'
+    job.updatedAt = new Date().toISOString()
+    job.workerStartedAt = undefined
+    queuedJobIds.push(job.id)
+  }
+}
+
+function validateGeneratorAccessCode(
+  req: IncomingMessage,
+  res: ServerResponse,
+) {
+  const configuredCodes = parseAccessCodes()
+  if (configuredCodes.length === 0) {
+    return true
+  }
+
+  const accessCode = getRequestHeader(req, 'x-generator-code')?.trim() ?? ''
+  if (accessCode && configuredCodes.includes(accessCode)) {
+    return true
+  }
+
+  sendApiJson(req, res, 401, {
+    error: 'generator_code_required',
+    message: '생성 비밀번호가 필요합니다.',
+  })
+  return false
+}
+
+function validateWorkerAccess(req: IncomingMessage, res: ServerResponse) {
+  const workerToken = getWorkerToken()
+  if (!workerToken) {
+    sendApiJson(req, res, 503, {
+      error: 'worker_token_not_configured',
+      message: 'GENERATOR_WORKER_TOKEN이 서버에 설정되어 있지 않습니다.',
+    })
+    return false
+  }
+
+  const requestToken = getRequestHeader(req, 'x-worker-token')?.trim() ?? ''
+  if (requestToken && requestToken === workerToken) {
+    return true
+  }
+
+  sendApiJson(req, res, 401, {
+    error: 'worker_token_required',
+    message: 'worker 인증 토큰이 필요합니다.',
+  })
+  return false
+}
+
+function getWorkerToken() {
+  const configuredWorkerToken = process.env.GENERATOR_WORKER_TOKEN?.trim()
+  if (configuredWorkerToken) {
+    return configuredWorkerToken
+  }
+
+  return parseAccessCodes()[0] ?? ''
+}
+
+function parseAccessCodes() {
+  return (
+    process.env.GENERATOR_ACCESS_CODES ||
+    process.env.BETA_ACCESS_CODES ||
+    ''
+  )
+    .split(',')
+    .map((code) => code.trim())
+    .filter(Boolean)
+}
+
+function getRequestHeader(req: IncomingMessage, name: string) {
+  const value = req.headers[name] ?? req.headers[name.toLowerCase()]
+  return Array.isArray(value) ? value[0] : value
+}
+
+async function readJsonBody(req: IncomingMessage) {
+  let text = ''
+  for await (const chunk of req) {
+    text += chunk
+    if (text.length > 1_000_000) {
+      throw new Error('요청 본문이 너무 큽니다.')
+    }
+  }
+
+  if (!text.trim()) {
+    return {}
+  }
+
+  return JSON.parse(text) as Record<string, unknown>
+}
+
+function sendApiJson(
+  req: IncomingMessage,
+  res: ServerResponse,
+  statusCode: number,
+  payload: Record<string, unknown>,
+) {
+  setApiCors(req, res)
+  sendJson(res, statusCode, payload)
 }
 
 function sendJson(

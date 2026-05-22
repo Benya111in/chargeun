@@ -626,6 +626,7 @@ async function readCachedGeneratedRecord(
   workDir: string,
   jobId: string,
   sourceUrl: string,
+  publicAssetBaseUrl: string,
 ) {
   if (process.env.GENERATOR_DISABLE_CACHE === '1') {
     return null
@@ -638,6 +639,16 @@ async function readCachedGeneratedRecord(
     if (isUnsafeGeneratedScenarioCache(customScenario)) {
       return null
     }
+    if (
+      customScenario.videoPlaybackKind !== 'youtube' &&
+      customScenario.youtubeVideoId === undefined
+    ) {
+      customScenario.videoSrc = buildGeneratedAssetUrl(
+        publicAssetBaseUrl,
+        jobId,
+        'source.mp4',
+      )
+    }
 
     return {
       baseScenarioId: 'local-generated-video',
@@ -645,7 +656,8 @@ async function readCachedGeneratedRecord(
       customScenario,
       id: jobId,
       matchBasis: 'metadata' as const,
-      sourceTitle: customScenario.generatedSourceTitle ?? '입력한 재난안전 영상',
+      sourceTitle:
+        customScenario.generatedSourceTitle ?? '입력한 재난안전 영상',
       sourceUrl,
       thumbnailUrl: customScenario.generatedThumbnailUrl,
       topicLabel: customScenario.generatedTopicLabel ?? '재난안전 영상 학습',
@@ -656,12 +668,26 @@ async function readCachedGeneratedRecord(
   }
 }
 
-async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
+export function buildGeneratedPracticeId(input: unknown) {
+  const sourceUrl = normalizeUrl(input)
+
+  return {
+    id: `generated-${hashText(sourceUrl).slice(0, 12)}`,
+    sourceUrl,
+  }
+}
+
+export async function generatePracticeFromUrl(sourceUrl: string, req?: any) {
   const jobId = `generated-${hashText(sourceUrl).slice(0, 12)}`
   const workDir = join(publicGeneratedDir, jobId)
   const publicAssetBaseUrl = getPublicGeneratorApiBase(req)
   const youtubeVideoId = extractYouTubeVideoId(sourceUrl)
-  const cachedRecord = await readCachedGeneratedRecord(workDir, jobId, sourceUrl)
+  const cachedRecord = await readCachedGeneratedRecord(
+    workDir,
+    jobId,
+    sourceUrl,
+    publicAssetBaseUrl,
+  )
 
   if (cachedRecord) {
     return { record: cachedRecord }

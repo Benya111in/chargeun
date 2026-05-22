@@ -100,21 +100,146 @@ export async function requestGeneratedPracticeFromApi(
     )
   }
 
-  const response = await fetch(
-    `${config.apiBase}/api/generate-practice-from-url`,
-    {
-      body: JSON.stringify({ sourceUrl }),
-      headers: {
-        'content-type': 'application/json',
-        ...(accessCode.trim()
-          ? {
-              'x-generator-code': accessCode.trim(),
-            }
-          : {}),
-      },
-      method: 'POST',
-    },
+  const queued = await queueGeneratedPracticeJob(
+    config.apiBase,
+    sourceUrl,
+    accessCode,
   )
+
+  if (queued) {
+    return pollGeneratedPracticeJob(config.apiBase, queued)
+  }
+
+  return requestGeneratedPracticeDirectly(config.apiBase, sourceUrl, accessCode)
+}
+
+async function queueGeneratedPracticeJob(
+  apiBase: string,
+  sourceUrl: string,
+  accessCode: string,
+) {
+  const response = await fetch(`${apiBase}/api/generation-jobs`, {
+    body: JSON.stringify({ sourceUrl }),
+    headers: {
+      'content-type': 'application/json',
+      ...(accessCode.trim()
+        ? {
+            'x-generator-code': accessCode.trim(),
+          }
+        : {}),
+    },
+    method: 'POST',
+  })
+
+  if (response.status === 404) {
+    return null
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    job?: {
+      clientToken?: string
+      id?: string
+      message?: string | null
+      status?: string
+    }
+    message?: string
+    record?: GeneratedScenarioRecord | null
+  }
+
+  if (!response.ok || !payload.job?.id || !payload.job.clientToken) {
+    throw new Error(
+      payload.message ??
+        payload.job?.message ??
+        '생성 작업을 서버에 등록하지 못했습니다.',
+    )
+  }
+
+  if (payload.record) {
+    return {
+      completedRecord: payload.record,
+      id: payload.job.id,
+      token: payload.job.clientToken,
+    }
+  }
+
+  return {
+    id: payload.job.id,
+    token: payload.job.clientToken,
+  }
+}
+
+async function pollGeneratedPracticeJob(
+  apiBase: string,
+  job: {
+    completedRecord?: GeneratedScenarioRecord
+    id: string
+    token: string
+  },
+) {
+  if (job.completedRecord) {
+    return { record: job.completedRecord }
+  }
+
+  const startedAt = Date.now()
+  const timeoutMs = 30 * 60 * 1000
+
+  while (Date.now() - startedAt < timeoutMs) {
+    await wait(2_500)
+
+    const response = await fetch(
+      `${apiBase}/api/generation-jobs/${encodeURIComponent(
+        job.id,
+      )}?token=${encodeURIComponent(job.token)}`,
+    )
+    const payload = (await response.json().catch(() => ({}))) as {
+      job?: {
+        message?: string | null
+        status?: 'completed' | 'failed' | 'processing' | 'queued'
+      }
+      message?: string
+      record?: GeneratedScenarioRecord | null
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        payload.message || '생성 작업 상태를 확인하지 못했습니다.',
+      )
+    }
+
+    if (payload.job?.status === 'completed' && payload.record) {
+      return { record: payload.record }
+    }
+
+    if (payload.job?.status === 'failed') {
+      throw new Error(
+        payload.job.message ||
+          '생성 작업이 실패했습니다. 맥북 worker 로그를 확인해 주세요.',
+      )
+    }
+  }
+
+  throw new Error(
+    '생성 시간이 너무 오래 걸립니다. 맥북 worker가 켜져 있는지 확인해 주세요.',
+  )
+}
+
+async function requestGeneratedPracticeDirectly(
+  apiBase: string,
+  sourceUrl: string,
+  accessCode = '',
+) {
+  const response = await fetch(`${apiBase}/api/generate-practice-from-url`, {
+    body: JSON.stringify({ sourceUrl }),
+    headers: {
+      'content-type': 'application/json',
+      ...(accessCode.trim()
+        ? {
+            'x-generator-code': accessCode.trim(),
+          }
+        : {}),
+    },
+    method: 'POST',
+  })
 
   let payload: {
     message?: string
@@ -198,4 +323,8 @@ function isGitHubPagesHost() {
   }
 
   return window.location.hostname.endsWith('github.io')
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
