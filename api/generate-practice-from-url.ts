@@ -1405,6 +1405,8 @@ async function downloadVideo(sourceUrl: string, workDir: string) {
     '-m',
     'yt_dlp',
     '--no-playlist',
+    '--js-runtimes',
+    process.env.YT_DLP_JS_RUNTIME?.trim() || 'node',
     '--write-auto-subs',
     '--write-subs',
     '--write-info-json',

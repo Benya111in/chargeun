@@ -28,6 +28,7 @@ GitHub Pages는 정적 파일만 배포하므로 OpenAI API key를 안전하게 
 - `GENERATOR_ALLOWED_ORIGINS=https://benya111in.github.io`
 - `GENERATOR_ACCESS_CODES=<공유할 생성 비밀번호>`
 - `GENERATOR_PYTHON_BIN=python3`
+- `YT_DLP_JS_RUNTIME=node`
 - `PUBLIC_GENERATOR_API_BASE=https://<Render 서비스 도메인>`
 - `PORT=10000`
 
@@ -50,6 +51,7 @@ OPENAI_GENERATION_MODEL=gpt-5.5
 GENERATOR_ACCESS_CODES=<공유할 생성 비밀번호>
 GENERATOR_ALLOWED_ORIGINS=https://benya111in.github.io
 GENERATOR_PYTHON_BIN=python3
+YT_DLP_JS_RUNTIME=node
 PUBLIC_GENERATOR_API_BASE=https://<Render 서비스 도메인>
 ```
 
