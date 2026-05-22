@@ -1565,18 +1565,18 @@ async function loadGeneratedScenarioFromAsset(id: string) {
   const config = getGeneratorApiConfig()
   const apiBase = config.apiBase.replace(/\/+$/u, '')
   const assetPath = `/generated/${encodeURIComponent(id)}/scenario.json`
-  const assetUrl = new URL(
-    apiBase ? `${apiBase}${assetPath}` : assetPath,
-    typeof window === 'undefined' ? undefined : window.location.origin,
-  )
-  assetUrl.searchParams.set('v', String(Date.now()))
-  const response = await fetch(assetUrl.toString(), { cache: 'no-store' })
+  const response = await fetchGeneratedScenarioAsset(assetPath, apiBase)
 
-  if (!response.ok) {
+  if (!response) {
     return null
   }
 
-  const customScenario = (await response.json()) as TheaterShow
+  const customScenario = response.scenario
+  if (response.source === 'static') {
+    customScenario.videoSrc = publicAssetSrc(
+      `/generated/${encodeURIComponent(id)}/source.mp4`,
+    )
+  }
   const record: GeneratedScenarioRecord = {
     baseScenarioId: 'local-generated-video',
     createdAt: new Date().toISOString(),
@@ -1592,6 +1592,45 @@ async function loadGeneratedScenarioFromAsset(id: string) {
   saveGeneratedScenario(record)
 
   return toGeneratedTheaterShow(record)
+}
+
+async function fetchGeneratedScenarioAsset(assetPath: string, apiBase: string) {
+  const urls = [
+    {
+      source: 'static' as const,
+      url: publicAssetSrc(assetPath),
+    },
+    apiBase
+      ? {
+          source: 'remote' as const,
+          url: `${apiBase}${assetPath}`,
+        }
+      : null,
+  ].filter((item) => item !== null)
+
+  for (const candidate of urls) {
+    const assetUrl = new URL(
+      candidate.url,
+      typeof window === 'undefined' ? undefined : window.location.origin,
+    )
+    assetUrl.searchParams.set('v', String(Date.now()))
+
+    try {
+      const response = await fetch(assetUrl.toString(), { cache: 'no-store' })
+      if (!response.ok) {
+        continue
+      }
+
+      return {
+        scenario: (await response.json()) as TheaterShow,
+        source: candidate.source,
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return null
 }
 
 function getNextScenario(currentScenario: TheaterShow) {
