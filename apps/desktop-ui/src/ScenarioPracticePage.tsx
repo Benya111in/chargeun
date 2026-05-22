@@ -70,15 +70,18 @@ export default function ScenarioPracticePage() {
     useState(false)
   const localScenario = selectScenarioFromPath()
   const scenario = routeScenarioId.startsWith('generated-')
-    ? (remoteGeneratedScenario ?? localScenario)
+    ? remoteGeneratedScenario
     : localScenario
 
   useEffect(() => {
     if (!routeScenarioId.startsWith('generated-')) {
+      setRemoteGeneratedScenario(null)
+      setIsLoadingGeneratedScenario(false)
       return
     }
 
     let isActive = true
+    setRemoteGeneratedScenario(null)
     setIsLoadingGeneratedScenario(true)
 
     loadGeneratedScenarioFromAsset(routeScenarioId)
@@ -1561,9 +1564,13 @@ function loadGeneratedScenarioFromId(id: string) {
 async function loadGeneratedScenarioFromAsset(id: string) {
   const config = getGeneratorApiConfig()
   const apiBase = config.apiBase.replace(/\/+$/u, '')
-  const response = await fetch(
-    `${apiBase}/generated/${encodeURIComponent(id)}/scenario.json`,
+  const assetPath = `/generated/${encodeURIComponent(id)}/scenario.json`
+  const assetUrl = new URL(
+    apiBase ? `${apiBase}${assetPath}` : assetPath,
+    typeof window === 'undefined' ? undefined : window.location.origin,
   )
+  assetUrl.searchParams.set('v', String(Date.now()))
+  const response = await fetch(assetUrl.toString(), { cache: 'no-store' })
 
   if (!response.ok) {
     return null
