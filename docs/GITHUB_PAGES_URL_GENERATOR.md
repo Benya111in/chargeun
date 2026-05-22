@@ -4,6 +4,7 @@
 
 - GitHub Pages: `https://benya111in.github.io/chargeun/#/url-generator`
 - 로컬 확인: `http://127.0.0.1:4173/#/url-generator`
+- Render API: `https://chargeun.onrender.com`
 
 ## 원칙
 
@@ -69,10 +70,13 @@ GitHub Pages 프론트가 그 절대 URL을 받아 재생하므로 OpenAI key는
 
 GitHub repository variable에 다음 값을 설정한다.
 
-- `GENERATOR_API_BASE=https://<생성 API 서버 도메인>`
+- `GENERATOR_API_BASE=https://chargeun.onrender.com`
 
 그 다음 GitHub Pages workflow를 다시 실행하면 프론트엔드 빌드에
 `VITE_GENERATOR_API_BASE`로 들어간다.
+
+현재 workflow에는 `GENERATOR_API_BASE`가 비어 있을 때도
+`https://chargeun.onrender.com`을 기본값으로 쓰는 fallback이 있다.
 
 임시로는 URL query로도 연결할 수 있다.
 

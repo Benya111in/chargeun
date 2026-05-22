@@ -38,7 +38,7 @@ jobs:
 
       - name: Build static site
         env:
-          VITE_GENERATOR_API_BASE: ${{ vars.GENERATOR_API_BASE }}
+          VITE_GENERATOR_API_BASE: ${{ vars.GENERATOR_API_BASE || 'https://chargeun.onrender.com' }}
         run: pnpm --filter desktop-ui build
 
       - name: Configure Pages
