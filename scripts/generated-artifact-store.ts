@@ -82,10 +82,7 @@ export function buildGeneratedArtifactManifest(input: {
   provider: GeneratedArtifactManifest['provider']
 }) {
   const files = input.fileNames.map((name) => {
-    const key =
-      input.provider === 'cloudflare-r2'
-        ? buildGeneratedArtifactKey(input.jobId, name)
-        : `generated/${input.jobId}/${name}`
+    const key = buildGeneratedArtifactKey(input.jobId, name)
 
     return {
       contentType: contentTypeForGeneratedArtifact(name),
@@ -218,6 +215,10 @@ function assertSafeGeneratedJobId(jobId: string) {
 function assertSafeGeneratedArtifactName(fileName: string) {
   if (
     fileName !== 'scenario.json' &&
+    fileName !== 'pipeline-trace.json' &&
+    fileName !== 'quality-report.json' &&
+    fileName !== 'audio-transcript.json' &&
+    fileName !== 'visual-caption-evidence.json' &&
     fileName !== 'source.mp4' &&
     fileName !== 'source.info.json' &&
     !/^source\.[a-z0-9-]+(?:-orig)?\.vtt$/iu.test(fileName) &&

@@ -2,6 +2,7 @@ import { learningScenarios, type TheaterShow } from './demo-theater-content'
 import { isLocalSeasonalEnabled } from './local-seasonal'
 
 export const generatedScenarioStorageKey = 'chagunchagun.generated-scenarios.v1'
+export const acceptedGeneratedPipelineVersion = 'url-multi-agent-quality-v20'
 
 export type GeneratedScenarioRecord = {
   baseScenarioId: string
@@ -219,7 +220,10 @@ export function loadGeneratedScenarioRecords(): GeneratedScenarioRecord[] {
 
 export function toGeneratedTheaterShow(record: GeneratedScenarioRecord) {
   if (record.customScenario) {
-    if (isUnsafeGeneratedCustomScenario(record.customScenario)) {
+    if (
+      isUnsafeGeneratedCustomScenario(record.customScenario) ||
+      !isPublishableGeneratedCustomScenario(record.customScenario)
+    ) {
       return null
     }
 
@@ -269,6 +273,30 @@ function isUnsafeGeneratedCustomScenario(scenario: TheaterShow) {
 
   return warnings.some((warning) =>
     /제목과 공식 안전 주제|자막 접근을 막아|title_only|oembed/iu.test(warning),
+  )
+}
+
+function isPublishableGeneratedCustomScenario(scenario: TheaterShow) {
+  const candidate = scenario as TheaterShow & {
+    generatedArtifactManifest?: { qualityVersion?: string }
+    generationPipelineTrace?: { agentRuns?: unknown; pipelineVersion?: string }
+    generationQualityReport?: {
+      groundingPassed?: boolean
+      passed?: boolean
+      sourceCoveragePassed?: boolean
+      uiPlaybackPassed?: boolean
+    }
+  }
+
+  return (
+    candidate.generationQualityReport?.passed === true &&
+    candidate.generationQualityReport.groundingPassed === true &&
+    candidate.generationQualityReport.sourceCoveragePassed === true &&
+    candidate.generationQualityReport.uiPlaybackPassed === true &&
+    candidate.generationPipelineTrace?.pipelineVersion ===
+      acceptedGeneratedPipelineVersion &&
+    Array.isArray(candidate.generationPipelineTrace.agentRuns) &&
+    candidate.generatedArtifactManifest?.qualityVersion === 'quality-v1'
   )
 }
 

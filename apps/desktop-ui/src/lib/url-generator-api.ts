@@ -9,6 +9,25 @@ export type GeneratorApiConfig = {
   requiresRemoteApi: boolean
 }
 
+export type GenerationJobStatus =
+  | 'blocked'
+  | 'failed'
+  | 'needs_repair'
+  | 'processing'
+  | 'published'
+  | 'queued'
+
+export type GenerationJobProgress = {
+  message: string | null
+  qualityReport?: Record<string, unknown> | null
+  status: GenerationJobStatus
+}
+
+export type RequestGeneratedPracticeOptions = {
+  onProgress?: (progress: GenerationJobProgress) => void
+  signal?: AbortSignal
+}
+
 export function getGeneratorApiConfig(): GeneratorApiConfig {
   const queryApiBase = readApiBaseFromQuery()
   if (queryApiBase) {
@@ -86,9 +105,14 @@ export function persistGeneratorAccessCode(input: string) {
   }
 }
 
+export function isPublishedGenerationStatus(status: string | undefined) {
+  return status === 'published'
+}
+
 export async function requestGeneratedPracticeFromApi(
   sourceUrl: string,
   accessCode = '',
+  options: RequestGeneratedPracticeOptions = {},
 ): Promise<{
   record: GeneratedScenarioRecord
 }> {
@@ -104,19 +128,26 @@ export async function requestGeneratedPracticeFromApi(
     config.apiBase,
     sourceUrl,
     accessCode,
+    options.signal,
   )
 
   if (queued) {
-    return pollGeneratedPracticeJob(config.apiBase, queued)
+    return pollGeneratedPracticeJob(config.apiBase, queued, options)
   }
 
-  return requestGeneratedPracticeDirectly(config.apiBase, sourceUrl, accessCode)
+  return requestGeneratedPracticeDirectly(
+    config.apiBase,
+    sourceUrl,
+    accessCode,
+    options.signal,
+  )
 }
 
 async function queueGeneratedPracticeJob(
   apiBase: string,
   sourceUrl: string,
   accessCode: string,
+  signal?: AbortSignal,
 ) {
   const response = await fetch(`${apiBase}/api/generation-jobs`, {
     body: JSON.stringify({ sourceUrl }),
@@ -129,6 +160,7 @@ async function queueGeneratedPracticeJob(
         : {}),
     },
     method: 'POST',
+    signal,
   })
 
   if (response.status === 404) {
@@ -161,14 +193,9 @@ async function queueGeneratedPracticeJob(
     )
   }
 
-  if (
-    payload.record &&
-    (payload.job.status === 'published' ||
-      payload.job.status === 'approved' ||
-      payload.job.status === 'completed')
-  ) {
+  if (payload.record && isPublishedGenerationStatus(payload.job.status)) {
     return {
-      completedRecord: payload.record,
+      publishedRecord: payload.record,
       id: payload.job.id,
       token: payload.job.clientToken,
     }
@@ -183,38 +210,34 @@ async function queueGeneratedPracticeJob(
 async function pollGeneratedPracticeJob(
   apiBase: string,
   job: {
-    completedRecord?: GeneratedScenarioRecord
     id: string
+    publishedRecord?: GeneratedScenarioRecord
     token: string
   },
+  options: RequestGeneratedPracticeOptions = {},
 ) {
-  if (job.completedRecord) {
-    return { record: job.completedRecord }
+  if (job.publishedRecord) {
+    return { record: job.publishedRecord }
   }
 
   const startedAt = Date.now()
   const timeoutMs = 30 * 60 * 1000
 
   while (Date.now() - startedAt < timeoutMs) {
-    await wait(2_500)
+    await wait(2_500, options.signal)
 
     const response = await fetch(
       `${apiBase}/api/generation-jobs/${encodeURIComponent(
         job.id,
       )}?token=${encodeURIComponent(job.token)}`,
+      { signal: options.signal },
     )
     const payload = (await response.json().catch(() => ({}))) as {
       job?: {
         message?: string | null
+        qualityReport?: Record<string, unknown> | null
         status?:
-          | 'approved'
-          | 'blocked'
-          | 'completed'
-          | 'failed'
-          | 'needs_repair'
-          | 'processing'
-          | 'published'
-          | 'queued'
+          | GenerationJobStatus
       }
       message?: string
       record?: GeneratedScenarioRecord | null
@@ -226,12 +249,15 @@ async function pollGeneratedPracticeJob(
       )
     }
 
-    if (
-      (payload.job?.status === 'published' ||
-        payload.job?.status === 'approved' ||
-        payload.job?.status === 'completed') &&
-      payload.record
-    ) {
+    if (isKnownGenerationStatus(payload.job?.status)) {
+      options.onProgress?.({
+        message: payload.job.message ?? null,
+        qualityReport: payload.job.qualityReport ?? null,
+        status: payload.job.status,
+      })
+    }
+
+    if (isPublishedGenerationStatus(payload.job?.status) && payload.record) {
       return { record: payload.record }
     }
 
@@ -248,10 +274,24 @@ async function pollGeneratedPracticeJob(
   )
 }
 
+function isKnownGenerationStatus(
+  status: string | undefined,
+): status is GenerationJobStatus {
+  return (
+    status === 'queued' ||
+    status === 'processing' ||
+    status === 'needs_repair' ||
+    status === 'published' ||
+    status === 'blocked' ||
+    status === 'failed'
+  )
+}
+
 async function requestGeneratedPracticeDirectly(
   apiBase: string,
   sourceUrl: string,
   accessCode = '',
+  signal?: AbortSignal,
 ) {
   const response = await fetch(`${apiBase}/api/generate-practice-from-url`, {
     body: JSON.stringify({ sourceUrl }),
@@ -264,6 +304,7 @@ async function requestGeneratedPracticeDirectly(
         : {}),
     },
     method: 'POST',
+    signal,
   })
 
   let payload: {
@@ -350,6 +391,23 @@ function isGitHubPagesHost() {
   return window.location.hostname.endsWith('github.io')
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
+function wait(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'))
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      signal?.removeEventListener('abort', abort)
+      resolve()
+    }, ms)
+
+    const abort = () => {
+      window.clearTimeout(timeoutId)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+
+    signal?.addEventListener('abort', abort, { once: true })
+  })
 }

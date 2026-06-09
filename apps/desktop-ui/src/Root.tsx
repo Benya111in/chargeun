@@ -8,6 +8,7 @@ const LocalSeasonalPage = lazy(() => import('./LocalSeasonalPage.tsx'))
 const LiveLabPage = lazy(() => import('./WebAppPage.tsx'))
 const QaWorkspacePage = lazy(() => import('./App.tsx'))
 const ScenarioPracticePage = lazy(() => import('./ScenarioPracticePage.tsx'))
+const SegmentEditorPage = lazy(() => import('./SegmentEditorPage.tsx'))
 const TeacherGuidePage = lazy(() => import('./TeacherGuidePage.tsx'))
 const UrlGeneratorPage = lazy(() => import('./UrlGeneratorPage.tsx'))
 
@@ -31,30 +32,33 @@ export function Root() {
     normalizedPathname === '/teacher' ||
     normalizedPathname === '/live-lab' ||
     normalizedPathname === '/url-generator' ||
+    normalizedPathname.startsWith('/guardian-editor') ||
     (isLocalSeasonalEnabled() && normalizedPathname === '/local-seasonal') ||
     normalizedPathname === '/qa' ||
     normalizedPathname.startsWith('/scenario/')
   const Page =
-    normalizedPathname === '/demo' ||
-    normalizedPathname.startsWith('/scenario/')
-      ? ScenarioPracticePage
-      : isLocalSeasonalEnabled() && normalizedPathname === '/local-seasonal'
-        ? LocalSeasonalPage
-        : normalizedPathname === '/teacher'
-          ? TeacherGuidePage
-          : normalizedPathname === '/live-lab'
-            ? LiveLabPage
-            : normalizedPathname === '/url-generator'
-              ? UrlGeneratorPage
-              : normalizedPathname === '/qa'
-                ? isQaUnlocked()
-                  ? QaWorkspacePage
-                  : InternalQaGatePage
-                : normalizedPathname === '/'
-                  ? LearningHomePage
-                  : isKnownPath
+    normalizedPathname.startsWith('/guardian-editor')
+      ? SegmentEditorPage
+      : normalizedPathname === '/demo' ||
+          normalizedPathname.startsWith('/scenario/')
+        ? ScenarioPracticePage
+        : isLocalSeasonalEnabled() && normalizedPathname === '/local-seasonal'
+          ? LocalSeasonalPage
+          : normalizedPathname === '/teacher'
+            ? TeacherGuidePage
+            : normalizedPathname === '/live-lab'
+              ? LiveLabPage
+              : normalizedPathname === '/url-generator'
+                ? UrlGeneratorPage
+                : normalizedPathname === '/qa'
+                  ? isQaUnlocked()
+                    ? QaWorkspacePage
+                    : InternalQaGatePage
+                  : normalizedPathname === '/'
                     ? LearningHomePage
-                    : NotFoundPage
+                    : isKnownPath
+                      ? LearningHomePage
+                      : NotFoundPage
 
   return (
     <Suspense

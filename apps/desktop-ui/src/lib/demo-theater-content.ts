@@ -96,6 +96,19 @@ export type TheaterShow = {
     passed?: boolean
     warnings?: string[]
   }
+  generationPipelineTrace?: {
+    agentRuns?: unknown[]
+    attempts?: number
+    pipelineVersion?: string
+  }
+  generationQualityReport?: {
+    groundingPassed?: boolean
+    issues?: Array<{ code?: string; message?: string; severity?: string }>
+    passed?: boolean
+    repairAttemptCount?: number
+    sourceCoveragePassed?: boolean
+    uiPlaybackPassed?: boolean
+  }
   homeNote?: string
   homeTitle?: string
   id: string

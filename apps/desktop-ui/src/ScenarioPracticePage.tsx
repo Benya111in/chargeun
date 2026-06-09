@@ -24,6 +24,7 @@ import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 import { appHref, getAppRoute, publicAssetSrc } from './lib/routes'
 import { cn } from './lib/utils'
 import {
+  acceptedGeneratedPipelineVersion,
   toGeneratedTheaterShow,
   type GeneratedScenarioRecord,
 } from './lib/generated-scenario'
@@ -33,6 +34,8 @@ type PracticeStage = 'explanation' | 'playback' | 'ready' | 'rest'
 
 const defaultScenarioId = 'fire-grounded-flow'
 const framePrecisionSec = 0.45
+const generatedActionFreezeGuardSec = 0.12
+const generatedIntroPauseGuardSec = 0.22
 const segmentStartGuardSec = 0.02
 const scenarioAliases: Record<string, string> = {
   'earthquake-review-flow': 'earthquake-protect-flow',
@@ -74,14 +77,16 @@ export default function ScenarioPracticePage() {
 
   useEffect(() => {
     if (!routeScenarioId.startsWith('generated-')) {
-      setRemoteGeneratedScenario(null)
-      setIsLoadingGeneratedScenario(false)
       return
     }
 
     let isActive = true
-    setRemoteGeneratedScenario(null)
-    setIsLoadingGeneratedScenario(true)
+    queueMicrotask(() => {
+      if (isActive) {
+        setRemoteGeneratedScenario(null)
+        setIsLoadingGeneratedScenario(true)
+      }
+    })
 
     loadGeneratedScenarioFromAsset(routeScenarioId)
       .then((loadedScenario) => {
@@ -1390,9 +1395,29 @@ function buildPlaybackWindow({
   const startSec = getSegmentStartSec(segment)
   const hasExplicitPause = segment.pauseMs !== undefined
   const rawEndSec = (segment.pauseMs ?? segment.endMs) / 1000
+  const isGeneratedSegment = segment.id.startsWith('generated-')
+  const trimTailForStaticDemo = !isGeneratedSegment
+  const generatedTailGuardSec =
+    !hasExplicitPause && isGeneratedSegment
+      ? segment.practiceMode === 'intro'
+        ? generatedIntroPauseGuardSec
+        : generatedActionFreezeGuardSec
+      : 0
+  const pauseAtSec = Math.max(
+    startSec,
+    rawEndSec -
+      (!hasExplicitPause &&
+      isGeneratedSegment &&
+      segment.practiceMode === 'intro'
+        ? generatedIntroPauseGuardSec
+        : 0),
+  )
   const freezeSec = Math.max(
     startSec,
-    rawEndSec - (hasExplicitPause ? 0 : framePrecisionSec),
+    rawEndSec -
+      (!hasExplicitPause && trimTailForStaticDemo
+        ? framePrecisionSec
+        : generatedTailGuardSec),
   )
 
   return {
@@ -1400,7 +1425,7 @@ function buildPlaybackWindow({
     freezeSec,
     index,
     nativePlayStarted: false,
-    pauseAtSec: rawEndSec,
+    pauseAtSec,
     requestId,
     segmentId: segment.id,
     startSec,
@@ -1557,9 +1582,7 @@ async function loadGeneratedScenarioFromAsset(id: string) {
   }
 
   const customScenario = response.scenario
-  if (!isAbsoluteHttpUrl(customScenario.videoSrc)) {
-    customScenario.videoSrc = response.sourceVideoUrl
-  }
+  customScenario.videoSrc = response.sourceVideoUrl
   const record: GeneratedScenarioRecord = {
     baseScenarioId: 'local-generated-video',
     createdAt: new Date().toISOString(),
@@ -1580,8 +1603,6 @@ async function fetchGeneratedScenarioAsset(id: string, apiBase: string) {
   const encodedId = encodeURIComponent(id)
   const qualityScenarioPath = `/generated/${encodedId}/${generatedQualityVersion}/scenario.json`
   const qualityVideoPath = `/generated/${encodedId}/${generatedQualityVersion}/source.mp4`
-  const legacyScenarioPath = `/generated/${encodedId}/scenario.json`
-  const legacyVideoPath = `/generated/${encodedId}/source.mp4`
   const generatedAssetBase = normalizeGeneratedAssetBase(
     import.meta.env.VITE_GENERATED_ASSET_BASE,
   )
@@ -1605,18 +1626,6 @@ async function fetchGeneratedScenarioAsset(id: string, apiBase: string) {
       publicAssetSrc(qualityVideoPath),
       'static',
     ),
-    apiBase
-      ? buildScenarioAssetCandidate(
-          `${apiBase}${legacyScenarioPath}`,
-          `${apiBase}${legacyVideoPath}`,
-          'legacy',
-        )
-      : null,
-    buildScenarioAssetCandidate(
-      publicAssetSrc(legacyScenarioPath),
-      publicAssetSrc(legacyVideoPath),
-      'legacy',
-    ),
   ].filter((item): item is ScenarioAssetCandidate => item !== null)
 
   for (const candidate of urls) {
@@ -1632,8 +1641,13 @@ async function fetchGeneratedScenarioAsset(id: string, apiBase: string) {
         continue
       }
 
+      const scenario = (await response.json()) as TheaterShow
+      if (!isPublishableGeneratedScenarioAsset(scenario)) {
+        continue
+      }
+
       return {
-        scenario: (await response.json()) as TheaterShow,
+        scenario,
         source: candidate.source,
         sourceVideoUrl: candidate.sourceVideoUrl,
       }
@@ -1646,7 +1660,7 @@ async function fetchGeneratedScenarioAsset(id: string, apiBase: string) {
 }
 
 type ScenarioAssetCandidate = {
-  source: 'canonical' | 'legacy' | 'remote' | 'static'
+  source: 'canonical' | 'remote' | 'static'
   sourceVideoUrl: string
   url: string
 }
@@ -1671,8 +1685,36 @@ function normalizeGeneratedAssetBase(input: unknown) {
   return input.trim().replace(/\/+$/u, '')
 }
 
-function isAbsoluteHttpUrl(input: string) {
-  return /^https?:\/\//iu.test(input)
+function isPublishableGeneratedScenarioAsset(scenario: TheaterShow) {
+  const candidate = scenario as TheaterShow & {
+    generatedArtifactManifest?: {
+      qualityVersion?: string
+      scenarioJsonUrl?: string
+      sourceVideoUrl?: string
+    }
+    generationPipelineTrace?: {
+      agentRuns?: unknown
+      pipelineVersion?: string
+    }
+    generationQualityReport?: {
+      groundingPassed?: boolean
+      passed?: boolean
+      sourceCoveragePassed?: boolean
+      uiPlaybackPassed?: boolean
+    }
+  }
+
+  return (
+    candidate.generationQualityReport?.passed === true &&
+    candidate.generationQualityReport.groundingPassed === true &&
+    candidate.generationQualityReport.sourceCoveragePassed === true &&
+    candidate.generationQualityReport.uiPlaybackPassed === true &&
+    candidate.generationPipelineTrace?.pipelineVersion ===
+      acceptedGeneratedPipelineVersion &&
+    Array.isArray(candidate.generationPipelineTrace.agentRuns) &&
+    candidate.generatedArtifactManifest?.qualityVersion ===
+      generatedQualityVersion
+  )
 }
 
 function getNextScenario(currentScenario: TheaterShow) {

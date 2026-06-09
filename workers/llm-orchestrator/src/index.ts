@@ -13,9 +13,9 @@ import {
   type VoiceReply,
 } from '@ansimtrack/shared-types'
 
-import { retrieveOfficialSources } from './official-rag'
+import { retrieveOfficialSources } from './official-rag.js'
 
-export { retrieveOfficialSources } from './official-rag'
+export { retrieveOfficialSources } from './official-rag.js'
 
 const lowConfidenceThreshold = 0.72
 const defaultRuleMatchLimit = 3
@@ -159,6 +159,10 @@ export const buildStructuredLearningExplanation = (
     }),
     ...buildSuppressedLearnerActionSteps(input.learnerActionSteps ?? []),
   ])
+  const doNotText =
+    status === 'validated'
+      ? chooseDoNotText(legacyExplanation.doNot, primaryRule)
+      : undefined
   const structured: StructuredLearningExplanation = {
     version: 'slowlearner_multitrack_v1',
     segment: {
@@ -196,11 +200,11 @@ export const buildStructuredLearningExplanation = (
         officialRuleIds: groundedRules.map((rule) => rule.rule_id),
         text: limitText(legacyExplanation.tracks.reason, 180),
       },
-      ...(status === 'validated' && primaryRule?.do_not
+      ...(doNotText
         ? {
             doNot: {
-              officialRuleIds: [primaryRule.rule_id],
-              text: limitText(primaryRule.do_not, 180),
+              officialRuleIds: primaryRule ? [primaryRule.rule_id] : [],
+              text: limitText(doNotText, 180),
             },
           }
         : {}),
@@ -248,6 +252,44 @@ export const buildStructuredLearningExplanation = (
   }
 
   return structuredLearningExplanationSchema.parse(structured)
+}
+
+function chooseDoNotText(
+  sourceDoNot: string | undefined,
+  primaryRule: RuleRecord | undefined,
+) {
+  const sourceText = sourceDoNot?.trim()
+  const officialText = primaryRule?.do_not?.trim()
+
+  if (
+    sourceText &&
+    (!officialText || !doNotTextsContradict(sourceText, officialText))
+  ) {
+    return sourceText
+  }
+
+  return officialText
+}
+
+function doNotTextsContradict(sourceText: string, officialText: string) {
+  const normalizedSource = normalizeForMatching(sourceText)
+  const normalizedOfficial = normalizeForMatching(officialText)
+  const sourceIsProhibition = /않|말|금지|피|멈추|자제|중단/.test(
+    normalizedSource,
+  )
+  const officialIsProhibition = /않|말|금지|피|멈추|자제|중단/.test(
+    normalizedOfficial,
+  )
+
+  if (sourceIsProhibition && officialIsProhibition) {
+    return false
+  }
+
+  return sourceIsProhibition !== officialIsProhibition
+}
+
+function normalizeForMatching(text: string) {
+  return text.replace(/\s+/gu, '').toLowerCase()
 }
 
 export const toLegacySegmentExplanation = (

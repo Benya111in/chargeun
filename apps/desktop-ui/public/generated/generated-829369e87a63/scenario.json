@@ -4,30 +4,44 @@
   "generatedSourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
   "generatedTopicLabel": "태풍 영상 학습",
   "generationEvidenceReport": {
-    "audioCueCount": 15,
-    "expandedCueCount": 15,
+    "audioCueCount": 7,
+    "expandedCueCount": 7,
     "frameBoundaryPrecisionMs": 10,
-    "sceneCutCandidatesMs": [],
-    "segmentationEvidence": [
-      "audio-caption",
-      "gpt-5.5-scenario-authoring"
+    "sceneCutCandidatesMs": [
+      4340,
+      5870,
+      8480,
+      10210,
+      12710,
+      14780,
+      16280,
+      18250,
+      21120,
+      23120,
+      28130
     ],
-    "sentenceBoundaryCount": 9,
+    "segmentationEvidence": [
+      "audio-asr",
+      "visual-scene-cut",
+      "visual-caption-ocr",
+      "deterministic-repair"
+    ],
+    "sentenceBoundaryCount": 5,
     "stages": [
       {
-        "evidence": "15 caption/audio cues",
-        "name": "audio-caption-parse",
+        "evidence": "7 direct-audio ASR cues",
+        "name": "audio-asr-transcription",
         "status": "completed"
       },
       {
-        "evidence": "15 bounded cues after sentence and boundary split",
+        "evidence": "7 bounded cues after sentence and boundary split",
         "name": "audio-sentence-boundary-split",
         "status": "completed"
       },
       {
-        "evidence": "no strong scene cut candidate",
+        "evidence": "11 ffmpeg scene candidates",
         "name": "visual-scene-probe",
-        "status": "skipped"
+        "status": "completed"
       },
       {
         "evidence": "segment start/end values quantized to 0.01 second",
@@ -35,287 +49,614 @@
         "status": "completed"
       },
       {
-        "evidence": "no sampled visual caption evidence",
+        "evidence": "23 sampled frames, 7 visual caption boundary candidates",
         "name": "visual-caption-ocr",
-        "status": "skipped"
+        "status": "completed"
       },
       {
-        "evidence": "7 GPT-authored learning segments from strict JSON schema",
-        "name": "gpt-5.5-scenario-authoring",
+        "evidence": "7 repaired learning segments from direct-audio and visual-caption evidence plus official rule grounding",
+        "name": "deterministic-fallback-repair",
         "status": "completed"
       }
     ],
     "videoDurationMs": 30063,
-    "visualCaptionBoundaries": [],
-    "visualCaptionFrameCount": 0,
-    "warnings": [
-      "프레임 장면 변화 후보가 약해서 자막/오디오 문장 경계를 우선 사용했습니다.",
-      "화면 자막 비교에 필요한 프레임을 충분히 추출하지 못했습니다."
+    "visualCaptionBoundaries": [
+      {
+        "afterCaption": "여름철 재해 사고",
+        "beforeCaption": "여름 호우·태풍 국민행동수칙",
+        "changeType": "new_topic",
+        "confidence": 0.8,
+        "reason": "연속 프레임 OCR에서 실제 화면 학습 자막의 핵심 문구가 바뀌었습니다.",
+        "recommendedBoundaryMs": 0,
+        "timeMs": 1000
+      },
+      {
+        "afterCaption": "여름철 재해 사고: 1위 호우, 2위 태풍",
+        "beforeCaption": "여름철 재해 사고: 1위 호우",
+        "changeType": "same_topic",
+        "confidence": 0.86,
+        "reason": "Additional ranking item appears; topic remains the same intro/statistics segment.",
+        "recommendedBoundaryMs": 4400,
+        "timeMs": 3500
+      },
+      {
+        "afterCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+        "beforeCaption": "여름철 재해 사고: 1위 호우, 2위 태풍",
+        "changeType": "new_topic",
+        "confidence": 0.93,
+        "reason": "Visible caption changes from intro/ranking to a specific heavy-rain action rule about hiking and camping.",
+        "recommendedBoundaryMs": 7000,
+        "timeMs": 6750
+      },
+      {
+        "afterCaption": "낮은 다리·침수된 도로 출입 금지",
+        "beforeCaption": "집중호우 시 산행·캠핑 금지",
+        "changeType": "new_topic",
+        "confidence": 0.94,
+        "reason": "Caption changes to a different hazard location/action rule: low bridges and flooded roads.",
+        "recommendedBoundaryMs": 11300,
+        "timeMs": 12490
+      },
+      {
+        "afterCaption": "낮은 다리·침수된 도로 출입 금지",
+        "beforeCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지",
+        "changeType": "new_topic",
+        "confidence": 0.93,
+        "reason": "연속 프레임 OCR에서 실제 화면 학습 자막의 핵심 문구가 바뀌었습니다.",
+        "recommendedBoundaryMs": 14800,
+        "timeMs": 13500
+      },
+      {
+        "afterCaption": "배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지",
+        "beforeCaption": "낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+        "changeType": "new_topic",
+        "confidence": 0.93,
+        "reason": "Caption changes to drainage-channel preparation and avoiding paddy/water-gate checks during heavy rain.",
+        "recommendedBoundaryMs": 23300,
+        "timeMs": 20700
+      },
+      {
+        "afterCaption": "국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+        "beforeCaption": "국민 여러분의 행복하고 안전한 여름을 위해",
+        "changeType": "same_topic",
+        "confidence": 0.9,
+        "reason": "Closing reminder text expands, but remains the same final safety-reminder topic.",
+        "recommendedBoundaryMs": 28000,
+        "timeMs": 27750
+      }
     ],
-    "generationModel": "gpt-5.5"
+    "visualCaptionFrames": [
+      {
+        "confidence": 0.8,
+        "hasLearningCaption": true,
+        "index": 0,
+        "normalizedCaption": "여름 호우·태풍 국민행동수칙",
+        "tsMs": 250,
+        "visibleCaption": "여름 호우·태풍 국민행동수칙"
+      },
+      {
+        "confidence": 0.86,
+        "hasLearningCaption": true,
+        "index": 1,
+        "normalizedCaption": "여름철 재해 사고",
+        "tsMs": 1000,
+        "visibleCaption": "여름철 재해 사고"
+      },
+      {
+        "confidence": 0.86,
+        "hasLearningCaption": true,
+        "index": 2,
+        "normalizedCaption": "여름철 재해 사고 / 1위 호우",
+        "tsMs": 2200,
+        "visibleCaption": "여름철 재해 사고 1위 호우 2위"
+      },
+      {
+        "confidence": 0.92,
+        "hasLearningCaption": true,
+        "index": 3,
+        "normalizedCaption": "여름철 재해 사고 / 1위 호우 / 2위 태풍",
+        "tsMs": 3500,
+        "visibleCaption": "여름철 재해 사고 1위 호우 2위 태풍"
+      },
+      {
+        "confidence": 0.92,
+        "hasLearningCaption": true,
+        "index": 4,
+        "normalizedCaption": "여름철 재해 사고 / 1위 호우 / 2위 태풍",
+        "tsMs": 4150,
+        "visibleCaption": "여름철 재해 사고 1위 호우 2위 태풍"
+      },
+      {
+        "confidence": 0.7,
+        "hasLearningCaption": true,
+        "index": 5,
+        "normalizedCaption": "재해유형별 인명피해 분석 결과",
+        "tsMs": 5650,
+        "visibleCaption": "재해유형별 인명피해 분석 결과"
+      },
+      {
+        "confidence": 0.94,
+        "hasLearningCaption": true,
+        "index": 6,
+        "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+        "tsMs": 6750,
+        "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+      },
+      {
+        "confidence": 0.94,
+        "hasLearningCaption": true,
+        "index": 7,
+        "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+        "tsMs": 8260,
+        "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+      },
+      {
+        "confidence": 0.94,
+        "hasLearningCaption": true,
+        "index": 8,
+        "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+        "tsMs": 9150,
+        "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+      },
+      {
+        "confidence": 0.94,
+        "hasLearningCaption": true,
+        "index": 9,
+        "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+        "tsMs": 9990,
+        "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+      },
+      {
+        "confidence": 0.94,
+        "hasLearningCaption": true,
+        "index": 10,
+        "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+        "tsMs": 11000,
+        "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+      },
+      {
+        "confidence": 0.62,
+        "hasLearningCaption": true,
+        "index": 11,
+        "normalizedCaption": "낮은 다리·침수된 도로",
+        "tsMs": 12490,
+        "visibleCaption": "낮은 다·수 도로"
+      },
+      {
+        "confidence": 0.93,
+        "hasLearningCaption": true,
+        "index": 12,
+        "normalizedCaption": "낮은 다리·침수된 도로 출입 금지",
+        "tsMs": 13500,
+        "visibleCaption": "낮은 다리·침수된 도로 출입 금지"
+      },
+      {
+        "confidence": 0.93,
+        "hasLearningCaption": true,
+        "index": 13,
+        "normalizedCaption": "낮은 다리·침수된 도로 출입 금지",
+        "tsMs": 14550,
+        "visibleCaption": "낮은 다리·침수된 도로 출입 금지"
+      },
+      {
+        "confidence": 0.84,
+        "hasLearningCaption": true,
+        "index": 14,
+        "normalizedCaption": "낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+        "tsMs": 16000,
+        "visibleCaption": "낮은 다리·침수된 도로 출입 금지 고립 시 건너지 말고 119 신고·도움 요..."
+      },
+      {
+        "confidence": 0.94,
+        "hasLearningCaption": true,
+        "index": 15,
+        "normalizedCaption": "낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+        "tsMs": 17850,
+        "visibleCaption": "낮은 다리·침수된 도로 출입 금지 고립 시 건너지 말고 119 신고·도움 요청"
+      },
+      {
+        "confidence": 0.35,
+        "hasLearningCaption": false,
+        "index": 16,
+        "normalizedCaption": "",
+        "tsMs": 18500,
+        "visibleCaption": ""
+      },
+      {
+        "confidence": 0.81,
+        "hasLearningCaption": true,
+        "index": 17,
+        "normalizedCaption": "배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지",
+        "tsMs": 20700,
+        "visibleCaption": "배수로 사전 정비 집중호우 시 논·물꼬 점검 절대 ..."
+      },
+      {
+        "confidence": 0.9,
+        "hasLearningCaption": true,
+        "index": 18,
+        "normalizedCaption": "배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 / 어르신, 어린이 등 외출금지",
+        "tsMs": 22900,
+        "visibleCaption": "배수로 사전 정비 집중호우 시 논·물꼬 점검 절대 금지"
+      },
+      {
+        "confidence": 0.25,
+        "hasLearningCaption": false,
+        "index": 19,
+        "normalizedCaption": "",
+        "tsMs": 23550,
+        "visibleCaption": ""
+      },
+      {
+        "confidence": 0.88,
+        "hasLearningCaption": true,
+        "index": 20,
+        "normalizedCaption": "국민 여러분의 행복하고 안전한 여름을 위해",
+        "tsMs": 25650,
+        "visibleCaption": "국민 여러분의 행복하고 안전한 여름을 위해 꼭"
+      },
+      {
+        "confidence": 0.96,
+        "hasLearningCaption": true,
+        "index": 21,
+        "normalizedCaption": "국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+        "tsMs": 27750,
+        "visibleCaption": "국민 여러분의 행복하고 안전한 여름을 위해 안전 수칙도 꼭 챙겨주세요"
+      },
+      {
+        "confidence": 0.98,
+        "hasLearningCaption": false,
+        "index": 22,
+        "normalizedCaption": "행정안전부",
+        "tsMs": 28500,
+        "visibleCaption": "행정안전부"
+      }
+    ],
+    "visualCaptionFrameCount": 23,
+    "warnings": [
+      "Some small or partially animated Korean text is only partly readable in frames 5, 11, 14, and 17.",
+      "The parenthetical line in frame 18 is low-confidence but appears to read: 어르신, 어린이 등 외출금지."
+    ]
   },
-  "homeNote": "GPT-5.5가 입력 영상 근거를 읽고 만든 장면별 학습 화면입니다.",
-  "homeTitle": "비와 태풍 때 지킬 약속",
+  "homeNote": "입력한 영상에서 새로 만든 장면별 학습 화면입니다.",
+  "homeTitle": "URL로 만든 연습",
   "id": "generated-829369e87a63",
-  "note": "제공된 음성 단서의 비·태풍 안전 안내를 바탕으로 느린 학습자용 짧은 행동 학습 장면으로 나누었습니다.",
+  "note": "직접 추출한 오디오 시간과 화면 자막 변화를 기준으로 새로 나눈 학습 화면입니다.",
   "posterSrc": "/demo/fire-grounded-02.jpg",
   "practiceSequence": false,
   "segments": [
     {
-      "actionReasons": [
-        "비와 태풍 때 지킬 일을 미리 떠올려요."
-      ],
-      "actionSteps": [
-        "오늘은 비와 태풍 때 지킬 약속을 배워요."
-      ],
+      "actionReasons": [],
+      "actionSteps": [],
       "answerOptions": [],
       "checkQuestion": "",
-      "description": "여름에는 비가 많이 오고 태풍이 올 수 있어요. 꼭 지킬 약속을 배워요.",
-      "endMs": 4440,
+      "description": "비와 태풍 안전수칙을 배워요.",
+      "endMs": 4390,
       "explanation": {
-        "overlayTargets": [],
-        "safetyMode": "grounded",
         "segmentId": "generated-829369e87a63-segment-1",
+        "safetyMode": "review_official",
         "tracks": {
-          "action": "오늘은 비와 태풍 때 지킬 약속을 배워요.",
-          "basic": "여름철 비와 태풍 시 이것만은 꼭 지켜 달라는 소개입니다.",
-          "easy": "여름에는 비가 많이 오고 태풍이 올 수 있어요. 꼭 지킬 약속을 배워요.",
-          "reason": "비와 태풍 때 지킬 일을 미리 떠올려요."
-        }
+          "basic": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍",
+          "easy": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍",
+          "reason": "강한 바람에 유리나 물건이 깨질 수 있어요.",
+          "caregiver": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍"
+        },
+        "overlayTargets": []
       },
       "id": "generated-829369e87a63-segment-1",
-      "label": "여름에는 비가 많이 오고 태풍이 올 수 있어요. 꼭 지킬 약속을 배워요.",
-      "learnerExplanation": "여름에는 비가 많이 오고 태풍이 올 수 있어요. 꼭 지킬 약속을 배워요.",
-      "learnerPrompt": "비와 태풍 때 지킬 약속을 배워요.",
+      "label": "비와 태풍 안전수칙을 배워요.",
+      "learnerExplanation": "비와 태풍 안전수칙을 배워요.",
+      "learnerPrompt": "비와 태풍 안전수칙을 배워요.",
       "learnerSequence": [
         {
           "kind": "situation",
-          "text": "여름에 비와 태풍이 와요."
-        },
-        {
-          "kind": "action",
-          "text": "지킬 약속을 하나씩 배워요."
+          "text": "비와 태풍 안전수칙을 배워요."
         }
       ],
       "narration": [
         {
-          "endMs": 4440,
+          "endMs": 4400,
           "source": "audio",
-          "startMs": 2870,
-          "text": "여름철 비와 태풍 시 이것만은 꼭 지켜 달라는 소개입니다."
+          "startMs": 0,
+          "text": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요."
         }
       ],
       "packet": {
-        "asrText": "여름철 비와 태풍 시 이것만은 꼭 지켜 달라는 소개입니다.",
+        "asrText": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍",
         "keyframes": [],
         "objectHints": [],
-        "ocrTokens": [],
+        "ocrTokens": [
+          "비와 태풍 소개",
+          "여름철",
+          "호우나",
+          "태풍",
+          "이것만은",
+          "지켜주세요",
+          "여름",
+          "호우",
+          "태풍",
+          "국민행동수칙",
+          "여름철",
+          "재해",
+          "사고",
+          "여름철",
+          "재해",
+          "사고",
+          "1위"
+        ],
         "sessionId": "generated-829369e87a63",
-        "tEndMs": 4440,
-        "tStartMs": 2870,
+        "tEndMs": 4390,
+        "tStartMs": 0,
         "uiElements": []
       },
       "practiceMode": "intro",
       "primarySourceTitle": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!",
       "requiredLearnerKeywords": [
-        "비",
         "태풍"
       ],
       "ruleMatches": [],
       "safetyNotice": "이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.",
       "safetyWarnings": [],
       "segment": {
-        "confidence": 0.88,
-        "endMs": 4440,
+        "confidence": 0.65,
+        "endMs": 4390,
         "hazard": "typhoon",
         "id": "generated-829369e87a63-segment-1",
-        "officialRuleIds": [
-          "LOCAL_TYPHOON_GENERATED"
-        ],
+        "officialRuleIds": [],
         "phase": "generated_typhoon_practice",
         "sessionId": "generated-829369e87a63",
-        "startMs": 2870
+        "startMs": 0
       },
       "sourceTopicKeys": [
         "intro_weather"
       ],
-      "startMs": 2870,
+      "startMs": 0,
       "structuredExplanation": {
-        "evidence": {
-          "asrEvidence": [
-            {
-              "confidence": 0.9,
-              "endMs": 4440,
-              "startMs": 2870,
-              "text": "여름철 비와 태풍 시 이것만은 꼭 지켜 달라는 소개입니다."
-            }
-          ],
-          "modelInference": [
-            {
-              "basedOn": [
-                "asr",
-                "visual-scene-cut",
-                "gpt-5.5"
-              ],
-              "claim": "GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다."
-            }
-          ],
-          "ocrEvidence": [],
-          "ruleEvidence": [
-            {
-              "matchedText": "여름철 비와 태풍 시 이것만은 꼭 지켜 달라는 소개입니다.",
-              "ruleId": "LOCAL_TYPHOON_GENERATED",
-              "sourceName": "입력 영상 자막과 GPT-5.5 구조화 결과",
-              "sourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-              "title": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!"
-            }
-          ],
-          "visualEvidence": []
-        },
+        "version": "slowlearner_multitrack_v1",
         "segment": {
-          "confidence": 0.88,
-          "decisionPoint": "여름에는 비가 많이 오고 태풍이 올 수 있어요. 꼭 지킬 약속을 배워요.",
-          "endMs": 4440,
-          "hazard": "typhoon",
-          "phase": "generated_typhoon_practice",
           "segmentId": "generated-829369e87a63-segment-1",
           "sessionId": "generated-829369e87a63",
           "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-          "startMs": 2870,
-          "status": "draft"
+          "hazard": "typhoon",
+          "phase": "generated_typhoon_practice",
+          "decisionPoint": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍",
+          "startMs": 0,
+          "endMs": 4390,
+          "confidence": 0.65,
+          "status": "needs_review"
         },
-        "suppressedCandidates": [],
         "tracks": {
           "easy": {
-            "maxReadingLevel": "very_easy",
-            "text": "여름에는 비가 많이 오고 태풍이 올 수 있어요. 꼭 지킬 약속을 배워요."
+            "text": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍",
+            "maxReadingLevel": "very_easy"
           },
           "reason": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "비와 태풍 때 지킬 일을 미리 떠올려요."
+            "text": "강한 바람에 유리나 물건이 깨질 수 있어요.",
+            "officialRuleIds": []
+          },
+          "caregiver": {
+            "script": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍",
+            "correctionHint": "이 장면은 행동 연습이 아니라 설명 장면으로 보고, 다음 행동 장면에서 확인합니다."
           }
         },
-        "validation": {
-          "hasGroundedAction": false,
-          "learnerSafe": true,
-          "requiresHumanReview": false,
-          "schemaValid": true,
-          "warnings": [
-            "GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다."
-          ]
+        "evidence": {
+          "visualEvidence": [],
+          "ocrEvidence": [
+            {
+              "text": "비와 태풍 소개",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "여름철",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "호우나",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "태풍",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "이것만은",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "지켜주세요",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "여름",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "호우",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "태풍",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "국민행동수칙",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "여름철",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "재해",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "사고",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "여름철",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "재해",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "사고",
+              "timeMs": 0,
+              "confidence": 0.7
+            },
+            {
+              "text": "1위",
+              "timeMs": 0,
+              "confidence": 0.7
+            }
+          ],
+          "asrEvidence": [
+            {
+              "text": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍",
+              "startMs": 0,
+              "endMs": 4390,
+              "confidence": 0.72
+            }
+          ],
+          "ruleEvidence": [],
+          "modelInference": []
         },
-        "version": "slowlearner_multitrack_v1"
+        "suppressedCandidates": [
+          {
+            "candidate": "여름철, 호우나, 태풍",
+            "category": "unclear_evidence",
+            "reason": "화면 단서는 있지만 공식 행동 카드로 연결할 근거가 부족합니다.",
+            "evidenceRefs": []
+          }
+        ],
+        "validation": {
+          "schemaValid": true,
+          "hasGroundedAction": false,
+          "learnerSafe": false,
+          "requiresHumanReview": true,
+          "warnings": [
+            "공식 근거가 충분하지 않아 학습자 행동 카드를 숨깁니다."
+          ]
+        }
       },
       "teacherGuide": {
-        "correction": "학습자가 다른 재난을 말하면, 이번 영상은 비와 태풍 때 지킬 일을 말한다고 부드럽게 알려 주세요.",
-        "observe": "비, 태풍이라는 말을 따라 말하거나 그림을 가리키는지 봅니다.",
-        "prompt": "오늘은 어떤 날씨 때 조심하는지 물어보세요.",
-        "script": "여름철 비와 태풍 시 이것만은 꼭 지켜 달라는 소개입니다."
+        "correction": "자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.",
+        "observe": "학습자가 장면과 행동을 구분하는지 봅니다.",
+        "prompt": "무슨 내용인지 같이 말해 봅니다.",
+        "script": "여름철 호우나 태풍 시 이것만은 꼭 지켜주세요. 여름 호우·태풍 국민행동수칙 여름철 재해 사고 여름철 재해 사고 / 1위 호우 여름철 재해 사고 / 1위 호우 / 2위 태풍"
       },
       "teachBack": null
     },
     {
       "actionReasons": [
-        "태풍 때 산에서는 갑자기 비가 많이 올 수 있어요.",
-        "캠핑장은 바람과 비 때문에 위험해요."
+        "비가 오면 산과 캠핑장은 위험해요."
       ],
       "actionSteps": [
-        "산에 가는 약속을 멈춰요.",
-        "캠핑 약속도 멈춰요.",
-        "어른에게 가지 않겠다고 말해요."
+        "산행과 캠핑은 멈추고 안전한 곳에 있어요"
       ],
       "answerOptions": [
         {
+          "id": "correct",
+          "label": "산행과 캠핑",
+          "role": "correct",
+          "kind": "state",
+          "feedback": "맞아요. 산행과 캠핑은 멈추고 안전한 곳에 있어요",
+          "officialRuleIds": [
+            "KR_TY_04"
+          ],
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "맞아요. 산과 캠핑은 가지 않아요.",
-          "id": "option-1",
-          "kind": "state",
-          "label": "가지 않아요",
-          "officialRuleIds": [
-            "LOCAL_TYPHOON_GENERATED"
-          ],
-          "role": "correct",
           "correct": true
         },
         {
+          "id": "contrast",
+          "label": "집 안에 있기",
+          "role": "contrast",
+          "kind": "state",
+          "feedback": "헷갈리면 장면을 다시 봐요.",
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "아니에요. 태풍 때 산은 위험해요.",
-          "id": "option-2",
-          "kind": "place",
-          "label": "산으로 가요",
-          "role": "contrast",
           "correct": false
         }
       ],
-      "checkQuestion": "태풍 때 산이나 캠핑은 어떻게 해요?",
-      "description": "비와 태풍 때는 산과 캠핑장이 위험해요. 밖에 멀리 가지 않아요.",
-      "endMs": 7050,
+      "checkQuestion": "태풍 때 무엇을 멈출까요?",
+      "description": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+      "endMs": 6990,
       "explanation": {
-        "doNot": "산이나 캠핑장에 가지 않아요.",
-        "overlayTargets": [],
-        "safetyMode": "grounded",
         "segmentId": "generated-829369e87a63-segment-2",
+        "safetyMode": "grounded",
+        "doNot": "산이나 캠핑장에 가지 않아요.",
         "tracks": {
-          "action": "산에 가는 약속을 멈춰요. / 캠핑 약속도 멈춰요. / 어른에게 가지 않겠다고 말해요.",
-          "basic": "산행이나 캠핑은 절대 안 된다는 안내입니다.",
-          "easy": "비와 태풍 때는 산과 캠핑장이 위험해요. 밖에 멀리 가지 않아요.",
-          "reason": "태풍 때 산에서는 갑자기 비가 많이 올 수 있어요."
-        }
+          "basic": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+          "easy": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+          "action": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+          "reason": "비가 오면 산과 캠핑장은 위험해요.",
+          "caregiver": "산행이나 캠핑은 절대 안 돼요. 산행이나 캠핑은 절대 안 돼요.",
+          "report": "산이나 계곡에서 물이 불어나면 높은 곳에서 119에 말합니다."
+        },
+        "overlayTargets": []
       },
       "id": "generated-829369e87a63-segment-2",
-      "label": "비와 태풍 때는 산과 캠핑장이 위험해요. 밖에 멀리 가지 않아요.",
-      "learnerExplanation": "비와 태풍 때는 산과 캠핑장이 위험해요. 밖에 멀리 가지 않아요.",
-      "learnerPrompt": "태풍 때는 산과 캠핑에 가지 않아요.",
+      "label": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+      "learnerExplanation": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+      "learnerPrompt": "비와 태풍이 올 수 있어요.",
       "learnerSequence": [
         {
           "kind": "situation",
-          "text": "태풍이 오는데 산이나 캠핑을 가려고 해요."
+          "text": "비와 태풍이 올 수 있어요."
         },
         {
           "kind": "action",
-          "text": "산에 가지 않아요."
-        },
-        {
-          "kind": "action",
-          "text": "캠핑도 가지 않아요."
-        },
-        {
-          "kind": "action",
-          "text": "어른에게 말해요."
+          "text": "산행과 캠핑은 멈추고 안전한 곳에 있어요"
         }
       ],
       "narration": [
         {
-          "endMs": 7050,
+          "endMs": 7000,
           "source": "audio",
-          "startMs": 4440,
-          "text": "산행이나 캠핑은 절대 안 된다는 안내입니다."
+          "startMs": 4400,
+          "text": "산행이나 캠핑은 절대 안 돼요."
         }
       ],
       "packet": {
-        "asrText": "산행이나 캠핑은 절대 안 된다는 안내입니다.",
+        "asrText": "산행이나 캠핑은 절대 안 돼요. 산행이나 캠핑은 절대 안 돼요.",
         "keyframes": [],
         "objectHints": [],
-        "ocrTokens": [],
+        "ocrTokens": [
+          "산행과 캠핑 피하기",
+          "산행이나",
+          "캠핑은",
+          "절대",
+          "돼요"
+        ],
         "sessionId": "generated-829369e87a63",
-        "tEndMs": 7050,
-        "tStartMs": 4440,
+        "tEndMs": 6990,
+        "tStartMs": 4400,
         "uiElements": []
       },
       "practiceMode": "action",
       "primarySourceTitle": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!",
       "requiredLearnerKeywords": [
-        "산",
-        "캠핑",
-        "가지 않기"
+        "캠핑"
       ],
       "ruleMatches": [],
       "safetyNotice": "이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.",
@@ -324,898 +665,1049 @@
       ],
       "segment": {
         "confidence": 0.88,
-        "endMs": 7050,
+        "endMs": 6990,
         "hazard": "typhoon",
         "id": "generated-829369e87a63-segment-2",
         "officialRuleIds": [
-          "LOCAL_TYPHOON_GENERATED"
+          "KR_TY_04"
         ],
         "phase": "generated_typhoon_practice",
         "sessionId": "generated-829369e87a63",
-        "startMs": 4440
+        "startMs": 4400
       },
       "sourceTopicKeys": [
         "outdoor_activity"
       ],
-      "startMs": 4440,
+      "startMs": 4400,
       "structuredExplanation": {
+        "version": "slowlearner_multitrack_v1",
+        "segment": {
+          "segmentId": "generated-829369e87a63-segment-2",
+          "sessionId": "generated-829369e87a63",
+          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
+          "hazard": "typhoon",
+          "phase": "generated_typhoon_practice",
+          "decisionPoint": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+          "startMs": 4400,
+          "endMs": 6990,
+          "confidence": 0.88,
+          "status": "validated"
+        },
+        "tracks": {
+          "easy": {
+            "text": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+            "maxReadingLevel": "very_easy"
+          },
+          "action": {
+            "cards": [
+              {
+                "label": "산행과 캠핑은 멈추고 안전한 곳에 있어요",
+                "order": 1,
+                "officialRuleIds": [
+                  "KR_TY_04"
+                ]
+              }
+            ]
+          },
+          "teachBack": {
+            "prompt": "태풍 때 무엇을 멈출까요?",
+            "correctOptionId": "correct",
+            "options": [
+              {
+                "id": "correct",
+                "label": "산행과 캠핑",
+                "role": "correct",
+                "kind": "state",
+                "feedback": "맞아요. 산행과 캠핑은 멈추고 안전한 곳에 있어요",
+                "officialRuleIds": [
+                  "KR_TY_04"
+                ],
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              },
+              {
+                "id": "contrast",
+                "label": "집 안에 있기",
+                "role": "contrast",
+                "kind": "state",
+                "feedback": "헷갈리면 장면을 다시 봐요.",
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              }
+            ],
+            "reviewPrompt": "같이 한 번 더 골라 봐요."
+          },
+          "reason": {
+            "text": "비가 오면 산과 캠핑장은 위험해요.",
+            "officialRuleIds": [
+              "KR_TY_04"
+            ]
+          },
+          "doNot": {
+            "text": "산이나 캠핑장에 가지 않아요.",
+            "officialRuleIds": [
+              "KR_TY_04"
+            ]
+          },
+          "caregiver": {
+            "script": "산행이나 캠핑은 절대 안 돼요. 산행이나 캠핑은 절대 안 돼요.",
+            "correctionHint": "농촌이나 산 근처에 사는 학습자는 가족이 정한 갈 곳을 다시 말하게 합니다."
+          },
+          "report": {
+            "text": "산이나 계곡에서 물이 불어나면 높은 곳에서 119에 말합니다.",
+            "emergencyNumbers": [
+              "119",
+              "112"
+            ],
+            "condition": "실제 위험하거나 도움이 필요할 때"
+          }
+        },
         "evidence": {
+          "visualEvidence": [],
+          "ocrEvidence": [
+            {
+              "text": "산행과 캠핑 피하기",
+              "timeMs": 4400,
+              "confidence": 0.7
+            },
+            {
+              "text": "산행이나",
+              "timeMs": 4400,
+              "confidence": 0.7
+            },
+            {
+              "text": "캠핑은",
+              "timeMs": 4400,
+              "confidence": 0.7
+            },
+            {
+              "text": "절대",
+              "timeMs": 4400,
+              "confidence": 0.7
+            },
+            {
+              "text": "돼요",
+              "timeMs": 4400,
+              "confidence": 0.7
+            }
+          ],
           "asrEvidence": [
             {
-              "confidence": 0.9,
-              "endMs": 7050,
-              "startMs": 4440,
-              "text": "산행이나 캠핑은 절대 안 된다는 안내입니다."
+              "text": "산행이나 캠핑은 절대 안 돼요. 산행이나 캠핑은 절대 안 돼요.",
+              "startMs": 4400,
+              "endMs": 6990,
+              "confidence": 0.72
+            }
+          ],
+          "ruleEvidence": [
+            {
+              "ruleId": "KR_TY_04",
+              "title": "mountain_rural",
+              "matchedText": "산과 계곡에서는 빨리 안전한 곳으로 가고, 논이나 물길을 보러 나가지 않습니다.",
+              "sourceName": "안전한TV - 태풍 발생 시 행동요령",
+              "sourceUrl": "https://www.safetv.go.kr/base/video/view?idx=916"
             }
           ],
           "modelInference": [
             {
+              "claim": "현재 세그먼트는 KR_TY_04 공식 규칙과 연결됩니다.",
               "basedOn": [
+                "ocr",
                 "asr",
-                "visual-scene-cut",
-                "gpt-5.5"
-              ],
-              "claim": "GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다."
+                "rule"
+              ]
             }
-          ],
-          "ocrEvidence": [],
-          "ruleEvidence": [
-            {
-              "matchedText": "산행이나 캠핑은 절대 안 된다는 안내입니다.",
-              "ruleId": "LOCAL_TYPHOON_GENERATED",
-              "sourceName": "입력 영상 자막과 GPT-5.5 구조화 결과",
-              "sourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-              "title": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!"
-            }
-          ],
-          "visualEvidence": []
-        },
-        "segment": {
-          "confidence": 0.88,
-          "decisionPoint": "비와 태풍 때는 산과 캠핑장이 위험해요. 밖에 멀리 가지 않아요.",
-          "endMs": 7050,
-          "hazard": "typhoon",
-          "phase": "generated_typhoon_practice",
-          "segmentId": "generated-829369e87a63-segment-2",
-          "sessionId": "generated-829369e87a63",
-          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-          "startMs": 4440,
-          "status": "validated"
+          ]
         },
         "suppressedCandidates": [
           {
-            "candidate": "산이나 캠핑장에 가지 않아요.",
+            "candidate": "비바람 속에서 논이나 물길을 보러 가지 않습니다.",
             "category": "unsafe_action",
+            "reason": "공식 행동요령의 금지 또는 주의 문장이므로 행동 카드에서 제외합니다.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "reason": "GPT-5.5가 하지 말아야 할 행동으로 분리했습니다."
+              "KR_TY_04"
+            ]
           }
         ],
-        "tracks": {
-          "action": {
-            "cards": [
-              {
-                "label": "산에 가는 약속을 멈춰요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 1
-              },
-              {
-                "label": "캠핑 약속도 멈춰요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 2
-              },
-              {
-                "label": "어른에게 가지 않겠다고 말해요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 3
-              }
-            ]
-          },
-          "doNot": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "산이나 캠핑장에 가지 않아요."
-          },
-          "easy": {
-            "maxReadingLevel": "very_easy",
-            "text": "비와 태풍 때는 산과 캠핑장이 위험해요. 밖에 멀리 가지 않아요."
-          },
-          "reason": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "태풍 때 산에서는 갑자기 비가 많이 올 수 있어요."
-          },
-          "teachBack": {
-            "correctOptionId": "option-1",
-            "options": [
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "맞아요. 산과 캠핑은 가지 않아요.",
-                "id": "option-1",
-                "kind": "state",
-                "label": "가지 않아요",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "role": "correct"
-              },
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "아니에요. 태풍 때 산은 위험해요.",
-                "id": "option-2",
-                "kind": "place",
-                "label": "산으로 가요",
-                "role": "contrast"
-              }
-            ],
-            "prompt": "태풍 때 산이나 캠핑은 어떻게 해요?",
-            "reviewPrompt": "같이 한 번 더 골라 봐요."
-          }
-        },
         "validation": {
+          "schemaValid": true,
           "hasGroundedAction": true,
           "learnerSafe": true,
           "requiresHumanReview": false,
-          "schemaValid": true,
-          "warnings": [
-            "GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다."
-          ]
-        },
-        "version": "slowlearner_multitrack_v1"
+          "warnings": []
+        }
       },
       "teacherGuide": {
-        "correction": "학습자가 '가도 된다'고 하면, 영상에서는 산행과 캠핑은 절대 안 된다고 했다고 짧게 다시 말해 주세요.",
-        "observe": "산, 캠핑, 가지 않기 중 한 가지라도 말하거나 선택하는지 봅니다.",
-        "prompt": "태풍 때 산에 가도 되는지 물어보세요.",
-        "script": "산행이나 캠핑은 절대 안 된다는 안내입니다."
+        "correction": "자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.",
+        "observe": "학습자가 장면과 행동을 구분하는지 봅니다.",
+        "prompt": "태풍 때 무엇을 멈출까요?",
+        "script": "산행이나 캠핑은 절대 안 돼요."
       },
       "teachBack": {
-        "correctOptionId": "option-1",
+        "prompt": "태풍 때 무엇을 멈출까요?",
+        "correctOptionId": "correct",
         "options": [
           {
-            "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "feedback": "맞아요. 산과 캠핑은 가지 않아요.",
-            "id": "option-1",
+            "id": "correct",
+            "label": "산행과 캠핑",
+            "role": "correct",
             "kind": "state",
-            "label": "가지 않아요",
+            "feedback": "맞아요. 산행과 캠핑은 멈추고 안전한 곳에 있어요",
             "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
+              "KR_TY_04"
             ],
-            "role": "correct"
+            "evidenceRefs": [
+              "input-video-transcript"
+            ]
           },
           {
+            "id": "contrast",
+            "label": "집 안에 있기",
+            "role": "contrast",
+            "kind": "state",
+            "feedback": "헷갈리면 장면을 다시 봐요.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
               "input-video-transcript"
-            ],
-            "feedback": "아니에요. 태풍 때 산은 위험해요.",
-            "id": "option-2",
-            "kind": "place",
-            "label": "산으로 가요",
-            "role": "contrast"
+            ]
           }
         ],
-        "prompt": "태풍 때 산이나 캠핑은 어떻게 해요?",
         "reviewPrompt": "같이 한 번 더 골라 봐요."
       }
     },
     {
       "actionReasons": [
-        "비가 더 세질 수 있어요.",
-        "빨리 피하면 덜 위험해요."
+        "비가 갑자기 많이 오면 물이 빠르게 불어날 수 있어요."
       ],
       "actionSteps": [
-        "하던 일을 멈춰요.",
-        "가까운 안전한 곳으로 대피해요.",
-        "어른의 말을 들어요."
+        "안전한 곳으로 가요"
       ],
       "answerOptions": [
         {
+          "id": "correct",
+          "label": "안전한 곳",
+          "role": "correct",
+          "kind": "place",
+          "feedback": "맞아요. 안전한 곳으로 가요",
+          "officialRuleIds": [
+            "KR_TY_02"
+          ],
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "맞아요. 바로 안전한 곳으로 대피해요.",
-          "id": "option-1",
-          "kind": "place",
-          "label": "안전한 곳",
-          "officialRuleIds": [
-            "LOCAL_TYPHOON_GENERATED"
-          ],
-          "role": "correct",
           "correct": true
         },
         {
+          "id": "contrast",
+          "label": "바닷가",
+          "role": "contrast",
+          "kind": "place",
+          "feedback": "헷갈리면 장면을 다시 봐요.",
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "아니에요. 비를 맞으며 계속 놀면 위험해요.",
-          "id": "option-2",
-          "kind": "state",
-          "label": "계속 놀기",
-          "role": "contrast",
           "correct": false
         }
       ],
-      "checkQuestion": "갑자기 비가 쏟아지면 어디로 가요?",
-      "description": "갑자기 비가 많이 오면 바로 피해야 해요. 안전한 곳으로 대피해요.",
-      "endMs": 11640,
+      "checkQuestion": "어디로 갈까요?",
+      "description": "안전한 곳으로 가요",
+      "endMs": 11290,
       "explanation": {
-        "doNot": "비를 맞으며 계속 걷거나 놀지 않아요.",
-        "overlayTargets": [],
-        "safetyMode": "grounded",
         "segmentId": "generated-829369e87a63-segment-3",
+        "safetyMode": "grounded",
+        "doNot": "물이 불어난 곳에 가까이 가지 않아요.",
         "tracks": {
-          "action": "하던 일을 멈춰요. / 가까운 안전한 곳으로 대피해요. / 어른의 말을 들어요.",
-          "basic": "갑자기 비가 쏟아질 경우 즉시 안전한 곳으로 대피한다는 안내입니다.",
-          "easy": "갑자기 비가 많이 오면 바로 피해야 해요. 안전한 곳으로 대피해요.",
-          "reason": "비가 더 세질 수 있어요."
-        }
+          "basic": "안전한 곳으로 가요",
+          "easy": "안전한 곳으로 가요",
+          "action": "안전한 곳으로 가요",
+          "reason": "비가 갑자기 많이 오면 물이 빠르게 불어날 수 있어요.",
+          "caregiver": "갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다. 갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다.",
+          "report": "물이 불어나면 높은 곳에서 119에 위치를 말합니다."
+        },
+        "overlayTargets": []
       },
       "id": "generated-829369e87a63-segment-3",
-      "label": "갑자기 비가 많이 오면 바로 피해야 해요. 안전한 곳으로 대피해요.",
-      "learnerExplanation": "갑자기 비가 많이 오면 바로 피해야 해요. 안전한 곳으로 대피해요.",
-      "learnerPrompt": "비가 갑자기 많이 오면 안전한 곳으로 대피해요.",
+      "label": "안전한 곳으로 가요",
+      "learnerExplanation": "안전한 곳으로 가요",
+      "learnerPrompt": "비가 갑자기 많이 와요.",
       "learnerSequence": [
         {
           "kind": "situation",
-          "text": "갑자기 비가 쏟아져요."
+          "text": "비가 갑자기 많이 와요."
         },
         {
           "kind": "action",
-          "text": "멈춰요."
-        },
-        {
-          "kind": "action",
-          "text": "안전한 곳으로 대피해요."
-        },
-        {
-          "kind": "action",
-          "text": "어른의 말을 들어요."
+          "text": "안전한 곳으로 가요"
         }
       ],
       "narration": [
         {
-          "endMs": 11640,
+          "endMs": 11300,
           "source": "audio",
-          "startMs": 7050,
-          "text": "갑자기 비가 쏟아질 경우 즉시 안전한 곳으로 대피한다는 안내입니다."
+          "startMs": 7000,
+          "text": "갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다."
         }
       ],
       "packet": {
-        "asrText": "갑자기 비가 쏟아질 경우 즉시 안전한 곳으로 대피한다는 안내입니다.",
+        "asrText": "갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다. 갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다.",
         "keyframes": [],
         "objectHints": [],
-        "ocrTokens": [],
+        "ocrTokens": [
+          "안전한 곳으로 대피하기",
+          "갑자기",
+          "비가",
+          "쏟아질",
+          "경우에는",
+          "즉시",
+          "안전한",
+          "곳으로",
+          "대피합니다"
+        ],
         "sessionId": "generated-829369e87a63",
-        "tEndMs": 11640,
-        "tStartMs": 7050,
+        "tEndMs": 11290,
+        "tStartMs": 7000,
         "uiElements": []
       },
       "practiceMode": "action",
       "primarySourceTitle": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!",
       "requiredLearnerKeywords": [
-        "안전한 곳",
-        "대피"
+        "안전한 곳"
       ],
       "ruleMatches": [],
       "safetyNotice": "이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.",
       "safetyWarnings": [
-        "비를 맞으며 계속 걷거나 놀지 않아요."
+        "물이 불어난 곳에 가까이 가지 않아요."
       ],
       "segment": {
         "confidence": 0.88,
-        "endMs": 11640,
+        "endMs": 11290,
         "hazard": "typhoon",
         "id": "generated-829369e87a63-segment-3",
         "officialRuleIds": [
-          "LOCAL_TYPHOON_GENERATED"
+          "KR_TY_02"
         ],
         "phase": "generated_typhoon_practice",
         "sessionId": "generated-829369e87a63",
-        "startMs": 7050
+        "startMs": 7000
       },
       "sourceTopicKeys": [
         "evacuate_to_safe_place"
       ],
-      "startMs": 7050,
+      "startMs": 7000,
       "structuredExplanation": {
+        "version": "slowlearner_multitrack_v1",
+        "segment": {
+          "segmentId": "generated-829369e87a63-segment-3",
+          "sessionId": "generated-829369e87a63",
+          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
+          "hazard": "typhoon",
+          "phase": "generated_typhoon_practice",
+          "decisionPoint": "안전한 곳으로 가요",
+          "startMs": 7000,
+          "endMs": 11290,
+          "confidence": 0.88,
+          "status": "validated"
+        },
+        "tracks": {
+          "easy": {
+            "text": "안전한 곳으로 가요",
+            "maxReadingLevel": "very_easy"
+          },
+          "action": {
+            "cards": [
+              {
+                "label": "안전한 곳으로 가요",
+                "order": 1,
+                "officialRuleIds": [
+                  "KR_TY_02"
+                ]
+              }
+            ]
+          },
+          "teachBack": {
+            "prompt": "어디로 갈까요?",
+            "correctOptionId": "correct",
+            "options": [
+              {
+                "id": "correct",
+                "label": "안전한 곳",
+                "role": "correct",
+                "kind": "place",
+                "feedback": "맞아요. 안전한 곳으로 가요",
+                "officialRuleIds": [
+                  "KR_TY_02"
+                ],
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              },
+              {
+                "id": "contrast",
+                "label": "바닷가",
+                "role": "contrast",
+                "kind": "place",
+                "feedback": "헷갈리면 장면을 다시 봐요.",
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              }
+            ],
+            "reviewPrompt": "같이 한 번 더 골라 봐요."
+          },
+          "reason": {
+            "text": "비가 갑자기 많이 오면 물이 빠르게 불어날 수 있어요.",
+            "officialRuleIds": [
+              "KR_TY_02"
+            ]
+          },
+          "doNot": {
+            "text": "물이 불어난 곳에 가까이 가지 않아요.",
+            "officialRuleIds": [
+              "KR_TY_02"
+            ]
+          },
+          "caregiver": {
+            "script": "갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다. 갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다.",
+            "correctionHint": "실제 동네의 하천, 바닷가, 산길 이름을 함께 말해 줍니다."
+          },
+          "report": {
+            "text": "물이 불어나면 높은 곳에서 119에 위치를 말합니다.",
+            "emergencyNumbers": [
+              "119",
+              "112"
+            ],
+            "condition": "실제 위험하거나 도움이 필요할 때"
+          }
+        },
         "evidence": {
+          "visualEvidence": [],
+          "ocrEvidence": [
+            {
+              "text": "안전한 곳으로 대피하기",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "갑자기",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "비가",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "쏟아질",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "경우에는",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "즉시",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "안전한",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "곳으로",
+              "timeMs": 7000,
+              "confidence": 0.7
+            },
+            {
+              "text": "대피합니다",
+              "timeMs": 7000,
+              "confidence": 0.7
+            }
+          ],
           "asrEvidence": [
             {
-              "confidence": 0.9,
-              "endMs": 11640,
-              "startMs": 7050,
-              "text": "갑자기 비가 쏟아질 경우 즉시 안전한 곳으로 대피한다는 안내입니다."
+              "text": "갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다. 갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다.",
+              "startMs": 7000,
+              "endMs": 11290,
+              "confidence": 0.72
+            }
+          ],
+          "ruleEvidence": [
+            {
+              "ruleId": "KR_TY_02",
+              "title": "avoid_water",
+              "matchedText": "하천, 개울, 바닷가, 산사태가 날 수 있는 곳에서 멀리 갑니다.",
+              "sourceName": "안전한TV - 태풍 발생 시 행동요령",
+              "sourceUrl": "https://www.safetv.go.kr/base/video/view?idx=916"
             }
           ],
           "modelInference": [
             {
+              "claim": "현재 세그먼트는 KR_TY_02 공식 규칙과 연결됩니다.",
               "basedOn": [
+                "ocr",
                 "asr",
-                "visual-scene-cut",
-                "gpt-5.5"
-              ],
-              "claim": "GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다."
+                "rule"
+              ]
             }
-          ],
-          "ocrEvidence": [],
-          "ruleEvidence": [
-            {
-              "matchedText": "갑자기 비가 쏟아질 경우 즉시 안전한 곳으로 대피한다는 안내입니다.",
-              "ruleId": "LOCAL_TYPHOON_GENERATED",
-              "sourceName": "입력 영상 자막과 GPT-5.5 구조화 결과",
-              "sourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-              "title": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!"
-            }
-          ],
-          "visualEvidence": []
-        },
-        "segment": {
-          "confidence": 0.88,
-          "decisionPoint": "갑자기 비가 많이 오면 바로 피해야 해요. 안전한 곳으로 대피해요.",
-          "endMs": 11640,
-          "hazard": "typhoon",
-          "phase": "generated_typhoon_practice",
-          "segmentId": "generated-829369e87a63-segment-3",
-          "sessionId": "generated-829369e87a63",
-          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-          "startMs": 7050,
-          "status": "validated"
+          ]
         },
         "suppressedCandidates": [
           {
-            "candidate": "비를 맞으며 계속 걷거나 놀지 않아요.",
+            "candidate": "물이 흐르는 곳 가까이 가지 않습니다.",
             "category": "unsafe_action",
+            "reason": "공식 행동요령의 금지 또는 주의 문장이므로 행동 카드에서 제외합니다.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "reason": "GPT-5.5가 하지 말아야 할 행동으로 분리했습니다."
+              "KR_TY_02"
+            ]
           }
         ],
-        "tracks": {
-          "action": {
-            "cards": [
-              {
-                "label": "하던 일을 멈춰요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 1
-              },
-              {
-                "label": "가까운 안전한 곳으로 대피해요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 2
-              },
-              {
-                "label": "어른의 말을 들어요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 3
-              }
-            ]
-          },
-          "doNot": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "비를 맞으며 계속 걷거나 놀지 않아요."
-          },
-          "easy": {
-            "maxReadingLevel": "very_easy",
-            "text": "갑자기 비가 많이 오면 바로 피해야 해요. 안전한 곳으로 대피해요."
-          },
-          "reason": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "비가 더 세질 수 있어요."
-          },
-          "teachBack": {
-            "correctOptionId": "option-1",
-            "options": [
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "맞아요. 바로 안전한 곳으로 대피해요.",
-                "id": "option-1",
-                "kind": "place",
-                "label": "안전한 곳",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "role": "correct"
-              },
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "아니에요. 비를 맞으며 계속 놀면 위험해요.",
-                "id": "option-2",
-                "kind": "state",
-                "label": "계속 놀기",
-                "role": "contrast"
-              }
-            ],
-            "prompt": "갑자기 비가 쏟아지면 어디로 가요?",
-            "reviewPrompt": "같이 한 번 더 골라 봐요."
-          }
-        },
         "validation": {
+          "schemaValid": true,
           "hasGroundedAction": true,
           "learnerSafe": true,
           "requiresHumanReview": false,
-          "schemaValid": true,
-          "warnings": [
-            "GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다."
-          ]
-        },
-        "version": "slowlearner_multitrack_v1"
+          "warnings": []
+        }
       },
       "teacherGuide": {
-        "correction": "학습자가 우산만 쓰고 계속 간다고 하면, 먼저 안전한 곳으로 대피한다고 알려 주세요.",
-        "observe": "안전한 곳, 대피라는 말을 이해하고 선택하는지 봅니다.",
-        "prompt": "비가 갑자기 많이 오면 먼저 무엇을 해야 하는지 물어보세요.",
-        "script": "갑자기 비가 쏟아질 경우 즉시 안전한 곳으로 대피한다는 안내입니다."
+        "correction": "자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.",
+        "observe": "학습자가 장면과 행동을 구분하는지 봅니다.",
+        "prompt": "어디로 갈까요?",
+        "script": "갑자기 비가 쏟아질 경우에는 즉시 안전한 곳으로 대피합니다."
       },
       "teachBack": {
-        "correctOptionId": "option-1",
+        "prompt": "어디로 갈까요?",
+        "correctOptionId": "correct",
         "options": [
           {
-            "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "feedback": "맞아요. 바로 안전한 곳으로 대피해요.",
-            "id": "option-1",
-            "kind": "place",
+            "id": "correct",
             "label": "안전한 곳",
+            "role": "correct",
+            "kind": "place",
+            "feedback": "맞아요. 안전한 곳으로 가요",
             "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
+              "KR_TY_02"
             ],
-            "role": "correct"
+            "evidenceRefs": [
+              "input-video-transcript"
+            ]
           },
           {
+            "id": "contrast",
+            "label": "바닷가",
+            "role": "contrast",
+            "kind": "place",
+            "feedback": "헷갈리면 장면을 다시 봐요.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
               "input-video-transcript"
-            ],
-            "feedback": "아니에요. 비를 맞으며 계속 놀면 위험해요.",
-            "id": "option-2",
-            "kind": "state",
-            "label": "계속 놀기",
-            "role": "contrast"
+            ]
           }
         ],
-        "prompt": "갑자기 비가 쏟아지면 어디로 가요?",
         "reviewPrompt": "같이 한 번 더 골라 봐요."
       }
     },
     {
       "actionReasons": [
-        "물이 찬 곳은 깊이를 알기 어려워요.",
-        "길에서 빠져나오기 어려우면 혼자 해결하기 힘들어요."
+        "위험하면 빨리 도움을 받아야 해요."
       ],
       "actionSteps": [
-        "물이 찬 낮은 곳 앞에서 멈춰요.",
-        "건너지 말고 돌아가요.",
-        "빠져나오기 어려우면 어른에게 알리고 119에 말해요."
+        "119에 알려요"
       ],
       "answerOptions": [
         {
+          "id": "correct",
+          "label": "어른",
+          "role": "correct",
+          "kind": "person",
+          "feedback": "맞아요. 119에 알려요",
+          "officialRuleIds": [
+            "KR_TY_02"
+          ],
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "맞아요. 물이 찬 곳은 건너지 않아요.",
-          "id": "option-1",
-          "kind": "state",
-          "label": "건너지 않기",
-          "officialRuleIds": [
-            "LOCAL_TYPHOON_GENERATED"
-          ],
-          "role": "correct",
           "correct": true
         },
         {
+          "id": "contrast",
+          "label": "혼자",
+          "role": "contrast",
+          "kind": "person",
+          "feedback": "헷갈리면 장면을 다시 봐요.",
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "아니에요. 물이 찬 곳은 위험해요.",
-          "id": "option-2",
-          "kind": "state",
-          "label": "빨리 건너기",
-          "role": "contrast",
           "correct": false
         }
       ],
-      "checkQuestion": "물이 찬 낮은 곳이 보이면 어떻게 해요?",
-      "description": "물이 찬 낮은 곳은 건너지 않아요. 빠져나오기 어려우면 어른에게 알리고 119에 말해요.",
-      "endMs": 18120,
+      "checkQuestion": "누구에게 말해야 할까요?",
+      "description": "119에 알려요",
+      "endMs": 18090,
       "explanation": {
-        "doNot": "물이 찬 곳을 건너지 않아요.",
-        "overlayTargets": [],
-        "safetyMode": "grounded",
         "segmentId": "generated-829369e87a63-segment-4",
+        "safetyMode": "grounded",
+        "doNot": "혼자 빠져나오려고 하지 않아요.",
         "tracks": {
-          "action": "물이 찬 낮은 곳 앞에서 멈춰요. / 건너지 말고 돌아가요. / 빠져나오기 어려우면 어른에게 알리고 119에 말해요.",
-          "basic": "위험이 있는 낮은 곳은 절대 건너지 말고, 통행 중 빠져나오기 어려운 상황이면 119에 신고한다는 안내입니다.",
-          "easy": "물이 찬 낮은 곳은 건너지 않아요. 빠져나오기 어려우면 어른에게 알리고 119에 말해요.",
-          "reason": "물이 찬 곳은 깊이를 알기 어려워요."
-        }
+          "basic": "119에 알려요",
+          "easy": "119에 알려요",
+          "action": "119에 알려요",
+          "reason": "위험하면 빨리 도움을 받아야 해요.",
+          "caregiver": "침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 낮은 다리·침수된 도로 출입 금지 낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+          "report": "물이 불어나면 높은 곳에서 119에 위치를 말합니다."
+        },
+        "overlayTargets": []
       },
       "id": "generated-829369e87a63-segment-4",
-      "label": "물이 찬 낮은 곳은 건너지 않아요. 빠져나오기 어려우면 어른에게 알리고 119에 말해요.",
-      "learnerExplanation": "물이 찬 낮은 곳은 건너지 않아요. 빠져나오기 어려우면 어른에게 알리고 119에 말해요.",
-      "learnerPrompt": "물이 찬 곳은 건너지 말고, 어려우면 119에 알려요.",
+      "label": "119에 알려요",
+      "learnerExplanation": "119에 알려요",
+      "learnerPrompt": "물이 찬 낮은 곳이 있어요.",
       "learnerSequence": [
         {
           "kind": "situation",
-          "text": "길에 물이 차 있어요."
+          "text": "물이 찬 낮은 곳이 있어요."
         },
         {
           "kind": "action",
-          "text": "멈춰요."
-        },
-        {
-          "kind": "action",
-          "text": "건너지 않아요."
-        },
-        {
-          "kind": "action",
-          "text": "어른에게 알리고 119에 말해요."
+          "text": "119에 알려요"
         }
       ],
       "narration": [
         {
-          "endMs": 18120,
+          "endMs": 14800,
           "source": "audio",
-          "startMs": 11640,
-          "text": "위험이 있는 낮은 곳은 절대 건너지 말고, 통행 중 빠져나오기 어려운 상황이면 119에 신고한다는 안내입니다."
+          "startMs": 11300,
+          "text": "침수 위험이 있는 낮은 다리는 절대 건너지 말고"
+        },
+        {
+          "endMs": 18100,
+          "source": "audio",
+          "startMs": 14800,
+          "text": "통행 중 고립되었다면 119에 신고합니다."
         }
       ],
       "packet": {
-        "asrText": "위험이 있는 낮은 곳은 절대 건너지 말고, 통행 중 빠져나오기 어려운 상황이면 119에 신고한다는 안내입니다.",
+        "asrText": "침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 낮은 다리·침수된 도로 출입 금지 낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
         "keyframes": [],
         "objectHints": [],
-        "ocrTokens": [],
+        "ocrTokens": [
+          "물이 찬 낮은 곳 피하기",
+          "119 또는 주변 어른에게 알리기",
+          "침수",
+          "위험이",
+          "있는",
+          "낮은",
+          "다리는",
+          "절대",
+          "건너지",
+          "말고",
+          "통행",
+          "고립되었다면",
+          "119에",
+          "신고합니다",
+          "낮은",
+          "다리",
+          "침수된",
+          "도로"
+        ],
         "sessionId": "generated-829369e87a63",
-        "tEndMs": 18120,
-        "tStartMs": 11640,
+        "tEndMs": 18090,
+        "tStartMs": 11300,
         "uiElements": []
       },
       "practiceMode": "action",
       "primarySourceTitle": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!",
       "requiredLearnerKeywords": [
-        "물이 찬 곳",
-        "건너지 않기",
-        "119",
-        "어른",
-        "알리기"
+        "119"
       ],
       "ruleMatches": [],
       "safetyNotice": "이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.",
       "safetyWarnings": [
-        "물이 찬 곳을 건너지 않아요."
+        "혼자 빠져나오려고 하지 않아요."
       ],
       "segment": {
         "confidence": 0.88,
-        "endMs": 18120,
+        "endMs": 18090,
         "hazard": "typhoon",
         "id": "generated-829369e87a63-segment-4",
         "officialRuleIds": [
-          "LOCAL_TYPHOON_GENERATED"
+          "KR_TY_02"
         ],
         "phase": "generated_typhoon_practice",
         "sessionId": "generated-829369e87a63",
-        "startMs": 11640
+        "startMs": 11300
       },
       "sourceTopicKeys": [
         "stay_away_from_low_water",
         "call_119"
       ],
-      "startMs": 11640,
+      "startMs": 11300,
       "structuredExplanation": {
+        "version": "slowlearner_multitrack_v1",
+        "segment": {
+          "segmentId": "generated-829369e87a63-segment-4",
+          "sessionId": "generated-829369e87a63",
+          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
+          "hazard": "typhoon",
+          "phase": "generated_typhoon_practice",
+          "decisionPoint": "119에 알려요",
+          "startMs": 11300,
+          "endMs": 18090,
+          "confidence": 0.88,
+          "status": "validated"
+        },
+        "tracks": {
+          "easy": {
+            "text": "119에 알려요",
+            "maxReadingLevel": "very_easy"
+          },
+          "action": {
+            "cards": [
+              {
+                "label": "119에 알려요",
+                "order": 1,
+                "officialRuleIds": [
+                  "KR_TY_02"
+                ]
+              }
+            ]
+          },
+          "teachBack": {
+            "prompt": "누구에게 말해야 할까요?",
+            "correctOptionId": "correct",
+            "options": [
+              {
+                "id": "correct",
+                "label": "어른",
+                "role": "correct",
+                "kind": "person",
+                "feedback": "맞아요. 119에 알려요",
+                "officialRuleIds": [
+                  "KR_TY_02"
+                ],
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              },
+              {
+                "id": "contrast",
+                "label": "혼자",
+                "role": "contrast",
+                "kind": "person",
+                "feedback": "헷갈리면 장면을 다시 봐요.",
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              }
+            ],
+            "reviewPrompt": "같이 한 번 더 골라 봐요."
+          },
+          "reason": {
+            "text": "위험하면 빨리 도움을 받아야 해요.",
+            "officialRuleIds": [
+              "KR_TY_02"
+            ]
+          },
+          "doNot": {
+            "text": "혼자 빠져나오려고 하지 않아요.",
+            "officialRuleIds": [
+              "KR_TY_02"
+            ]
+          },
+          "caregiver": {
+            "script": "침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 낮은 다리·침수된 도로 출입 금지 낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+            "correctionHint": "실제 동네의 하천, 바닷가, 산길 이름을 함께 말해 줍니다."
+          },
+          "report": {
+            "text": "물이 불어나면 높은 곳에서 119에 위치를 말합니다.",
+            "emergencyNumbers": [
+              "119",
+              "112"
+            ],
+            "condition": "실제 위험하거나 도움이 필요할 때"
+          }
+        },
         "evidence": {
+          "visualEvidence": [],
+          "ocrEvidence": [
+            {
+              "text": "물이 찬 낮은 곳 피하기",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "119 또는 주변 어른에게 알리기",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "침수",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "위험이",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "있는",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "낮은",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "다리는",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "절대",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "건너지",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "말고",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "통행",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "고립되었다면",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "119에",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "신고합니다",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "낮은",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "다리",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "침수된",
+              "timeMs": 11300,
+              "confidence": 0.7
+            },
+            {
+              "text": "도로",
+              "timeMs": 11300,
+              "confidence": 0.7
+            }
+          ],
           "asrEvidence": [
             {
-              "confidence": 0.9,
-              "endMs": 18120,
-              "startMs": 11640,
-              "text": "위험이 있는 낮은 곳은 절대 건너지 말고, 통행 중 빠져나오기 어려운 상황이면 119에 신고한다는 안내입니다."
+              "text": "침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 낮은 다리·침수된 도로 출입 금지 낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+              "startMs": 11300,
+              "endMs": 18090,
+              "confidence": 0.72
+            }
+          ],
+          "ruleEvidence": [
+            {
+              "ruleId": "KR_TY_02",
+              "title": "avoid_water",
+              "matchedText": "하천, 개울, 바닷가, 산사태가 날 수 있는 곳에서 멀리 갑니다.",
+              "sourceName": "안전한TV - 태풍 발생 시 행동요령",
+              "sourceUrl": "https://www.safetv.go.kr/base/video/view?idx=916"
             }
           ],
           "modelInference": [
             {
+              "claim": "현재 세그먼트는 KR_TY_02 공식 규칙과 연결됩니다.",
               "basedOn": [
+                "ocr",
                 "asr",
-                "visual-scene-cut",
-                "gpt-5.5"
-              ],
-              "claim": "GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다."
+                "rule"
+              ]
             }
-          ],
-          "ocrEvidence": [],
-          "ruleEvidence": [
-            {
-              "matchedText": "위험이 있는 낮은 곳은 절대 건너지 말고, 통행 중 빠져나오기 어려운 상황이면 119에 신고한다는 안내입니다.",
-              "ruleId": "LOCAL_TYPHOON_GENERATED",
-              "sourceName": "입력 영상 자막과 GPT-5.5 구조화 결과",
-              "sourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-              "title": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!"
-            }
-          ],
-          "visualEvidence": []
-        },
-        "segment": {
-          "confidence": 0.88,
-          "decisionPoint": "물이 찬 낮은 곳은 건너지 않아요. 빠져나오기 어려우면 어른에게 알리고 119에 말해요.",
-          "endMs": 18120,
-          "hazard": "typhoon",
-          "phase": "generated_typhoon_practice",
-          "segmentId": "generated-829369e87a63-segment-4",
-          "sessionId": "generated-829369e87a63",
-          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-          "startMs": 11640,
-          "status": "validated"
+          ]
         },
         "suppressedCandidates": [
           {
-            "candidate": "물이 찬 곳을 건너지 않아요.",
+            "candidate": "물이 흐르는 곳 가까이 가지 않습니다.",
             "category": "unsafe_action",
+            "reason": "공식 행동요령의 금지 또는 주의 문장이므로 행동 카드에서 제외합니다.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "reason": "GPT-5.5가 하지 말아야 할 행동으로 분리했습니다."
+              "KR_TY_02"
+            ]
           }
         ],
-        "tracks": {
-          "action": {
-            "cards": [
-              {
-                "label": "물이 찬 낮은 곳 앞에서 멈춰요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 1
-              },
-              {
-                "label": "건너지 말고 돌아가요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 2
-              },
-              {
-                "label": "빠져나오기 어려우면 어른에게 알리고 119에 말해요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 3
-              }
-            ]
-          },
-          "doNot": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "물이 찬 곳을 건너지 않아요."
-          },
-          "easy": {
-            "maxReadingLevel": "very_easy",
-            "text": "물이 찬 낮은 곳은 건너지 않아요. 빠져나오기 어려우면 어른에게 알리고 119에 말해요."
-          },
-          "reason": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "물이 찬 곳은 깊이를 알기 어려워요."
-          },
-          "teachBack": {
-            "correctOptionId": "option-1",
-            "options": [
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "맞아요. 물이 찬 곳은 건너지 않아요.",
-                "id": "option-1",
-                "kind": "state",
-                "label": "건너지 않기",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "role": "correct"
-              },
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "아니에요. 물이 찬 곳은 위험해요.",
-                "id": "option-2",
-                "kind": "state",
-                "label": "빨리 건너기",
-                "role": "contrast"
-              }
-            ],
-            "prompt": "물이 찬 낮은 곳이 보이면 어떻게 해요?",
-            "reviewPrompt": "같이 한 번 더 골라 봐요."
-          }
-        },
         "validation": {
+          "schemaValid": true,
           "hasGroundedAction": true,
           "learnerSafe": true,
           "requiresHumanReview": false,
-          "schemaValid": true,
-          "warnings": [
-            "GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다."
-          ]
-        },
-        "version": "slowlearner_multitrack_v1"
+          "warnings": []
+        }
       },
       "teacherGuide": {
-        "correction": "학습자가 물을 건너겠다고 하면, 영상에서는 위험이 있는 낮은 곳은 절대 건너지 말라고 했다고 알려 주세요. 도움이 필요하면 119를 말하게 합니다.",
-        "observe": "멈춤, 건너지 않기, 119 알리기 순서를 말하거나 고르는지 봅니다.",
-        "prompt": "물이 찬 길을 만나면 건너도 되는지, 도움이 필요하면 누구에게 말하는지 물어보세요.",
-        "script": "위험이 있는 낮은 곳은 절대 건너지 말고, 통행 중 빠져나오기 어려운 상황이면 119에 신고한다는 안내입니다."
+        "correction": "자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.",
+        "observe": "학습자가 장면과 행동을 구분하는지 봅니다.",
+        "prompt": "누구에게 말해야 할까요?",
+        "script": "침수 위험이 있는 낮은 다리는 절대 건너지 말고 통행 중 고립되었다면 119에 신고합니다. 낮은 다리·침수된 도로 출입 금지 낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청"
       },
       "teachBack": {
-        "correctOptionId": "option-1",
+        "prompt": "누구에게 말해야 할까요?",
+        "correctOptionId": "correct",
         "options": [
           {
-            "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "feedback": "맞아요. 물이 찬 곳은 건너지 않아요.",
-            "id": "option-1",
-            "kind": "state",
-            "label": "건너지 않기",
+            "id": "correct",
+            "label": "어른",
+            "role": "correct",
+            "kind": "person",
+            "feedback": "맞아요. 119에 알려요",
             "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
+              "KR_TY_02"
             ],
-            "role": "correct"
+            "evidenceRefs": [
+              "input-video-transcript"
+            ]
           },
           {
+            "id": "contrast",
+            "label": "혼자",
+            "role": "contrast",
+            "kind": "person",
+            "feedback": "헷갈리면 장면을 다시 봐요.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
               "input-video-transcript"
-            ],
-            "feedback": "아니에요. 물이 찬 곳은 위험해요.",
-            "id": "option-2",
-            "kind": "state",
-            "label": "빨리 건너기",
-            "role": "contrast"
+            ]
           }
         ],
-        "prompt": "물이 찬 낮은 곳이 보이면 어떻게 해요?",
         "reviewPrompt": "같이 한 번 더 골라 봐요."
       }
     },
     {
       "actionReasons": [
-        "비가 오기 전에 미리 봐야 덜 위험해요.",
-        "비가 많이 올 때 밖으로 나가면 위험해요."
+        "비가 오기 전에 정리해야 안전해요."
       ],
       "actionSteps": [
-        "비가 오기 전에 어른에게 배수로와 물꼬를 말해요.",
-        "배수로와 물꼬는 미리 살펴요.",
-        "비가 많이 올 때는 밖으로 보러 나가지 않아요."
+        "배수로를 미리 정리해요"
       ],
       "answerOptions": [
         {
+          "id": "correct",
+          "label": "배수로",
+          "role": "correct",
+          "kind": "object",
+          "feedback": "맞아요. 배수로를 미리 정리해요",
+          "officialRuleIds": [
+            "KR_TY_04"
+          ],
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "맞아요. 비가 많이 올 때는 보러 나가지 않아요.",
-          "id": "option-1",
-          "kind": "state",
-          "label": "나가지 않기",
-          "officialRuleIds": [
-            "LOCAL_TYPHOON_GENERATED"
-          ],
-          "role": "correct",
           "correct": true
         },
         {
+          "id": "contrast",
+          "label": "가방",
+          "role": "contrast",
+          "kind": "object",
+          "feedback": "헷갈리면 장면을 다시 봐요.",
           "evidenceRefs": [
-            "gpt-5.5-plan",
             "input-video-transcript"
           ],
-          "feedback": "아니에요. 비가 많이 올 때 밖은 위험해요.",
-          "id": "option-2",
-          "kind": "place",
-          "label": "밖으로 나가기",
-          "role": "contrast",
           "correct": false
         }
       ],
-      "checkQuestion": "비가 많이 올 때 물꼬를 보러 나가도 될까요?",
-      "description": "배수로와 물꼬는 비가 오기 전에 미리 살펴요. 비가 많이 올 때는 밖으로 나가지 않아요.",
-      "endMs": 23370,
+      "checkQuestion": "무엇을 미리 정리할까요?",
+      "description": "배수로를 미리 정리해요",
+      "endMs": 23290,
       "explanation": {
-        "doNot": "비가 많이 올 때 배수로와 물꼬를 보러 밖에 나가지 않아요.",
-        "overlayTargets": [],
-        "safetyMode": "grounded",
         "segmentId": "generated-829369e87a63-segment-5",
+        "safetyMode": "grounded",
+        "doNot": "비가 올 때 물꼬를 보러 나가지 않아요.",
         "tracks": {
-          "action": "비가 오기 전에 어른에게 배수로와 물꼬를 말해요. / 배수로와 물꼬는 미리 살펴요. / 비가 많이 올 때는 밖으로 보러 나가지 않아요.",
-          "basic": "배수로는 미리 정리하고, 비가 많이 올 때는 물꼬 점검을 나가지 말라는 내용으로 안내합니다.",
-          "easy": "배수로와 물꼬는 비가 오기 전에 미리 살펴요. 비가 많이 올 때는 밖으로 나가지 않아요.",
-          "reason": "비가 오기 전에 미리 봐야 덜 위험해요."
-        }
+          "basic": "배수로를 미리 정리해요",
+          "easy": "배수로를 미리 정리해요",
+          "action": "배수로를 미리 정리해요",
+          "reason": "비가 오기 전에 정리해야 안전해요.",
+          "caregiver": "배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 / 어르신, 어린이 등 외출금지",
+          "report": "산이나 계곡에서 물이 불어나면 높은 곳에서 119에 말합니다."
+        },
+        "overlayTargets": []
       },
       "id": "generated-829369e87a63-segment-5",
-      "label": "배수로와 물꼬는 비가 오기 전에 미리 살펴요. 비가 많이 올 때는 밖으로 나가지 않아요.",
-      "learnerExplanation": "배수로와 물꼬는 비가 오기 전에 미리 살펴요. 비가 많이 올 때는 밖으로 나가지 않아요.",
-      "learnerPrompt": "배수로와 물꼬는 미리 보고, 큰비 때는 나가지 않아요.",
+      "label": "배수로를 미리 정리해요",
+      "learnerExplanation": "배수로를 미리 정리해요",
+      "learnerPrompt": "물이 불어난 곳은 위험해요.",
       "learnerSequence": [
         {
           "kind": "situation",
-          "text": "비가 많이 오려고 해요. 배수로와 물꼬가 걱정돼요."
+          "text": "물이 불어난 곳은 위험해요."
         },
         {
           "kind": "action",
-          "text": "어른에게 말해요."
-        },
-        {
-          "kind": "action",
-          "text": "미리 살펴요."
-        },
-        {
-          "kind": "action",
-          "text": "큰비 때는 밖으로 나가지 않아요."
+          "text": "배수로를 미리 정리해요"
         }
       ],
       "narration": [
         {
-          "endMs": 23370,
+          "endMs": 23300,
           "source": "audio",
-          "startMs": 18120,
-          "text": "배수로는 미리 정리하고, 비가 많이 올 때는 물꼬 점검을 나가지 말라는 내용으로 안내합니다."
+          "startMs": 18100,
+          "text": "배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다."
         }
       ],
       "packet": {
-        "asrText": "배수로는 미리 정리하고, 비가 많이 올 때는 물꼬 점검을 나가지 말라는 내용으로 안내합니다.",
+        "asrText": "배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 / 어르신, 어린이 등 외출금지",
         "keyframes": [],
         "objectHints": [],
-        "ocrTokens": [],
+        "ocrTokens": [
+          "배수로와 물꼬",
+          "배수로는",
+          "미리",
+          "점검하고",
+          "비가",
+          "많이",
+          "물구점검을",
+          "나가지",
+          "않습니다",
+          "배수로",
+          "사전",
+          "정비",
+          "집중호우",
+          "물꼬",
+          "점검",
+          "절대",
+          "금지"
+        ],
         "sessionId": "generated-829369e87a63",
-        "tEndMs": 23370,
-        "tStartMs": 18120,
+        "tEndMs": 23290,
+        "tStartMs": 18100,
         "uiElements": []
       },
       "practiceMode": "action",
@@ -1227,559 +1719,817 @@
       "ruleMatches": [],
       "safetyNotice": "이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.",
       "safetyWarnings": [
-        "비가 많이 올 때 배수로와 물꼬를 보러 밖에 나가지 않아요."
+        "비가 올 때 물꼬를 보러 나가지 않아요."
       ],
       "segment": {
         "confidence": 0.88,
-        "endMs": 23370,
+        "endMs": 23290,
         "hazard": "typhoon",
         "id": "generated-829369e87a63-segment-5",
         "officialRuleIds": [
-          "LOCAL_TYPHOON_GENERATED"
+          "KR_TY_04"
         ],
         "phase": "generated_typhoon_practice",
         "sessionId": "generated-829369e87a63",
-        "startMs": 18120
+        "startMs": 18100
       },
       "sourceTopicKeys": [
         "drain_waterway"
       ],
-      "startMs": 18120,
+      "startMs": 18100,
       "structuredExplanation": {
+        "version": "slowlearner_multitrack_v1",
+        "segment": {
+          "segmentId": "generated-829369e87a63-segment-5",
+          "sessionId": "generated-829369e87a63",
+          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
+          "hazard": "typhoon",
+          "phase": "generated_typhoon_practice",
+          "decisionPoint": "배수로를 미리 정리해요",
+          "startMs": 18100,
+          "endMs": 23290,
+          "confidence": 0.88,
+          "status": "validated"
+        },
+        "tracks": {
+          "easy": {
+            "text": "배수로를 미리 정리해요",
+            "maxReadingLevel": "very_easy"
+          },
+          "action": {
+            "cards": [
+              {
+                "label": "배수로를 미리 정리해요",
+                "order": 1,
+                "officialRuleIds": [
+                  "KR_TY_04"
+                ]
+              }
+            ]
+          },
+          "teachBack": {
+            "prompt": "무엇을 미리 정리할까요?",
+            "correctOptionId": "correct",
+            "options": [
+              {
+                "id": "correct",
+                "label": "배수로",
+                "role": "correct",
+                "kind": "object",
+                "feedback": "맞아요. 배수로를 미리 정리해요",
+                "officialRuleIds": [
+                  "KR_TY_04"
+                ],
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              },
+              {
+                "id": "contrast",
+                "label": "가방",
+                "role": "contrast",
+                "kind": "object",
+                "feedback": "헷갈리면 장면을 다시 봐요.",
+                "evidenceRefs": [
+                  "input-video-transcript"
+                ]
+              }
+            ],
+            "reviewPrompt": "같이 한 번 더 골라 봐요."
+          },
+          "reason": {
+            "text": "비가 오기 전에 정리해야 안전해요.",
+            "officialRuleIds": [
+              "KR_TY_04"
+            ]
+          },
+          "doNot": {
+            "text": "비가 올 때 물꼬를 보러 나가지 않아요.",
+            "officialRuleIds": [
+              "KR_TY_04"
+            ]
+          },
+          "caregiver": {
+            "script": "배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 / 어르신, 어린이 등 외출금지",
+            "correctionHint": "농촌이나 산 근처에 사는 학습자는 가족이 정한 갈 곳을 다시 말하게 합니다."
+          },
+          "report": {
+            "text": "산이나 계곡에서 물이 불어나면 높은 곳에서 119에 말합니다.",
+            "emergencyNumbers": [
+              "119",
+              "112"
+            ],
+            "condition": "실제 위험하거나 도움이 필요할 때"
+          }
+        },
         "evidence": {
+          "visualEvidence": [],
+          "ocrEvidence": [
+            {
+              "text": "배수로와 물꼬",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "배수로는",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "미리",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "점검하고",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "비가",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "많이",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "물구점검을",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "나가지",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "않습니다",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "배수로",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "사전",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "정비",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "집중호우",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "물꼬",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "점검",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "절대",
+              "timeMs": 18100,
+              "confidence": 0.7
+            },
+            {
+              "text": "금지",
+              "timeMs": 18100,
+              "confidence": 0.7
+            }
+          ],
           "asrEvidence": [
             {
-              "confidence": 0.9,
-              "endMs": 23370,
-              "startMs": 18120,
-              "text": "배수로는 미리 정리하고, 비가 많이 올 때는 물꼬 점검을 나가지 말라는 내용으로 안내합니다."
+              "text": "배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 / 어르신, 어린이 등 외출금지",
+              "startMs": 18100,
+              "endMs": 23290,
+              "confidence": 0.72
+            }
+          ],
+          "ruleEvidence": [
+            {
+              "ruleId": "KR_TY_04",
+              "title": "mountain_rural",
+              "matchedText": "산과 계곡에서는 빨리 안전한 곳으로 가고, 논이나 물길을 보러 나가지 않습니다.",
+              "sourceName": "안전한TV - 태풍 발생 시 행동요령",
+              "sourceUrl": "https://www.safetv.go.kr/base/video/view?idx=916"
             }
           ],
           "modelInference": [
             {
+              "claim": "현재 세그먼트는 KR_TY_04 공식 규칙과 연결됩니다.",
               "basedOn": [
+                "ocr",
                 "asr",
-                "visual-scene-cut",
-                "gpt-5.5"
-              ],
-              "claim": "GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다."
+                "rule"
+              ]
             }
-          ],
-          "ocrEvidence": [],
-          "ruleEvidence": [
-            {
-              "matchedText": "배수로는 미리 정리하고, 비가 많이 올 때는 물꼬 점검을 나가지 말라는 내용으로 안내합니다.",
-              "ruleId": "LOCAL_TYPHOON_GENERATED",
-              "sourceName": "입력 영상 자막과 GPT-5.5 구조화 결과",
-              "sourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-              "title": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!"
-            }
-          ],
-          "visualEvidence": []
-        },
-        "segment": {
-          "confidence": 0.88,
-          "decisionPoint": "배수로와 물꼬는 비가 오기 전에 미리 살펴요. 비가 많이 올 때는 밖으로 나가지 않아요.",
-          "endMs": 23370,
-          "hazard": "typhoon",
-          "phase": "generated_typhoon_practice",
-          "segmentId": "generated-829369e87a63-segment-5",
-          "sessionId": "generated-829369e87a63",
-          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-          "startMs": 18120,
-          "status": "validated"
+          ]
         },
         "suppressedCandidates": [
           {
-            "candidate": "비가 많이 올 때 배수로와 물꼬를 보러 밖에 나가지 않아요.",
+            "candidate": "비바람 속에서 논이나 물길을 보러 가지 않습니다.",
             "category": "unsafe_action",
+            "reason": "공식 행동요령의 금지 또는 주의 문장이므로 행동 카드에서 제외합니다.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "reason": "GPT-5.5가 하지 말아야 할 행동으로 분리했습니다."
-          }
-        ],
-        "tracks": {
-          "action": {
-            "cards": [
-              {
-                "label": "비가 오기 전에 어른에게 배수로와 물꼬를 말해요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 1
-              },
-              {
-                "label": "배수로와 물꼬는 미리 살펴요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 2
-              },
-              {
-                "label": "비가 많이 올 때는 밖으로 보러 나가지 않아요.",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "order": 3
-              }
+              "KR_TY_04"
             ]
           },
-          "doNot": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "비가 많이 올 때 배수로와 물꼬를 보러 밖에 나가지 않아요."
+          {
+            "candidate": "바람이 강할 때 밖으로 나가지 않습니다.",
+            "category": "unsafe_action",
+            "reason": "공식 행동요령의 금지 또는 주의 문장이므로 행동 카드에서 제외합니다.",
+            "evidenceRefs": [
+              "KR_TY_01"
+            ]
           },
-          "easy": {
-            "maxReadingLevel": "very_easy",
-            "text": "배수로와 물꼬는 비가 오기 전에 미리 살펴요. 비가 많이 올 때는 밖으로 나가지 않아요."
-          },
-          "reason": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "비가 오기 전에 미리 봐야 덜 위험해요."
-          },
-          "teachBack": {
-            "correctOptionId": "option-1",
-            "options": [
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "맞아요. 비가 많이 올 때는 보러 나가지 않아요.",
-                "id": "option-1",
-                "kind": "state",
-                "label": "나가지 않기",
-                "officialRuleIds": [
-                  "LOCAL_TYPHOON_GENERATED"
-                ],
-                "role": "correct"
-              },
-              {
-                "evidenceRefs": [
-                  "gpt-5.5-plan",
-                  "input-video-transcript"
-                ],
-                "feedback": "아니에요. 비가 많이 올 때 밖은 위험해요.",
-                "id": "option-2",
-                "kind": "place",
-                "label": "밖으로 나가기",
-                "role": "contrast"
-              }
-            ],
-            "prompt": "비가 많이 올 때 물꼬를 보러 나가도 될까요?",
-            "reviewPrompt": "같이 한 번 더 골라 봐요."
+          {
+            "candidate": "집 안에서는 문과 창문을 닫고 밖에 나가지 않으며 날씨 알림을 봅니다.",
+            "category": "unsupported_action",
+            "reason": "현재 세그먼트의 핵심 판단 지점으로 선택되지 않았습니다.",
+            "evidenceRefs": [
+              "KR_TY_01"
+            ]
           }
-        },
+        ],
         "validation": {
+          "schemaValid": true,
           "hasGroundedAction": true,
           "learnerSafe": true,
           "requiresHumanReview": false,
-          "schemaValid": true,
-          "warnings": [
-            "GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다."
-          ]
-        },
-        "version": "slowlearner_multitrack_v1"
+          "warnings": []
+        }
       },
       "teacherGuide": {
-        "correction": "학습자가 비가 많이 올 때 보러 나간다고 하면, 비가 오기 전에 미리 살피고 큰비 때는 나가지 않는다고 다시 말해 주세요.",
-        "observe": "배수로, 물꼬라는 낱말을 듣고 비 오기 전과 큰비 때 행동을 구분하는지 봅니다.",
-        "prompt": "배수로와 물꼬는 언제 살피는지 물어보세요.",
-        "script": "배수로는 미리 정리하고, 비가 많이 올 때는 물꼬 점검을 나가지 말라는 내용으로 안내합니다."
+        "correction": "자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.",
+        "observe": "학습자가 장면과 행동을 구분하는지 봅니다.",
+        "prompt": "무엇을 미리 정리할까요?",
+        "script": "배수로는 미리 점검하고 비가 많이 올 땐 물구점검을 나가지 않습니다. 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 / 어르신, 어린이 등 외출금지"
       },
       "teachBack": {
-        "correctOptionId": "option-1",
+        "prompt": "무엇을 미리 정리할까요?",
+        "correctOptionId": "correct",
         "options": [
           {
-            "evidenceRefs": [
-              "gpt-5.5-plan",
-              "input-video-transcript"
-            ],
-            "feedback": "맞아요. 비가 많이 올 때는 보러 나가지 않아요.",
-            "id": "option-1",
-            "kind": "state",
-            "label": "나가지 않기",
+            "id": "correct",
+            "label": "배수로",
+            "role": "correct",
+            "kind": "object",
+            "feedback": "맞아요. 배수로를 미리 정리해요",
             "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
+              "KR_TY_04"
             ],
-            "role": "correct"
+            "evidenceRefs": [
+              "input-video-transcript"
+            ]
           },
           {
+            "id": "contrast",
+            "label": "가방",
+            "role": "contrast",
+            "kind": "object",
+            "feedback": "헷갈리면 장면을 다시 봐요.",
             "evidenceRefs": [
-              "gpt-5.5-plan",
               "input-video-transcript"
-            ],
-            "feedback": "아니에요. 비가 많이 올 때 밖은 위험해요.",
-            "id": "option-2",
-            "kind": "place",
-            "label": "밖으로 나가기",
-            "role": "contrast"
+            ]
           }
         ],
-        "prompt": "비가 많이 올 때 물꼬를 보러 나가도 될까요?",
         "reviewPrompt": "같이 한 번 더 골라 봐요."
       }
     },
     {
-      "actionReasons": [
-        "우산처럼 비와 태풍 약속도 미리 챙겨요."
-      ],
-      "actionSteps": [
-        "나가기 전 우산을 챙겨요.",
-        "비와 태풍 약속도 떠올려요."
-      ],
+      "actionReasons": [],
+      "actionSteps": [],
       "answerOptions": [],
       "checkQuestion": "",
-      "description": "우산을 챙기듯이 비와 태풍 약속도 다시 생각해요.",
-      "endMs": 25610,
+      "description": "안전수칙을 다시 기억해요.",
+      "endMs": 28000,
       "explanation": {
-        "overlayTargets": [],
-        "safetyMode": "grounded",
         "segmentId": "generated-829369e87a63-segment-6",
+        "safetyMode": "review_official",
         "tracks": {
-          "action": "나가기 전 우산을 챙겨요. / 비와 태풍 약속도 떠올려요.",
-          "basic": "안전한 여름을 위해 우산을 챙기듯 비와 태풍 때 지킬 약속도 챙기자는 마무리 안내입니다.",
-          "easy": "우산을 챙기듯이 비와 태풍 약속도 다시 생각해요.",
-          "reason": "우산처럼 비와 태풍 약속도 미리 챙겨요."
-        }
+          "basic": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+          "easy": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+          "reason": "강한 바람에 유리나 물건이 깨질 수 있어요.",
+          "caregiver": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요"
+        },
+        "overlayTargets": []
       },
       "id": "generated-829369e87a63-segment-6",
-      "label": "우산을 챙기듯이 비와 태풍 약속도 다시 생각해요.",
-      "learnerExplanation": "우산을 챙기듯이 비와 태풍 약속도 다시 생각해요.",
-      "learnerPrompt": "우산처럼 비와 태풍 약속도 챙겨요.",
+      "label": "안전수칙을 다시 기억해요.",
+      "learnerExplanation": "안전수칙을 다시 기억해요.",
+      "learnerPrompt": "안전수칙을 다시 기억해요.",
       "learnerSequence": [
         {
           "kind": "situation",
-          "text": "밖에 나가기 전이에요."
-        },
-        {
-          "kind": "action",
-          "text": "우산을 챙겨요."
-        },
-        {
-          "kind": "action",
-          "text": "비와 태풍 약속도 떠올려요."
+          "text": "안전수칙을 다시 기억해요."
         }
       ],
       "narration": [
         {
-          "endMs": 25610,
+          "endMs": 28000,
           "source": "audio",
-          "startMs": 23370,
-          "text": "안전한 여름을 위해 우산을 챙기듯 비와 태풍 때 지킬 약속도 챙기자는 마무리 안내입니다."
+          "startMs": 23300,
+          "text": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요."
         }
       ],
       "packet": {
-        "asrText": "안전한 여름을 위해 우산을 챙기듯 비와 태풍 때 지킬 약속도 챙기자는 마무리 안내입니다.",
+        "asrText": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
         "keyframes": [],
         "objectHints": [],
-        "ocrTokens": [],
+        "ocrTokens": [
+          "마지막 복습",
+          "안전한",
+          "여름을",
+          "위해",
+          "우산을",
+          "챙기듯",
+          "안전수칙도",
+          "챙겨주세요",
+          "국민",
+          "여러분의",
+          "행복하고",
+          "안전한",
+          "여름을",
+          "위해",
+          "안전",
+          "수칙도",
+          "챙겨주세요"
+        ],
         "sessionId": "generated-829369e87a63",
-        "tEndMs": 25610,
-        "tStartMs": 23370,
+        "tEndMs": 28000,
+        "tStartMs": 23300,
         "uiElements": []
       },
       "practiceMode": "intro",
       "primarySourceTitle": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!",
-      "requiredLearnerKeywords": [
-        "다시 기억하기"
-      ],
+      "requiredLearnerKeywords": [],
       "ruleMatches": [],
       "safetyNotice": "이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.",
       "safetyWarnings": [],
       "segment": {
-        "confidence": 0.88,
-        "endMs": 25610,
+        "confidence": 0.65,
+        "endMs": 28000,
         "hazard": "typhoon",
         "id": "generated-829369e87a63-segment-6",
-        "officialRuleIds": [
-          "LOCAL_TYPHOON_GENERATED"
-        ],
+        "officialRuleIds": [],
         "phase": "generated_typhoon_practice",
         "sessionId": "generated-829369e87a63",
-        "startMs": 23370
+        "startMs": 23300
       },
       "sourceTopicKeys": [
         "outro_review"
       ],
-      "startMs": 23370,
+      "startMs": 23300,
       "structuredExplanation": {
-        "evidence": {
-          "asrEvidence": [
-            {
-              "confidence": 0.9,
-              "endMs": 25610,
-              "startMs": 23370,
-              "text": "안전한 여름을 위해 우산을 챙기듯 비와 태풍 때 지킬 약속도 챙기자는 마무리 안내입니다."
-            }
-          ],
-          "modelInference": [
-            {
-              "basedOn": [
-                "asr",
-                "visual-scene-cut",
-                "gpt-5.5"
-              ],
-              "claim": "GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다."
-            }
-          ],
-          "ocrEvidence": [],
-          "ruleEvidence": [
-            {
-              "matchedText": "안전한 여름을 위해 우산을 챙기듯 비와 태풍 때 지킬 약속도 챙기자는 마무리 안내입니다.",
-              "ruleId": "LOCAL_TYPHOON_GENERATED",
-              "sourceName": "입력 영상 자막과 GPT-5.5 구조화 결과",
-              "sourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-              "title": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!"
-            }
-          ],
-          "visualEvidence": []
-        },
+        "version": "slowlearner_multitrack_v1",
         "segment": {
-          "confidence": 0.88,
-          "decisionPoint": "우산을 챙기듯이 비와 태풍 약속도 다시 생각해요.",
-          "endMs": 25610,
-          "hazard": "typhoon",
-          "phase": "generated_typhoon_practice",
           "segmentId": "generated-829369e87a63-segment-6",
           "sessionId": "generated-829369e87a63",
           "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-          "startMs": 23370,
-          "status": "draft"
-        },
-        "suppressedCandidates": [],
-        "tracks": {
-          "easy": {
-            "maxReadingLevel": "very_easy",
-            "text": "우산을 챙기듯이 비와 태풍 약속도 다시 생각해요."
-          },
-          "reason": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "우산처럼 비와 태풍 약속도 미리 챙겨요."
-          }
-        },
-        "validation": {
-          "hasGroundedAction": false,
-          "learnerSafe": true,
-          "requiresHumanReview": false,
-          "schemaValid": true,
-          "warnings": [
-            "GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다."
-          ]
-        },
-        "version": "slowlearner_multitrack_v1"
-      },
-      "teacherGuide": {
-        "correction": "학습자가 우산만 말하면, 영상에서는 약속도 함께 챙기자고 했다고 알려 주세요.",
-        "observe": "우산과 안전 약속을 함께 연결하는지 봅니다.",
-        "prompt": "우산처럼 무엇을 다시 생각해야 하는지 물어보세요.",
-        "script": "안전한 여름을 위해 우산을 챙기듯 비와 태풍 때 지킬 약속도 챙기자는 마무리 안내입니다."
-      },
-      "teachBack": null
-    },
-    {
-      "actionReasons": [
-        "다시 말하면 기억하기 쉬워요.",
-        "비와 태풍 때 바로 행동하기 쉬워요."
-      ],
-      "actionSteps": [
-        "산과 캠핑은 가지 않아요.",
-        "갑자기 비가 오면 안전한 곳으로 대피해요.",
-        "위험하면 어른에게 알리고 119에 말해요."
-      ],
-      "answerOptions": [],
-      "checkQuestion": "",
-      "description": "오늘 배운 약속을 다시 기억해요. 산과 캠핑은 가지 않고, 큰비에는 대피하고, 필요하면 119에 말해요.",
-      "endMs": 31270,
-      "explanation": {
-        "overlayTargets": [],
-        "safetyMode": "grounded",
-        "segmentId": "generated-829369e87a63-segment-7",
-        "tracks": {
-          "action": "산과 캠핑은 가지 않아요. / 갑자기 비가 오면 안전한 곳으로 대피해요. / 위험하면 어른에게 알리고 119에 말해요.",
-          "basic": "안전수칙도 챙겨 달라는 마지막 복습 안내입니다.",
-          "easy": "오늘 배운 약속을 다시 기억해요. 산과 캠핑은 가지 않고, 큰비에는 대피하고, 필요하면 119에 말해요.",
-          "reason": "다시 말하면 기억하기 쉬워요."
-        }
-      },
-      "id": "generated-829369e87a63-segment-7",
-      "label": "오늘 배운 약속을 다시 기억해요. 산과 캠핑은 가지 않고, 큰비에는 대피하고, 필요하면 119에 말해요.",
-      "learnerExplanation": "오늘 배운 약속을 다시 기억해요. 산과 캠핑은 가지 않고, 큰비에는 대피하고, 필요하면 119에 말해요.",
-      "learnerPrompt": "비와 태풍 약속을 다시 기억해요.",
-      "learnerSequence": [
-        {
-          "kind": "situation",
-          "text": "비와 태풍 약속을 다 배웠어요."
-        },
-        {
-          "kind": "action",
-          "text": "가지 않기."
-        },
-        {
-          "kind": "action",
-          "text": "대피하기."
-        },
-        {
-          "kind": "action",
-          "text": "119에 알리기."
-        }
-      ],
-      "narration": [
-        {
-          "endMs": 31270,
-          "source": "audio",
-          "startMs": 25610,
-          "text": "안전수칙도 챙겨 달라는 마지막 복습 안내입니다."
-        }
-      ],
-      "packet": {
-        "asrText": "안전수칙도 챙겨 달라는 마지막 복습 안내입니다.",
-        "keyframes": [],
-        "objectHints": [],
-        "ocrTokens": [],
-        "sessionId": "generated-829369e87a63",
-        "tEndMs": 31270,
-        "tStartMs": 25610,
-        "uiElements": []
-      },
-      "practiceMode": "intro",
-      "primarySourceTitle": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!",
-      "requiredLearnerKeywords": [
-        "다시 기억하기"
-      ],
-      "ruleMatches": [],
-      "safetyNotice": "이 앱은 연습용입니다. 실제로 위험할 때는 119·112, 주변 어른, 현장 안내를 우선 따르세요.",
-      "safetyWarnings": [],
-      "segment": {
-        "confidence": 0.88,
-        "endMs": 31270,
-        "hazard": "typhoon",
-        "id": "generated-829369e87a63-segment-7",
-        "officialRuleIds": [
-          "LOCAL_TYPHOON_GENERATED"
-        ],
-        "phase": "generated_typhoon_practice",
-        "sessionId": "generated-829369e87a63",
-        "startMs": 25610
-      },
-      "sourceTopicKeys": [
-        "outro_review"
-      ],
-      "startMs": 25610,
-      "structuredExplanation": {
-        "evidence": {
-          "asrEvidence": [
-            {
-              "confidence": 0.9,
-              "endMs": 31270,
-              "startMs": 25610,
-              "text": "안전수칙도 챙겨 달라는 마지막 복습 안내입니다."
-            }
-          ],
-          "modelInference": [
-            {
-              "basedOn": [
-                "asr",
-                "visual-scene-cut",
-                "gpt-5.5"
-              ],
-              "claim": "GPT-5.5가 입력 영상 근거로 학습 장면을 작성했습니다."
-            }
-          ],
-          "ocrEvidence": [],
-          "ruleEvidence": [
-            {
-              "matchedText": "안전수칙도 챙겨 달라는 마지막 복습 안내입니다.",
-              "ruleId": "LOCAL_TYPHOON_GENERATED",
-              "sourceName": "입력 영상 자막과 GPT-5.5 구조화 결과",
-              "sourceUrl": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-              "title": "호우·태풍 안전예방수칙! 꼭 숙지해주세요!"
-            }
-          ],
-          "visualEvidence": []
-        },
-        "segment": {
-          "confidence": 0.88,
-          "decisionPoint": "오늘 배운 약속을 다시 기억해요. 산과 캠핑은 가지 않고, 큰비에는 대피하고, 필요하면 119에 말해요.",
-          "endMs": 31270,
           "hazard": "typhoon",
           "phase": "generated_typhoon_practice",
-          "segmentId": "generated-829369e87a63-segment-7",
-          "sessionId": "generated-829369e87a63",
-          "sourceId": "https://www.youtube.com/watch?v=IiVsojHcoEo",
-          "startMs": 25610,
-          "status": "draft"
+          "decisionPoint": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+          "startMs": 23300,
+          "endMs": 28000,
+          "confidence": 0.65,
+          "status": "needs_review"
         },
-        "suppressedCandidates": [],
         "tracks": {
           "easy": {
-            "maxReadingLevel": "very_easy",
-            "text": "오늘 배운 약속을 다시 기억해요. 산과 캠핑은 가지 않고, 큰비에는 대피하고, 필요하면 119에 말해요."
+            "text": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+            "maxReadingLevel": "very_easy"
           },
           "reason": {
-            "officialRuleIds": [
-              "LOCAL_TYPHOON_GENERATED"
-            ],
-            "text": "다시 말하면 기억하기 쉬워요."
+            "text": "강한 바람에 유리나 물건이 깨질 수 있어요.",
+            "officialRuleIds": []
+          },
+          "caregiver": {
+            "script": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+            "correctionHint": "이 장면은 행동 연습이 아니라 설명 장면으로 보고, 다음 행동 장면에서 확인합니다."
           }
         },
-        "validation": {
-          "hasGroundedAction": false,
-          "learnerSafe": true,
-          "requiresHumanReview": false,
-          "schemaValid": true,
-          "warnings": [
-            "GPT-5.5 자동 생성 결과입니다. 공유 전 사람이 검토해야 합니다."
-          ]
+        "evidence": {
+          "visualEvidence": [],
+          "ocrEvidence": [
+            {
+              "text": "마지막 복습",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "안전한",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "여름을",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "위해",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "우산을",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "챙기듯",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "안전수칙도",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "챙겨주세요",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "국민",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "여러분의",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "행복하고",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "안전한",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "여름을",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "위해",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "안전",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "수칙도",
+              "timeMs": 23300,
+              "confidence": 0.7
+            },
+            {
+              "text": "챙겨주세요",
+              "timeMs": 23300,
+              "confidence": 0.7
+            }
+          ],
+          "asrEvidence": [
+            {
+              "text": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+              "startMs": 23300,
+              "endMs": 28000,
+              "confidence": 0.72
+            }
+          ],
+          "ruleEvidence": [],
+          "modelInference": []
         },
-        "version": "slowlearner_multitrack_v1"
+        "suppressedCandidates": [
+          {
+            "candidate": "안전한, 여름을, 우산을",
+            "category": "unclear_evidence",
+            "reason": "화면 단서는 있지만 공식 행동 카드로 연결할 근거가 부족합니다.",
+            "evidenceRefs": []
+          }
+        ],
+        "validation": {
+          "schemaValid": true,
+          "hasGroundedAction": false,
+          "learnerSafe": false,
+          "requiresHumanReview": true,
+          "warnings": [
+            "공식 근거가 충분하지 않아 학습자 행동 카드를 숨깁니다."
+          ]
+        }
       },
       "teacherGuide": {
-        "correction": "학습자가 한 가지만 말해도 칭찬한 뒤, 산과 캠핑 가지 않기, 대피하기, 119 알리기를 짧게 덧붙여 주세요.",
-        "observe": "학습자가 핵심 행동을 한 가지 이상 떠올리는지 봅니다.",
-        "prompt": "오늘 배운 비와 태풍 약속을 하나 말해 보게 하세요.",
-        "script": "안전수칙도 챙겨 달라는 마지막 복습 안내입니다."
+        "correction": "자동 생성된 문구가 어색하면 선생님이 쉬운 말로 다시 말합니다.",
+        "observe": "학습자가 장면과 행동을 구분하는지 봅니다.",
+        "prompt": "무슨 내용인지 같이 말해 봅니다.",
+        "script": "안전한 여름을 위해 우산을 챙기듯 안전수칙도 챙겨주세요. 국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요"
       },
       "teachBack": null
     }
   ],
   "showOnHome": false,
-  "title": "비와 태풍 때 지킬 약속",
+  "title": "URL로 만든 연습",
+  "videoSrc": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/source.mp4",
   "videoPlaybackKind": "file",
-  "videoSrc": "https://chargeun.onrender.com/generated/generated-829369e87a63/source.mp4",
+  "generationPipelineTrace": {
+    "agentRuns": [
+      {
+        "agent": "evidence-agent",
+        "status": "passed",
+        "summary": "7 direct-audio ASR cues from whisper-1, 23 visual caption frames, 11 scene-cut candidates collected.",
+        "completedAt": "2026-06-09T09:45:26.021Z",
+        "startedAt": "2026-06-09T09:45:26.021Z"
+      },
+      {
+        "agent": "scene-agent",
+        "status": "passed",
+        "summary": "7 evidence cues prepared with audio sentence and visual boundary constraints.",
+        "completedAt": "2026-06-09T09:45:26.022Z",
+        "startedAt": "2026-06-09T09:45:26.022Z"
+      },
+      {
+        "agent": "scenario-author-agent",
+        "issueCodes": [
+          "scenario_author_unavailable"
+        ],
+        "status": "needs_repair",
+        "summary": "Attempt 1: scenario author failed or timed out, switching to deterministic evidence rebuild. 제작 결과가 검증을 통과하지 못했습니다.",
+        "completedAt": "2026-06-09T09:45:26.025Z",
+        "startedAt": "2026-06-09T09:45:26.025Z"
+      },
+      {
+        "agent": "repair-coordinator",
+        "issueCodes": [
+          "mixed_topic_segment"
+        ],
+        "status": "passed",
+        "summary": "Deterministic evidence fallback produced a publishable scenario.",
+        "completedAt": "2026-06-09T09:45:26.042Z",
+        "startedAt": "2026-06-09T09:45:26.042Z"
+      },
+      {
+        "agent": "publisher-agent",
+        "status": "passed",
+        "summary": "Prepared 30 canonical quality-v1 artifacts for publish.",
+        "completedAt": "2026-06-09T09:45:26.044Z",
+        "startedAt": "2026-06-09T09:45:26.044Z"
+      }
+    ],
+    "attempts": 1,
+    "issueRouting": [],
+    "pipelineVersion": "url-multi-agent-quality-v16",
+    "artifactManifest": {
+      "files": [
+        {
+          "contentType": "application/json; charset=utf-8",
+          "key": "generated/generated-829369e87a63/quality-v1/audio-transcript.json",
+          "name": "audio-transcript.json",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/audio-transcript.json"
+        },
+        {
+          "contentType": "application/json; charset=utf-8",
+          "key": "generated/generated-829369e87a63/quality-v1/pipeline-trace.json",
+          "name": "pipeline-trace.json",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/pipeline-trace.json"
+        },
+        {
+          "contentType": "application/json; charset=utf-8",
+          "key": "generated/generated-829369e87a63/quality-v1/quality-report.json",
+          "name": "quality-report.json",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/quality-report.json"
+        },
+        {
+          "contentType": "application/json; charset=utf-8",
+          "key": "generated/generated-829369e87a63/quality-v1/scenario.json",
+          "name": "scenario.json",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/scenario.json"
+        },
+        {
+          "contentType": "application/json; charset=utf-8",
+          "key": "generated/generated-829369e87a63/quality-v1/source.info.json",
+          "name": "source.info.json",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/source.info.json"
+        },
+        {
+          "contentType": "video/mp4",
+          "key": "generated/generated-829369e87a63/quality-v1/source.mp4",
+          "name": "source.mp4",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/source.mp4"
+        },
+        {
+          "contentType": "application/json; charset=utf-8",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-evidence.json",
+          "name": "visual-caption-evidence.json",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-evidence.json"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-00.jpg",
+          "name": "visual-caption-frame-00.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-00.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-01.jpg",
+          "name": "visual-caption-frame-01.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-01.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-02.jpg",
+          "name": "visual-caption-frame-02.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-02.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-03.jpg",
+          "name": "visual-caption-frame-03.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-03.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-04.jpg",
+          "name": "visual-caption-frame-04.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-04.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-05.jpg",
+          "name": "visual-caption-frame-05.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-05.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-06.jpg",
+          "name": "visual-caption-frame-06.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-06.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-07.jpg",
+          "name": "visual-caption-frame-07.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-07.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-08.jpg",
+          "name": "visual-caption-frame-08.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-08.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-09.jpg",
+          "name": "visual-caption-frame-09.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-09.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-10.jpg",
+          "name": "visual-caption-frame-10.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-10.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-11.jpg",
+          "name": "visual-caption-frame-11.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-11.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-12.jpg",
+          "name": "visual-caption-frame-12.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-12.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-13.jpg",
+          "name": "visual-caption-frame-13.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-13.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-14.jpg",
+          "name": "visual-caption-frame-14.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-14.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-15.jpg",
+          "name": "visual-caption-frame-15.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-15.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-16.jpg",
+          "name": "visual-caption-frame-16.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-16.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-17.jpg",
+          "name": "visual-caption-frame-17.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-17.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-18.jpg",
+          "name": "visual-caption-frame-18.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-18.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-19.jpg",
+          "name": "visual-caption-frame-19.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-19.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-20.jpg",
+          "name": "visual-caption-frame-20.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-20.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-21.jpg",
+          "name": "visual-caption-frame-21.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-21.jpg"
+        },
+        {
+          "contentType": "image/jpeg",
+          "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-22.jpg",
+          "name": "visual-caption-frame-22.jpg",
+          "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-22.jpg"
+        }
+      ],
+      "provider": "render-local",
+      "qualityVersion": "quality-v1",
+      "scenarioJsonUrl": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/scenario.json",
+      "sourceVideoUrl": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/source.mp4"
+    },
+    "publishedAt": "2026-06-09T09:45:26.044Z"
+  },
   "generationQualityReport": {
     "analysisDepth": {
-      "audioCueCount": 15,
-      "expandedCueCount": 15,
+      "audioCueCount": 7,
+      "expandedCueCount": 7,
       "frameBoundaryPrecisionMs": 10,
-      "sceneCutCandidatesMs": [],
-      "segmentationEvidence": [
-        "audio-caption",
-        "gpt-5.5-scenario-authoring"
+      "sceneCutCandidatesMs": [
+        4340,
+        5870,
+        8480,
+        10210,
+        12710,
+        14780,
+        16280,
+        18250,
+        21120,
+        23120,
+        28130
       ],
-      "sentenceBoundaryCount": 9,
+      "segmentationEvidence": [
+        "audio-asr",
+        "visual-scene-cut",
+        "visual-caption-ocr",
+        "deterministic-repair"
+      ],
+      "sentenceBoundaryCount": 5,
       "stages": [
         {
-          "evidence": "15 caption/audio cues",
-          "name": "audio-caption-parse",
+          "evidence": "7 direct-audio ASR cues",
+          "name": "audio-asr-transcription",
           "status": "completed"
         },
         {
-          "evidence": "15 bounded cues after sentence and boundary split",
+          "evidence": "7 bounded cues after sentence and boundary split",
           "name": "audio-sentence-boundary-split",
           "status": "completed"
         },
         {
-          "evidence": "no strong scene cut candidate",
+          "evidence": "11 ffmpeg scene candidates",
           "name": "visual-scene-probe",
-          "status": "skipped"
+          "status": "completed"
         },
         {
           "evidence": "segment start/end values quantized to 0.01 second",
@@ -1787,30 +2537,478 @@
           "status": "completed"
         },
         {
-          "evidence": "no sampled visual caption evidence",
+          "evidence": "23 sampled frames, 7 visual caption boundary candidates",
           "name": "visual-caption-ocr",
-          "status": "skipped"
+          "status": "completed"
         },
         {
-          "evidence": "7 GPT-authored learning segments from strict JSON schema",
-          "name": "gpt-5.5-scenario-authoring",
+          "evidence": "7 repaired learning segments from direct-audio and visual-caption evidence plus official rule grounding",
+          "name": "deterministic-fallback-repair",
           "status": "completed"
         }
       ],
       "videoDurationMs": 30063,
-      "visualCaptionBoundaries": [],
-      "visualCaptionFrameCount": 0,
-      "warnings": [
-        "프레임 장면 변화 후보가 약해서 자막/오디오 문장 경계를 우선 사용했습니다.",
-        "화면 자막 비교에 필요한 프레임을 충분히 추출하지 못했습니다."
+      "visualCaptionBoundaries": [
+        {
+          "afterCaption": "여름철 재해 사고",
+          "beforeCaption": "여름 호우·태풍 국민행동수칙",
+          "changeType": "new_topic",
+          "confidence": 0.8,
+          "reason": "연속 프레임 OCR에서 실제 화면 학습 자막의 핵심 문구가 바뀌었습니다.",
+          "recommendedBoundaryMs": 0,
+          "timeMs": 1000
+        },
+        {
+          "afterCaption": "여름철 재해 사고: 1위 호우, 2위 태풍",
+          "beforeCaption": "여름철 재해 사고: 1위 호우",
+          "changeType": "same_topic",
+          "confidence": 0.86,
+          "reason": "Additional ranking item appears; topic remains the same intro/statistics segment.",
+          "recommendedBoundaryMs": 4400,
+          "timeMs": 3500
+        },
+        {
+          "afterCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+          "beforeCaption": "여름철 재해 사고: 1위 호우, 2위 태풍",
+          "changeType": "new_topic",
+          "confidence": 0.93,
+          "reason": "Visible caption changes from intro/ranking to a specific heavy-rain action rule about hiking and camping.",
+          "recommendedBoundaryMs": 7000,
+          "timeMs": 6750
+        },
+        {
+          "afterCaption": "낮은 다리·침수된 도로 출입 금지",
+          "beforeCaption": "집중호우 시 산행·캠핑 금지",
+          "changeType": "new_topic",
+          "confidence": 0.94,
+          "reason": "Caption changes to a different hazard location/action rule: low bridges and flooded roads.",
+          "recommendedBoundaryMs": 11300,
+          "timeMs": 12490
+        },
+        {
+          "afterCaption": "낮은 다리·침수된 도로 출입 금지",
+          "beforeCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지",
+          "changeType": "new_topic",
+          "confidence": 0.93,
+          "reason": "연속 프레임 OCR에서 실제 화면 학습 자막의 핵심 문구가 바뀌었습니다.",
+          "recommendedBoundaryMs": 14800,
+          "timeMs": 13500
+        },
+        {
+          "afterCaption": "배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지",
+          "beforeCaption": "낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+          "changeType": "new_topic",
+          "confidence": 0.93,
+          "reason": "Caption changes to drainage-channel preparation and avoiding paddy/water-gate checks during heavy rain.",
+          "recommendedBoundaryMs": 23300,
+          "timeMs": 20700
+        },
+        {
+          "afterCaption": "국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+          "beforeCaption": "국민 여러분의 행복하고 안전한 여름을 위해",
+          "changeType": "same_topic",
+          "confidence": 0.9,
+          "reason": "Closing reminder text expands, but remains the same final safety-reminder topic.",
+          "recommendedBoundaryMs": 28000,
+          "timeMs": 27750
+        }
       ],
-      "generationModel": "gpt-5.5"
+      "visualCaptionFrames": [
+        {
+          "confidence": 0.8,
+          "hasLearningCaption": true,
+          "index": 0,
+          "normalizedCaption": "여름 호우·태풍 국민행동수칙",
+          "tsMs": 250,
+          "visibleCaption": "여름 호우·태풍 국민행동수칙"
+        },
+        {
+          "confidence": 0.86,
+          "hasLearningCaption": true,
+          "index": 1,
+          "normalizedCaption": "여름철 재해 사고",
+          "tsMs": 1000,
+          "visibleCaption": "여름철 재해 사고"
+        },
+        {
+          "confidence": 0.86,
+          "hasLearningCaption": true,
+          "index": 2,
+          "normalizedCaption": "여름철 재해 사고 / 1위 호우",
+          "tsMs": 2200,
+          "visibleCaption": "여름철 재해 사고 1위 호우 2위"
+        },
+        {
+          "confidence": 0.92,
+          "hasLearningCaption": true,
+          "index": 3,
+          "normalizedCaption": "여름철 재해 사고 / 1위 호우 / 2위 태풍",
+          "tsMs": 3500,
+          "visibleCaption": "여름철 재해 사고 1위 호우 2위 태풍"
+        },
+        {
+          "confidence": 0.92,
+          "hasLearningCaption": true,
+          "index": 4,
+          "normalizedCaption": "여름철 재해 사고 / 1위 호우 / 2위 태풍",
+          "tsMs": 4150,
+          "visibleCaption": "여름철 재해 사고 1위 호우 2위 태풍"
+        },
+        {
+          "confidence": 0.7,
+          "hasLearningCaption": true,
+          "index": 5,
+          "normalizedCaption": "재해유형별 인명피해 분석 결과",
+          "tsMs": 5650,
+          "visibleCaption": "재해유형별 인명피해 분석 결과"
+        },
+        {
+          "confidence": 0.94,
+          "hasLearningCaption": true,
+          "index": 6,
+          "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+          "tsMs": 6750,
+          "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+        },
+        {
+          "confidence": 0.94,
+          "hasLearningCaption": true,
+          "index": 7,
+          "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+          "tsMs": 8260,
+          "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+        },
+        {
+          "confidence": 0.94,
+          "hasLearningCaption": true,
+          "index": 8,
+          "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+          "tsMs": 9150,
+          "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+        },
+        {
+          "confidence": 0.94,
+          "hasLearningCaption": true,
+          "index": 9,
+          "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+          "tsMs": 9990,
+          "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+        },
+        {
+          "confidence": 0.94,
+          "hasLearningCaption": true,
+          "index": 10,
+          "normalizedCaption": "재해유형별 인명피해 분석 결과 / 1위 하천급류 / 2위 산사태 / 3위 건물침수 / 집중호우 시 산행·캠핑 금지",
+          "tsMs": 11000,
+          "visibleCaption": "재해유형별 인명피해 분석 결과 1위 하천급류 2위 산사태 3위 건물침수 집중호우 시 산행·캠핑 금지"
+        },
+        {
+          "confidence": 0.62,
+          "hasLearningCaption": true,
+          "index": 11,
+          "normalizedCaption": "낮은 다리·침수된 도로",
+          "tsMs": 12490,
+          "visibleCaption": "낮은 다·수 도로"
+        },
+        {
+          "confidence": 0.93,
+          "hasLearningCaption": true,
+          "index": 12,
+          "normalizedCaption": "낮은 다리·침수된 도로 출입 금지",
+          "tsMs": 13500,
+          "visibleCaption": "낮은 다리·침수된 도로 출입 금지"
+        },
+        {
+          "confidence": 0.93,
+          "hasLearningCaption": true,
+          "index": 13,
+          "normalizedCaption": "낮은 다리·침수된 도로 출입 금지",
+          "tsMs": 14550,
+          "visibleCaption": "낮은 다리·침수된 도로 출입 금지"
+        },
+        {
+          "confidence": 0.84,
+          "hasLearningCaption": true,
+          "index": 14,
+          "normalizedCaption": "낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+          "tsMs": 16000,
+          "visibleCaption": "낮은 다리·침수된 도로 출입 금지 고립 시 건너지 말고 119 신고·도움 요..."
+        },
+        {
+          "confidence": 0.94,
+          "hasLearningCaption": true,
+          "index": 15,
+          "normalizedCaption": "낮은 다리·침수된 도로 출입 금지 / 고립 시 건너지 말고 119 신고·도움 요청",
+          "tsMs": 17850,
+          "visibleCaption": "낮은 다리·침수된 도로 출입 금지 고립 시 건너지 말고 119 신고·도움 요청"
+        },
+        {
+          "confidence": 0.35,
+          "hasLearningCaption": false,
+          "index": 16,
+          "normalizedCaption": "",
+          "tsMs": 18500,
+          "visibleCaption": ""
+        },
+        {
+          "confidence": 0.81,
+          "hasLearningCaption": true,
+          "index": 17,
+          "normalizedCaption": "배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지",
+          "tsMs": 20700,
+          "visibleCaption": "배수로 사전 정비 집중호우 시 논·물꼬 점검 절대 ..."
+        },
+        {
+          "confidence": 0.9,
+          "hasLearningCaption": true,
+          "index": 18,
+          "normalizedCaption": "배수로 사전 정비 / 집중호우 시 논·물꼬 점검 절대 금지 / 어르신, 어린이 등 외출금지",
+          "tsMs": 22900,
+          "visibleCaption": "배수로 사전 정비 집중호우 시 논·물꼬 점검 절대 금지"
+        },
+        {
+          "confidence": 0.25,
+          "hasLearningCaption": false,
+          "index": 19,
+          "normalizedCaption": "",
+          "tsMs": 23550,
+          "visibleCaption": ""
+        },
+        {
+          "confidence": 0.88,
+          "hasLearningCaption": true,
+          "index": 20,
+          "normalizedCaption": "국민 여러분의 행복하고 안전한 여름을 위해",
+          "tsMs": 25650,
+          "visibleCaption": "국민 여러분의 행복하고 안전한 여름을 위해 꼭"
+        },
+        {
+          "confidence": 0.96,
+          "hasLearningCaption": true,
+          "index": 21,
+          "normalizedCaption": "국민 여러분의 행복하고 안전한 여름을 위해 / 안전 수칙도 꼭 챙겨주세요",
+          "tsMs": 27750,
+          "visibleCaption": "국민 여러분의 행복하고 안전한 여름을 위해 안전 수칙도 꼭 챙겨주세요"
+        },
+        {
+          "confidence": 0.98,
+          "hasLearningCaption": false,
+          "index": 22,
+          "normalizedCaption": "행정안전부",
+          "tsMs": 28500,
+          "visibleCaption": "행정안전부"
+        }
+      ],
+      "visualCaptionFrameCount": 23,
+      "warnings": [
+        "Some small or partially animated Korean text is only partly readable in frames 5, 11, 14, and 17.",
+        "The parenthetical line in frame 18 is low-confidence but appears to read: 어르신, 어린이 등 외출금지."
+      ]
     },
-    "checkedAt": "2026-05-22T06:20:47.755Z",
-    "issues": [],
+    "checkedAt": "2026-06-09T09:45:26.042Z",
+    "groundingPassed": true,
+    "issues": [
+      {
+        "code": "mixed_topic_segment",
+        "message": "한 장면 안에 여러 판단 주제가 섞였을 수 있습니다.",
+        "segmentId": "generated-829369e87a63-segment-4",
+        "severity": "warning"
+      }
+    ],
     "passed": true,
-    "score": 100,
+    "repairAttemptCount": 0,
+    "score": 95,
+    "sourceCoveragePassed": true,
     "sourceTopicCount": 7,
+    "uiPlaybackPassed": true,
     "version": "url_generation_lrs_v1"
+  },
+  "generatedArtifactManifest": {
+    "files": [
+      {
+        "contentType": "application/json; charset=utf-8",
+        "key": "generated/generated-829369e87a63/quality-v1/audio-transcript.json",
+        "name": "audio-transcript.json",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/audio-transcript.json"
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "key": "generated/generated-829369e87a63/quality-v1/pipeline-trace.json",
+        "name": "pipeline-trace.json",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/pipeline-trace.json"
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "key": "generated/generated-829369e87a63/quality-v1/quality-report.json",
+        "name": "quality-report.json",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/quality-report.json"
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "key": "generated/generated-829369e87a63/quality-v1/scenario.json",
+        "name": "scenario.json",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/scenario.json"
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "key": "generated/generated-829369e87a63/quality-v1/source.info.json",
+        "name": "source.info.json",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/source.info.json"
+      },
+      {
+        "contentType": "video/mp4",
+        "key": "generated/generated-829369e87a63/quality-v1/source.mp4",
+        "name": "source.mp4",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/source.mp4"
+      },
+      {
+        "contentType": "application/json; charset=utf-8",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-evidence.json",
+        "name": "visual-caption-evidence.json",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-evidence.json"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-00.jpg",
+        "name": "visual-caption-frame-00.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-00.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-01.jpg",
+        "name": "visual-caption-frame-01.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-01.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-02.jpg",
+        "name": "visual-caption-frame-02.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-02.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-03.jpg",
+        "name": "visual-caption-frame-03.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-03.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-04.jpg",
+        "name": "visual-caption-frame-04.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-04.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-05.jpg",
+        "name": "visual-caption-frame-05.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-05.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-06.jpg",
+        "name": "visual-caption-frame-06.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-06.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-07.jpg",
+        "name": "visual-caption-frame-07.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-07.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-08.jpg",
+        "name": "visual-caption-frame-08.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-08.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-09.jpg",
+        "name": "visual-caption-frame-09.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-09.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-10.jpg",
+        "name": "visual-caption-frame-10.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-10.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-11.jpg",
+        "name": "visual-caption-frame-11.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-11.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-12.jpg",
+        "name": "visual-caption-frame-12.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-12.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-13.jpg",
+        "name": "visual-caption-frame-13.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-13.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-14.jpg",
+        "name": "visual-caption-frame-14.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-14.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-15.jpg",
+        "name": "visual-caption-frame-15.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-15.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-16.jpg",
+        "name": "visual-caption-frame-16.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-16.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-17.jpg",
+        "name": "visual-caption-frame-17.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-17.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-18.jpg",
+        "name": "visual-caption-frame-18.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-18.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-19.jpg",
+        "name": "visual-caption-frame-19.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-19.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-20.jpg",
+        "name": "visual-caption-frame-20.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-20.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-21.jpg",
+        "name": "visual-caption-frame-21.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-21.jpg"
+      },
+      {
+        "contentType": "image/jpeg",
+        "key": "generated/generated-829369e87a63/quality-v1/visual-caption-frame-22.jpg",
+        "name": "visual-caption-frame-22.jpg",
+        "url": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/visual-caption-frame-22.jpg"
+      }
+    ],
+    "provider": "render-local",
+    "qualityVersion": "quality-v1",
+    "scenarioJsonUrl": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/scenario.json",
+    "sourceVideoUrl": "http://localhost:10000/generated/generated-829369e87a63/quality-v1/source.mp4"
   }
 }

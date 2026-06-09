@@ -190,5 +190,79 @@
     "source_title": "국민재난안전포털 - 화재 발생시 행동요령",
     "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/fire.html",
     "updated_at": "2026-04-14"
+  },
+  {
+    "rule_id": "KR_WF_01",
+    "hazard": "fire",
+    "phase": "wildfire_prevention",
+    "when": [
+      "산과 가까운 곳에서 불을 사용할 수 있음",
+      "쓰레기나 영농부산물을 소각하려 함",
+      "취사나 야영 뒤 불씨가 남아 있을 수 있음",
+      "입산할 때 화기를 가져갈 수 있음"
+    ],
+    "action": "산림 근처에서 소각하지 않고, 화기 사용 후에는 불씨가 완전히 꺼졌는지 확인하며, 라이터와 담배 같은 화기를 산에 가져가지 않습니다.",
+    "do_not": "산림 근처에서 쓰레기나 영농부산물을 태우거나 라이터와 담배를 가지고 산에 들어가지 않습니다.",
+    "why": "작은 불씨도 바람을 타고 산으로 번져 큰 산불이 될 수 있습니다.",
+    "caregiver": "학습자가 소각, 불씨 확인, 라이터와 담배 금지를 각각 다른 행동으로 말할 수 있는지 확인합니다.",
+    "report_script": "산 가까운 곳에서 연기나 불꽃을 보면 119, 112, 지자체, 산림청 등에 신고합니다.",
+    "source_title": "국민재난안전포털 - 산불 국민행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/forestFire.html",
+    "updated_at": "2026-06-09"
+  },
+  {
+    "rule_id": "KR_WF_02",
+    "hazard": "fire",
+    "phase": "wildfire_alert",
+    "when": [
+      "산불이 발생함",
+      "대피 안내가 나옴",
+      "주변 사람에게 알려야 함",
+      "연기나 불꽃을 목격함"
+    ],
+    "action": "산불 대피 안내를 확인하고 주변 사람에게 즉시 알려 함께 대피합니다.",
+    "do_not": "산불을 혼자 보러 가거나 확인하느라 대피를 늦추지 않습니다.",
+    "why": "산불은 바람에 빠르게 번지므로 안내를 듣고 주변에 빨리 알려야 함께 피할 수 있습니다.",
+    "caregiver": "대피 안내를 듣는 행동과 주변 사람에게 알리는 행동을 순서대로 연습시킵니다.",
+    "report_script": "연기나 불꽃을 보면 119, 112, 지자체, 산림청 등에 신고합니다.",
+    "source_title": "국민재난안전포털 - 산불 국민행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/forestFire.html",
+    "updated_at": "2026-06-09"
+  },
+  {
+    "rule_id": "KR_WF_03",
+    "hazard": "fire",
+    "phase": "wildfire_evacuation",
+    "when": [
+      "산불 대피가 필요함",
+      "산불 확산 구역을 피해야 함",
+      "대피할 길을 선택해야 함"
+    ],
+    "action": "산과 떨어진 도로를 이용해 산불 확산 구역을 피해 신속히 대피합니다.",
+    "do_not": "산 가까운 길이나 산불 확산 방향으로 이동하지 않습니다.",
+    "why": "산 가까운 길은 불길과 연기가 번질 수 있어 대피 중 위험해질 수 있습니다.",
+    "caregiver": "학습자가 '산과 떨어진 도로'를 정답 장소로 고를 수 있는지 확인합니다.",
+    "report_script": "대피 중 위험하거나 고립되면 즉시 119와 주변 어른에게 알립니다.",
+    "source_title": "국민재난안전포털 - 산불 국민행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/forestFire.html",
+    "updated_at": "2026-06-09"
+  },
+  {
+    "rule_id": "KR_WF_04",
+    "hazard": "fire",
+    "phase": "wildfire_shelter_in_place",
+    "when": [
+      "대피가 어려움",
+      "주변에 낙엽 등 탈 수 있는 물건이 있음",
+      "몸을 낮춰 보호해야 함"
+    ],
+    "action": "대피가 어렵다면 주변 낙엽을 치우고 낮은 자세로 엎드려 몸을 보호합니다.",
+    "do_not": "마른 낙엽 가까이에 그대로 있거나 서서 산불을 구경하지 않습니다.",
+    "why": "마른 낙엽은 불이 쉽게 붙고, 낮은 자세는 뜨거운 바람과 연기를 줄이는 데 도움이 됩니다.",
+    "caregiver": "낙엽 치우기와 낮게 엎드리기를 한 장면 안의 순서 행동으로 연습시킵니다.",
+    "report_script": "대피가 어렵다면 가능한 위치를 119와 주변 어른에게 알립니다.",
+    "source_title": "국민재난안전포털 - 산불 국민행동요령",
+    "source_url": "https://www.safekorea.go.kr/idsiSFK/neo/main_m/sot/forestFire.html",
+    "updated_at": "2026-06-09"
   }
 ]

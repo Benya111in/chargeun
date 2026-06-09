@@ -71,7 +71,14 @@ async function processJob(job: WorkerJob) {
   console.log(`Starting ${job.id}`)
 
   try {
-    const generated = await generatePracticeFromUrl(job.sourceUrl)
+    const generated = await generatePracticeFromUrl(job.sourceUrl, {
+      onRepairNeeded: async ({ attempt, message, qualityReport }) => {
+        await postWorkerJson(`/api/worker/jobs/${job.id}/needs-repair`, {
+          message: `자동 수리 ${attempt}차: ${message}`,
+          qualityReport,
+        }).catch(() => undefined)
+      },
+    })
     const record = generated.record
 
     if (record.id !== job.id) {
@@ -83,18 +90,18 @@ async function processJob(job: WorkerJob) {
       throw new Error('customScenario 생성 결과가 없습니다.')
     }
 
-    const fileNames = await collectGeneratedFiles(job.id)
     const r2Config = getR2ConfigFromEnv()
+    const initialFileNames = await collectGeneratedFiles(job.id)
     const artifactManifest = r2Config
       ? buildGeneratedArtifactManifest({
           baseUrl: r2Config.publicBaseUrl,
-          fileNames,
+          fileNames: initialFileNames,
           jobId: job.id,
           provider: 'cloudflare-r2',
         })
       : buildGeneratedArtifactManifest({
           baseUrl: apiBase,
-          fileNames,
+          fileNames: initialFileNames,
           jobId: job.id,
           provider: 'render-local',
         })
@@ -107,11 +114,38 @@ async function processJob(job: WorkerJob) {
       unknown
     >
     customScenarioRecord.generatedArtifactManifest = artifactManifest
+    if (
+      customScenarioRecord.generationPipelineTrace &&
+      typeof customScenarioRecord.generationPipelineTrace === 'object' &&
+      !Array.isArray(customScenarioRecord.generationPipelineTrace)
+    ) {
+      const pipelineTrace =
+        customScenarioRecord.generationPipelineTrace as Record<string, unknown>
+      pipelineTrace.artifactManifest = artifactManifest
+    }
 
     await writeFile(
       join(generatedDir, job.id, 'scenario.json'),
       JSON.stringify(record.customScenario, null, 2),
     )
+    await writeFile(
+      join(generatedDir, job.id, 'quality-report.json'),
+      JSON.stringify(
+        customScenarioRecord.generationQualityReport ?? {},
+        null,
+        2,
+      ),
+    )
+    await writeFile(
+      join(generatedDir, job.id, 'pipeline-trace.json'),
+      JSON.stringify(
+        customScenarioRecord.generationPipelineTrace ?? {},
+        null,
+        2,
+      ),
+    )
+
+    const fileNames = await collectGeneratedFiles(job.id)
 
     if (r2Config) {
       await uploadGeneratedFilesToR2(job.id, fileNames, r2Config)
@@ -266,6 +300,10 @@ async function postWorkerJson(pathname: string, body: Record<string, unknown>) {
 function isUploadableGeneratedFile(fileName: string) {
   return (
     fileName === 'scenario.json' ||
+    fileName === 'pipeline-trace.json' ||
+    fileName === 'quality-report.json' ||
+    fileName === 'audio-transcript.json' ||
+    fileName === 'visual-caption-evidence.json' ||
     fileName === 'source.mp4' ||
     fileName === 'source.info.json' ||
     /^source\.[a-z0-9-]+(?:-orig)?\.vtt$/iu.test(fileName) ||

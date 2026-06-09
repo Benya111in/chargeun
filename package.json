@@ -22,7 +22,11 @@
     "qa:sync": "node --import tsx scripts/sync-qa-logs.ts",
     "prompts:validate": "node --import tsx scripts/validate-prompts.ts",
     "qa:smoke": "pnpm eval:audit && pnpm qa:sync && pnpm --filter @ansimtrack/shared-types test && pnpm --filter @ansimtrack/llm-orchestrator test && pnpm --filter desktop-ui test",
-    "rules:validate": "node --import tsx scripts/validate-rules.ts"
+    "rules:validate": "node --import tsx scripts/validate-rules.ts",
+    "practice-v2:dev": "pnpm --filter practice-v2 dev",
+    "practice-v2:build": "pnpm --filter practice-v2 build",
+    "practice-v2:preview": "pnpm --filter practice-v2 preview",
+    "practice-v2:test": "pnpm --filter practice-v2 test"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

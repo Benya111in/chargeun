@@ -13,6 +13,7 @@ import {
 import { appHref } from './lib/routes'
 import {
   clearStoredGeneratorApiBase,
+  type GenerationJobProgress,
   getGeneratorApiConfig,
   loadStoredGeneratorAccessCode,
   persistGeneratorApiBase,
@@ -22,13 +23,21 @@ import {
 
 const generationSteps = [
   '생성 작업을 서버에 등록합니다.',
-  '맥북 작업자가 유튜브 영상과 자막을 가져옵니다.',
-  '음성이 끝나는 지점을 찾습니다.',
-  '화면 자막과 장면이 바뀌는 지점을 봅니다.',
-  'GPT-5.5가 장면별 학습 화면을 작성합니다.',
+  '로컬 생성 서버가 유튜브 영상을 가져와 오디오를 추출합니다.',
+  '직접 추출한 오디오에서 문장 타임스탬프를 찾습니다.',
+  '실제 화면 자막과 장면이 바뀌는 지점을 봅니다.',
+  'AI 작성 에이전트가 장면별 학습 화면을 작성합니다.',
   '재난안전 표현과 쉬운말 품질을 검사합니다.',
   '학습자가 볼 수 있는 연습 화면으로 저장합니다.',
 ]
+const generationStatusStep: Record<GenerationJobProgress['status'], number> = {
+  blocked: generationSteps.length - 1,
+  failed: generationSteps.length - 1,
+  needs_repair: 5,
+  processing: 2,
+  published: generationSteps.length - 1,
+  queued: 0,
+}
 const safetyNotice =
   '이 페이지는 연습 자료를 만드는 곳입니다. 실제 위험할 때는 119·112, 주변 어른, 현장 안내를 먼저 따르세요.'
 const minimumGenerationDisplayMs = 8_000
@@ -43,10 +52,14 @@ export default function UrlGeneratorPage() {
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(
     null,
   )
+  const [generationProgress, setGenerationProgress] =
+    useState<GenerationJobProgress | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [notice, setNotice] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
   const [stepIndex, setStepIndex] = useState(0)
+  const [generationAbortController, setGenerationAbortController] =
+    useState<AbortController | null>(null)
 
   useEffect(() => {
     if (!isGenerating || !generationStartedAt) {
@@ -55,17 +68,19 @@ export default function UrlGeneratorPage() {
 
     const update = () => {
       const elapsedMs = Date.now() - generationStartedAt
-      setElapsedSeconds(Math.floor(elapsedMs / 1000))
-      setStepIndex(
-        Math.min(generationSteps.length - 1, Math.floor(elapsedMs / 3_000)),
+      const elapsedStep = Math.min(
+        generationSteps.length - 1,
+        Math.floor(elapsedMs / 3_000),
       )
+      setElapsedSeconds(Math.floor(elapsedMs / 1000))
+      setStepIndex(getGenerationStepIndex(generationProgress, elapsedStep))
     }
 
     update()
     const intervalId = window.setInterval(update, 450)
 
     return () => window.clearInterval(intervalId)
-  }, [generationStartedAt, isGenerating])
+  }, [generationProgress, generationStartedAt, isGenerating])
 
   const canSubmit =
     sourceUrl.trim().length > 0 && !isGenerating && !apiConfig.requiresRemoteApi
@@ -110,13 +125,26 @@ export default function UrlGeneratorPage() {
       setNotice('')
       setElapsedSeconds(0)
       setGenerationStartedAt(Date.now())
+      setGenerationProgress({
+        message: '생성 작업을 서버에 등록하고 있습니다.',
+        status: 'queued',
+      })
       setIsGenerating(true)
       setStepIndex(0)
       persistGeneratorAccessCode(accessCode)
+      const abortController = new AbortController()
+      setGenerationAbortController(abortController)
 
       const generationPromise = requestGeneratedPracticeFromApi(
         sourceUrl,
         accessCode,
+        {
+          onProgress: (progress) => {
+            setGenerationProgress(progress)
+            setStepIndex(generationStatusStep[progress.status])
+          },
+          signal: abortController.signal,
+        },
       )
       const [generationResult] = await Promise.allSettled([
         generationPromise,
@@ -130,14 +158,30 @@ export default function UrlGeneratorPage() {
       const { record } = generationResult.value
       window.location.href = appHref(`/scenario/${record.id}`)
     } catch (error) {
+      const aborted =
+        error instanceof Error &&
+        (error.name === 'AbortError' || error.message === 'Aborted')
       setNotice(
-        error instanceof Error
+        aborted
+          ? '생성을 취소했습니다.'
+          : error instanceof Error
           ? error.message
           : '영상을 학습 화면으로 만들지 못했습니다.',
       )
       setGenerationStartedAt(null)
+      setGenerationProgress(null)
+      setGenerationAbortController(null)
       setIsGenerating(false)
     }
+  }
+
+  const handleGenerationCancel = () => {
+    generationAbortController?.abort()
+    setNotice('생성을 취소했습니다.')
+    setGenerationStartedAt(null)
+    setGenerationProgress(null)
+    setGenerationAbortController(null)
+    setIsGenerating(false)
   }
 
   return (
@@ -156,8 +200,8 @@ export default function UrlGeneratorPage() {
           </h1>
           <p className="mt-6 max-w-3xl text-xl font-semibold leading-9 text-[#596257]">
             기존 체험 페이지와 분리된 생성 전용 화면입니다. API key를 브라우저에
-            보내지 않고, 연결된 작업자가 영상 자막과 프레임 근거를 읽어
-            느린학습자용 학습 화면을 만듭니다.
+            보내지 않고, 로컬 생성 서버가 직접 추출한 오디오와 실제 화면
+            프레임을 읽어 느린학습자용 학습 화면을 만듭니다.
           </p>
 
           <form
@@ -299,6 +343,8 @@ export default function UrlGeneratorPage() {
       {isGenerating ? (
         <GenerationDialog
           elapsedSeconds={elapsedSeconds}
+          onCancel={handleGenerationCancel}
+          progress={generationProgress}
           stepIndex={stepIndex}
         />
       ) : null}
@@ -328,11 +374,18 @@ function ProcessCard({
 
 function GenerationDialog({
   elapsedSeconds,
+  onCancel,
+  progress,
   stepIndex,
 }: {
   elapsedSeconds: number
+  onCancel: () => void
+  progress: GenerationJobProgress | null
   stepIndex: number
 }) {
+  const statusLabel = getGenerationStatusLabel(progress)
+  const repairSummary = summarizeQualityReport(progress?.qualityReport)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/46 px-4">
       <section
@@ -353,6 +406,28 @@ function GenerationDialog({
             </p>
           </div>
         </div>
+        <div
+          className={`mt-5 rounded-md border px-4 py-3 text-sm font-semibold leading-6 ${getGenerationStatusClass(
+            progress?.status,
+          )}`}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-sm bg-white/70 px-2 py-1 text-xs font-bold">
+              {statusLabel}
+            </span>
+            <span>
+              {progress?.message ??
+                '로컬 생성 서버가 영상을 분석하고 품질 검사를 준비하고 있습니다.'}
+            </span>
+          </div>
+          {progress?.status === 'needs_repair' ? (
+            <p className="mt-2">
+              실패로 끊지 않고, 발견된 문제를 담당 Agent에게 다시 보내고
+              있습니다. published가 되기 전에는 학습 화면을 열지 않습니다.
+            </p>
+          ) : null}
+          {repairSummary ? <p className="mt-2">{repairSummary}</p> : null}
+        </div>
         <ol className="mt-5 grid gap-2">
           {generationSteps.map((step, index) => (
             <li
@@ -367,9 +442,93 @@ function GenerationDialog({
             </li>
           ))}
         </ol>
+        <button
+          className="mt-5 w-full rounded-md border border-[#151713] bg-white px-4 py-3 text-base font-semibold text-[#151713]"
+          onClick={onCancel}
+          type="button"
+        >
+          생성 취소하고 다시 입력하기
+        </button>
       </section>
     </div>
   )
+}
+
+function getGenerationStatusLabel(progress: GenerationJobProgress | null) {
+  switch (progress?.status) {
+    case 'queued':
+      return '대기'
+    case 'processing':
+      return '분석 중'
+    case 'needs_repair':
+      return '자동 수리 중'
+    case 'published':
+      return '공개 준비 완료'
+    case 'blocked':
+      return '품질 차단'
+    case 'failed':
+      return '작업 실패'
+    default:
+      return '준비 중'
+  }
+}
+
+function getGenerationStepIndex(
+  progress: GenerationJobProgress | null,
+  elapsedStep: number,
+) {
+  switch (progress?.status) {
+    case 'queued':
+      return 0
+    case 'processing':
+      return Math.min(elapsedStep, 4)
+    case 'needs_repair':
+      return 5
+    case 'published':
+    case 'blocked':
+    case 'failed':
+      return generationSteps.length - 1
+    default:
+      return elapsedStep
+  }
+}
+
+function getGenerationStatusClass(status: GenerationJobProgress['status'] | undefined) {
+  if (status === 'needs_repair') {
+    return 'border-amber-300 bg-amber-50 text-amber-950'
+  }
+
+  if (status === 'blocked' || status === 'failed') {
+    return 'border-rose-300 bg-rose-50 text-rose-900'
+  }
+
+  if (status === 'published') {
+    return 'border-emerald-300 bg-emerald-50 text-emerald-950'
+  }
+
+  return 'border-sky-200 bg-sky-50 text-sky-950'
+}
+
+function summarizeQualityReport(report: Record<string, unknown> | null | undefined) {
+  if (!report) {
+    return ''
+  }
+
+  const issues = Array.isArray(report.issues) ? report.issues : []
+  const codes = issues
+    .map((issue) =>
+      issue && typeof issue === 'object' && 'code' in issue
+        ? String(issue.code)
+        : '',
+    )
+    .filter(Boolean)
+    .slice(0, 3)
+
+  if (codes.length === 0) {
+    return ''
+  }
+
+  return `수리 대상: ${codes.join(', ')}`
 }
 
 function wait(ms: number) {

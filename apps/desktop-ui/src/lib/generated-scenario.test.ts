@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
+import type { TheaterShow } from './demo-theater-content'
 import {
+  acceptedGeneratedPipelineVersion,
   createGeneratedScenarioRecord,
   matchUrlToScenario,
   normalizeScenarioUrl,
@@ -99,5 +101,67 @@ describe('generated scenario URL flow', () => {
         },
       }),
     ).toBeNull()
+  })
+
+  it('accepts current published multi-agent generated scenarios', () => {
+    const record = createGeneratedScenarioRecord(
+      'https://www.youtube.com/watch?v=oWu95ZitpTI',
+      {
+        title: '태풍 대비법',
+      },
+    )
+
+    const scenario = toGeneratedTheaterShow({
+      ...record,
+      customScenario: {
+        accentClassName: 'bg-emerald-400',
+        generatedArtifactManifest: {
+          qualityVersion: 'quality-v1',
+          scenarioJsonUrl: `/generated/${record.id}/quality-v1/scenario.json`,
+          sourceVideoUrl: `/generated/${record.id}/quality-v1/source.mp4`,
+        },
+        generationPipelineTrace: {
+          agentRuns: [],
+          pipelineVersion: acceptedGeneratedPipelineVersion,
+        },
+        generationQualityReport: {
+          groundingPassed: true,
+          passed: true,
+          sourceCoveragePassed: true,
+          uiPlaybackPassed: true,
+        },
+        id: record.id,
+        note: '',
+        posterSrc: '',
+        segments: [
+          {
+            accentClassName: 'bg-emerald-400',
+            caption: '안전한 곳으로 가요.',
+            durationSec: 6,
+            id: `${record.id}-seg-1`,
+            label: '태풍 대비',
+            learnerPrompt: '바람이 강해요.',
+            learnerSequence: [
+              {
+                kind: 'situation',
+                text: '바람이 강해요.',
+              },
+              {
+                kind: 'action',
+                text: '안전한 곳으로 가요.',
+              },
+            ],
+            pauseAtSec: 6,
+            startSec: 0,
+            title: '태풍 대비',
+          },
+        ],
+        title: 'URL로 만든 연습',
+        videoPlaybackKind: 'file',
+        videoSrc: `/generated/${record.id}/quality-v1/source.mp4`,
+      } as unknown as TheaterShow,
+    })
+
+    expect(scenario?.id).toBe(record.id)
   })
 })

@@ -4,6 +4,7 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
+  readFileSync,
   statSync,
 } from 'node:fs'
 import {
@@ -11,13 +12,18 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http'
-import { extname, join, normalize, resolve, sep } from 'node:path'
+import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { fileURLToPath } from 'node:url'
 
-import generatePracticeFromUrl, {
+import generatePracticeFromUrlHandler, {
   buildGeneratedPracticeId,
+  generatePracticeFromUrl,
 } from '../api/generate-practice-from-url'
+import {
+  isCurrentPipelineTrace,
+  isPublishableGeneratedScenario,
+} from '../api/generation/pipeline'
 import {
   generatedQualityVersion,
   isR2Configured,
@@ -26,12 +32,13 @@ import {
 } from './generated-artifact-store'
 
 const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)))
+loadEnvFile('.env')
+loadEnvFile('.env.local')
 const generatedDir = join(rootDir, 'apps/desktop-ui/public/generated')
 const port = Number(process.env.PORT || 10000)
 const processingLeaseMs = 45 * 60 * 1000
 
 type GenerationJobStatus =
-  | 'approved'
   | 'blocked'
   | 'failed'
   | 'needs_repair'
@@ -54,6 +61,7 @@ type GenerationJob = {
 
 const generationJobs = new Map<string, GenerationJob>()
 const queuedJobIds: string[] = []
+const inlineProcessingJobIds = new Set<string>()
 
 mkdirSync(generatedDir, { recursive: true })
 
@@ -91,7 +99,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (url.pathname === '/api/generate-practice-from-url') {
-      return void generatePracticeFromUrl(req, res)
+      return void generatePracticeFromUrlHandler(req, res)
     }
 
     if (url.pathname.startsWith('/api/generation-jobs')) {
@@ -169,7 +177,11 @@ async function handleGenerationJobs(
       }
 
       generationJobs.set(id, job)
-      queuedJobIds.push(id)
+      if (shouldProcessJobsInline()) {
+        scheduleInlineGenerationJob(id)
+      } else {
+        queuedJobIds.push(id)
+      }
 
       return sendApiJson(req, res, 202, {
         job: publicGenerationJob(job, true),
@@ -224,6 +236,100 @@ async function handleGenerationJobs(
     error: 'not_found',
     message: 'Not found.',
   })
+}
+
+function shouldProcessJobsInline() {
+  if (process.env.GENERATOR_INLINE_JOBS === '0') {
+    return false
+  }
+
+  if (process.env.GENERATOR_INLINE_JOBS === '1') {
+    return true
+  }
+
+  if (
+    process.env.GENERATOR_WORKER_TOKEN ||
+    process.env.GENERATOR_ACCESS_CODES ||
+    process.env.BETA_ACCESS_CODES
+  ) {
+    return false
+  }
+
+  return !process.env.RENDER && !process.env.VERCEL
+}
+
+function scheduleInlineGenerationJob(jobId: string) {
+  if (inlineProcessingJobIds.has(jobId)) {
+    return
+  }
+
+  inlineProcessingJobIds.add(jobId)
+  setTimeout(() => {
+    void processInlineGenerationJob(jobId).finally(() => {
+      inlineProcessingJobIds.delete(jobId)
+    })
+  }, 0)
+}
+
+async function processInlineGenerationJob(jobId: string) {
+  const job = generationJobs.get(jobId)
+  if (!job || job.status !== 'queued') {
+    return
+  }
+
+  const startedAt = new Date().toISOString()
+  job.status = 'processing'
+  job.updatedAt = startedAt
+  job.workerStartedAt = startedAt
+  job.message = '로컬 생성 서버가 영상을 분석하고 있습니다.'
+
+  try {
+    const generated = await generatePracticeFromUrl(job.sourceUrl, {
+      headers: {
+        host: `localhost:${port}`,
+      },
+      onRepairNeeded: async ({ attempt, message, qualityReport }) => {
+        const currentJob = generationJobs.get(jobId)
+        if (
+          !currentJob ||
+          (currentJob.status !== 'processing' &&
+            currentJob.status !== 'needs_repair')
+        ) {
+          return
+        }
+
+        currentJob.message = `자동 수리 ${attempt}차: ${message}`
+        currentJob.qualityReport = qualityReport as Record<string, unknown>
+        currentJob.status = 'needs_repair'
+        currentJob.updatedAt = new Date().toISOString()
+      },
+    })
+    const record = generated.record as unknown as Record<string, unknown>
+
+    if (record.id !== jobId) {
+      throw new Error(
+        `Generated record id mismatch. job=${jobId}, record=${String(record.id)}`,
+      )
+    }
+
+    await assertPublishableRecord(jobId, record)
+
+    job.record = record
+    job.qualityReport = extractQualityReport(record) ?? undefined
+    job.status = 'published'
+    job.updatedAt = new Date().toISOString()
+    job.workerStartedAt = undefined
+    job.message = undefined
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : '로컬 생성 서버가 생성 작업을 완료하지 못했습니다.'
+    job.message = message
+    job.status = isQualityGateFailure(message) ? 'blocked' : 'failed'
+    job.updatedAt = new Date().toISOString()
+    job.workerStartedAt = undefined
+  }
 }
 
 async function handleWorkerJobs(
@@ -310,7 +416,7 @@ async function handleWorkerJobs(
       })
     }
 
-    mkdirSync(join(generatedDir, jobId), { recursive: true })
+    mkdirSync(dirname(filePath), { recursive: true })
     await pipeline(req, createWriteStream(filePath))
     job.updatedAt = new Date().toISOString()
 
@@ -584,7 +690,9 @@ function safeGeneratedUploadPath(jobId: string, fileName: string) {
     return null
   }
 
-  const filePath = normalize(join(generatedDir, jobId, fileName))
+  const filePath = normalize(
+    join(generatedDir, jobId, generatedQualityVersion, fileName),
+  )
   const jobDir = normalize(join(generatedDir, jobId))
   if (filePath !== jobDir && !filePath.startsWith(`${jobDir}${sep}`)) {
     return null
@@ -596,6 +704,10 @@ function safeGeneratedUploadPath(jobId: string, fileName: string) {
 function isAllowedGeneratedUploadName(fileName: string) {
   return (
     fileName === 'scenario.json' ||
+    fileName === 'pipeline-trace.json' ||
+    fileName === 'quality-report.json' ||
+    fileName === 'audio-transcript.json' ||
+    fileName === 'visual-caption-evidence.json' ||
     fileName === 'source.mp4' ||
     fileName === 'source.info.json' ||
     /^source\.[a-z0-9-]+(?:-orig)?\.vtt$/iu.test(fileName) ||
@@ -735,29 +847,28 @@ async function assertPublishableRecord(
     throw new Error('생성 결과가 품질 검사를 통과하지 못했습니다.')
   }
 
-  const artifactManifest = extractArtifactManifest(record)
-  if (artifactManifest) {
-    const [scenarioOk, videoOk] = await Promise.all([
-      verifyPublicArtifactUrl(artifactManifest.scenarioJsonUrl),
-      verifyPublicArtifactUrl(artifactManifest.sourceVideoUrl),
-    ])
-
-    if (!scenarioOk || !videoOk) {
-      throw new Error('생성 artifact 공개 URL 확인에 실패했습니다.')
-    }
-
-    return
+  if (!isPublishableGeneratedScenario(customScenario)) {
+    throw new Error(
+      '생성 결과가 멀티에이전트 publish 계약을 통과하지 못했습니다.',
+    )
   }
 
-  const scenarioPath = safeGeneratedUploadPath(jobId, 'scenario.json')
-  const sourcePath = safeGeneratedUploadPath(jobId, 'source.mp4')
-  if (
-    !scenarioPath ||
-    !sourcePath ||
-    !existsSync(scenarioPath) ||
-    !existsSync(sourcePath)
-  ) {
-    throw new Error('생성 artifact가 서버에 없습니다.')
+  if (!isCurrentPipelineTrace(customScenario.generationPipelineTrace)) {
+    throw new Error('생성 pipeline trace가 현재 버전이 아닙니다.')
+  }
+
+  const artifactManifest = extractArtifactManifest(record)
+  if (!artifactManifest) {
+    throw new Error('생성 artifact manifest가 없습니다.')
+  }
+
+  const [scenarioOk, videoOk] = await Promise.all([
+    verifyPublicArtifactUrl(artifactManifest.scenarioJsonUrl),
+    verifyPublicArtifactUrl(artifactManifest.sourceVideoUrl),
+  ])
+
+  if (!scenarioOk || !videoOk) {
+    throw new Error('생성 artifact 공개 URL 확인에 실패했습니다.')
   }
 }
 
@@ -793,6 +904,12 @@ function extractArtifactManifest(
   return manifest as GeneratedArtifactManifest
 }
 
+function isQualityGateFailure(message: string) {
+  return /자동 생성 품질 검사|학습 품질 검사|local learning-quality validation|publish gate/iu.test(
+    message,
+  )
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value))
 }
@@ -801,7 +918,10 @@ function requeueExpiredProcessingJobs() {
   const now = Date.now()
 
   for (const job of generationJobs.values()) {
-    if (job.status !== 'processing' || !job.workerStartedAt) {
+    if (
+      (job.status !== 'processing' && job.status !== 'needs_repair') ||
+      !job.workerStartedAt
+    ) {
       continue
     }
 
@@ -878,6 +998,36 @@ function parseAccessCodes() {
     .split(',')
     .map((code) => code.trim())
     .filter(Boolean)
+}
+
+function loadEnvFile(fileName: string) {
+  const filePath = join(rootDir, fileName)
+
+  try {
+    const text = readFileSync(filePath, 'utf8')
+
+    for (const line of text.split(/\r?\n/u)) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) {
+        continue
+      }
+
+      const equalsIndex = trimmed.indexOf('=')
+      if (equalsIndex <= 0) {
+        continue
+      }
+
+      const key = trimmed.slice(0, equalsIndex).trim()
+      const rawValue = trimmed.slice(equalsIndex + 1).trim()
+      const value = rawValue.replace(/^['"`]|['"`]$/gu, '')
+
+      if (key && process.env[key] === undefined) {
+        process.env[key] = value
+      }
+    }
+  } catch {
+    // Local env files are optional.
+  }
 }
 
 function getRequestHeader(req: IncomingMessage, name: string) {

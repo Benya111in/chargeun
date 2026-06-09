@@ -1,0 +1,63 @@
+{
+  "createdAt": "2026-06-05T22:41:15.250Z",
+  "posterSpec": {
+    "digital": {
+      "widthMm": 594,
+      "heightMm": 841
+    },
+    "printBleed": {
+      "widthMm": 600,
+      "heightMm": 847,
+      "bleedMm": 3
+    },
+    "png": {
+      "widthPx": 7016,
+      "heightPx": 9933,
+      "targetPpi": 300
+    }
+  },
+  "screenshots": [],
+  "outputs": [
+    {
+      "name": "poster-a1-digital.pdf",
+      "path": "/Users/user/Desktop/SlowLearner/outputs/a1-poster-design-20260603/poster-a1-digital.pdf",
+      "bytes": 12987901
+    },
+    {
+      "name": "poster-a1-print-bleed.pdf",
+      "path": "/Users/user/Desktop/SlowLearner/outputs/a1-poster-design-20260603/poster-a1-print-bleed.pdf",
+      "bytes": 12790033
+    },
+    {
+      "name": "poster-a1-300ppi.png",
+      "path": "/Users/user/Desktop/SlowLearner/outputs/a1-poster-design-20260603/poster-a1-300ppi.png",
+      "bytes": 23546490
+    },
+    {
+      "name": "poster-preview-screen.png",
+      "path": "/Users/user/Desktop/SlowLearner/outputs/a1-poster-design-20260603/poster-preview-screen.png",
+      "bytes": 1790746
+    }
+  ],
+  "images": [
+    {
+      "path": "/Users/user/Desktop/SlowLearner/outputs/a1-poster-design-20260603/poster-a1-300ppi.png",
+      "width": 7016,
+      "height": 9933,
+      "format": "png",
+      "bytes": 23546490
+    },
+    {
+      "path": "/Users/user/Desktop/SlowLearner/outputs/a1-poster-design-20260603/poster-preview-screen.png",
+      "width": 1200,
+      "height": 1699,
+      "format": "png",
+      "bytes": 1790746
+    }
+  ],
+  "notes": [
+    "Poster art is rebuilt with code-native HTML/CSS shapes and gradients; no generated concept image is used as a background.",
+    "The mint/cyan cinematic infographic reference is used only as visual direction for layout, depth, ribbons, panels, and icon language.",
+    "No link slot or screenshot capture is included in this version."
+  ]
+}

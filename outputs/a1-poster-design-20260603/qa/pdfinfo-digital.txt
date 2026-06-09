@@ -1,0 +1,19 @@
+Title:           차근차근 AI 도우미 A1 Poster
+Creator:         Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.0.0 Safari/537.36
+Producer:        Skia/PDF m148
+CreationDate:    Wed Jun  3 22:51:44 2026 KST
+ModDate:         Wed Jun  3 22:51:44 2026 KST
+Custom Metadata: no
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           1
+Encrypted:       no
+Page size:       1684.08 x 2385.12 pts (A1)
+Page rot:        0
+File size:       789288 bytes
+Optimized:       no
+PDF version:     1.4
