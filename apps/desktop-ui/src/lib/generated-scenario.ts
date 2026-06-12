@@ -2,7 +2,8 @@ import { learningScenarios, type TheaterShow } from './demo-theater-content'
 import { isLocalSeasonalEnabled } from './local-seasonal'
 
 export const generatedScenarioStorageKey = 'chagunchagun.generated-scenarios.v1'
-export const acceptedGeneratedPipelineVersion = 'url-multi-agent-quality-v20'
+export const acceptedGeneratedPipelineVersion = 'url-multi-agent-quality-v21'
+export const acceptedGeneratedQualityContractVersion = 'url-quality-contract-v1'
 
 export type GeneratedScenarioRecord = {
   baseScenarioId: string
@@ -278,11 +279,19 @@ function isUnsafeGeneratedCustomScenario(scenario: TheaterShow) {
 
 function isPublishableGeneratedCustomScenario(scenario: TheaterShow) {
   const candidate = scenario as TheaterShow & {
-    generatedArtifactManifest?: { qualityVersion?: string }
-    generationPipelineTrace?: { agentRuns?: unknown; pipelineVersion?: string }
+    generatedArtifactManifest?: {
+      files?: unknown
+      qualityVersion?: string
+    }
+    generationPipelineTrace?: {
+      agentRuns?: unknown
+      pipelineVersion?: string
+      qualityContractVersion?: string
+    }
     generationQualityReport?: {
       groundingPassed?: boolean
       passed?: boolean
+      qualityContractVersion?: string
       sourceCoveragePassed?: boolean
       uiPlaybackPassed?: boolean
     }
@@ -290,13 +299,38 @@ function isPublishableGeneratedCustomScenario(scenario: TheaterShow) {
 
   return (
     candidate.generationQualityReport?.passed === true &&
+    candidate.generationQualityReport.qualityContractVersion ===
+      acceptedGeneratedQualityContractVersion &&
     candidate.generationQualityReport.groundingPassed === true &&
     candidate.generationQualityReport.sourceCoveragePassed === true &&
     candidate.generationQualityReport.uiPlaybackPassed === true &&
     candidate.generationPipelineTrace?.pipelineVersion ===
       acceptedGeneratedPipelineVersion &&
+    candidate.generationPipelineTrace.qualityContractVersion ===
+      acceptedGeneratedQualityContractVersion &&
     Array.isArray(candidate.generationPipelineTrace.agentRuns) &&
-    candidate.generatedArtifactManifest?.qualityVersion === 'quality-v1'
+    candidate.generatedArtifactManifest?.qualityVersion === 'quality-v1' &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'scenario.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'source.mp4') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'quality-report.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'pipeline-trace.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'evidence-packet.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'scene-graph.json')
+  )
+}
+
+function generatedManifestContains(
+  manifest: { files?: unknown } | undefined,
+  name: string,
+) {
+  return (
+    Array.isArray(manifest?.files) &&
+    manifest.files.some(
+      (file) =>
+        Boolean(file) &&
+        typeof file === 'object' &&
+        (file as { name?: unknown }).name === name,
+    )
   )
 }
 

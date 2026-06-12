@@ -39,7 +39,7 @@ describe('web-analysis-api', () => {
             maxFramesPerAnalysis: 3,
             maxSessionMinutes: 10,
             models: {
-              analysis: 'gpt-5.4-mini',
+              analysis: 'gpt-5.5',
               transcription: 'gpt-4o-mini-transcribe',
             },
             rateLimit: {
@@ -56,7 +56,7 @@ describe('web-analysis-api', () => {
     await expect(getWebApiHealth()).resolves.toMatchObject({
       hasOpenAiKey: true,
       models: {
-        analysis: 'gpt-5.4-mini',
+        analysis: 'gpt-5.5',
       },
     })
   })

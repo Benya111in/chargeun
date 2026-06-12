@@ -18,6 +18,7 @@ const generatedDir = join(rootDir, 'apps/desktop-ui/public/generated')
 const defaultPollMs = 5_000
 
 type WorkerJob = {
+  deadlineAt?: string
   id: string
   sourceUrl: string
 }
@@ -72,6 +73,7 @@ async function processJob(job: WorkerJob) {
 
   try {
     const generated = await generatePracticeFromUrl(job.sourceUrl, {
+      deadlineAt: job.deadlineAt ? Date.parse(job.deadlineAt) : undefined,
       onRepairNeeded: async ({ attempt, message, qualityReport }) => {
         await postWorkerJson(`/api/worker/jobs/${job.id}/needs-repair`, {
           message: `자동 수리 ${attempt}차: ${message}`,
@@ -206,6 +208,17 @@ async function collectGeneratedFiles(jobId: string) {
     throw new Error('source.mp4 생성 파일이 없습니다.')
   }
 
+  for (const fileName of [
+    'quality-report.json',
+    'pipeline-trace.json',
+    'evidence-packet.json',
+    'scene-graph.json',
+  ]) {
+    if (!uploadable.includes(fileName)) {
+      throw new Error(`${fileName} 생성 파일이 없습니다.`)
+    }
+  }
+
   return uploadable
 }
 
@@ -235,16 +248,34 @@ async function uploadGeneratedFilesToR2(
 }
 
 async function verifyManifestArtifacts(manifest: {
+  files?: Array<{ name: string; url: string }>
   scenarioJsonUrl: string
   sourceVideoUrl: string
 }) {
-  const [scenarioOk, videoOk] = await Promise.all([
-    verifyPublicArtifactUrl(manifest.scenarioJsonUrl),
-    verifyPublicArtifactUrl(manifest.sourceVideoUrl),
-  ])
+  const requiredNames = [
+    'scenario.json',
+    'source.mp4',
+    'quality-report.json',
+    'pipeline-trace.json',
+    'evidence-packet.json',
+    'scene-graph.json',
+  ]
+  const urls = requiredNames.map((name) => {
+    if (name === 'scenario.json') return manifest.scenarioJsonUrl
+    if (name === 'source.mp4') return manifest.sourceVideoUrl
+    const file = manifest.files?.find((candidate) => candidate.name === name)
+    if (!file?.url) {
+      throw new Error(`R2 artifact manifest에 ${name} 파일이 없습니다.`)
+    }
 
-  if (!scenarioOk || !videoOk) {
-    throw new Error('R2 공개 artifact HEAD 확인에 실패했습니다.')
+    return file.url
+  })
+  const results = await Promise.all(
+    urls.map((url) => verifyPublicArtifactUrl(url)),
+  )
+
+  if (results.some((ok) => !ok)) {
+    throw new Error('R2 공개 artifact 전체 HEAD 확인에 실패했습니다.')
   }
 }
 
@@ -302,6 +333,8 @@ function isUploadableGeneratedFile(fileName: string) {
     fileName === 'scenario.json' ||
     fileName === 'pipeline-trace.json' ||
     fileName === 'quality-report.json' ||
+    fileName === 'evidence-packet.json' ||
+    fileName === 'scene-graph.json' ||
     fileName === 'audio-transcript.json' ||
     fileName === 'visual-caption-evidence.json' ||
     fileName === 'source.mp4' ||

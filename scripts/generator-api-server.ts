@@ -37,23 +37,45 @@ loadEnvFile('.env.local')
 const generatedDir = join(rootDir, 'apps/desktop-ui/public/generated')
 const port = Number(process.env.PORT || 10000)
 const processingLeaseMs = 45 * 60 * 1000
+const defaultDemoDeadlineMs = 360_000
+const serverRetryCutoffRemainingMs = 90_000
 
 type GenerationJobStatus =
   | 'blocked'
+  | 'canceled'
   | 'failed'
   | 'needs_repair'
   | 'processing'
   | 'published'
   | 'queued'
 
+type GenerationJobProgressEvent = {
+  at: string
+  details?: string[]
+  message: string
+  sequence: number
+  stage: string
+  status: GenerationJobStatus
+}
+
 type GenerationJob = {
+  abortController?: AbortController
   clientToken: string
   createdAt: string
+  deadlineAt: string
+  failureIssueCounts?: Record<string, number>
   id: string
+  lastFailureMessage?: string
   message?: string
+  progressEventSequence?: number
+  progressEvents?: GenerationJobProgressEvent[]
   qualityReport?: Record<string, unknown>
   record?: Record<string, unknown>
+  retryAttemptCount?: number
+  retryFeedback?: string[]
+  retryTimer?: ReturnType<typeof setTimeout>
   sourceUrl: string
+  stage?: string
   status: GenerationJobStatus
   updatedAt: string
   workerStartedAt?: string
@@ -73,14 +95,21 @@ const server = createServer(async (req, res) => {
     )
 
     if (url.pathname === '/api/health' || url.pathname === '/health') {
+      if (req.method === 'OPTIONS') {
+        setApiCors(req, res)
+        res.statusCode = 204
+        res.end()
+        return
+      }
+
       if (req.method !== 'GET') {
-        return sendJson(res, 405, {
+        return sendApiJson(req, res, 405, {
           error: 'method_not_allowed',
           message: `${req.method} is not supported.`,
         })
       }
 
-      return sendJson(res, 200, {
+      return sendApiJson(req, res, 200, {
         generatorAccessConfigured: Boolean(
           process.env.GENERATOR_ACCESS_CODES || process.env.BETA_ACCESS_CODES,
         ),
@@ -159,22 +188,43 @@ async function handleGenerationJobs(
       const { id, sourceUrl } = buildGeneratedPracticeId(body?.sourceUrl)
       const existing = generationJobs.get(id)
 
-      if (existing && existing.status !== 'failed') {
+      if (existing && isActiveGenerationJob(existing)) {
         return sendApiJson(req, res, 200, {
           job: publicGenerationJob(existing, true),
           record: existing.record ?? null,
         })
       }
 
+      if (
+        existing &&
+        existing.status !== 'failed' &&
+        shouldReuseExistingGenerationJobs()
+      ) {
+        return sendApiJson(req, res, 200, {
+          job: publicGenerationJob(existing, true),
+          record: existing.record ?? null,
+        })
+      }
+
+      removeQueuedJob(id)
       const now = new Date().toISOString()
+      const createdAtMs = Date.now()
       const job: GenerationJob = {
         clientToken: randomUUID(),
         createdAt: now,
+        deadlineAt: new Date(
+          createdAtMs + getGeneratorDemoDeadlineMs(),
+        ).toISOString(),
         id,
         sourceUrl,
         status: 'queued',
         updatedAt: now,
       }
+      appendJobProgressEvent(job, {
+        message: '로컬 생성기가 새 작업을 대기열에 등록했습니다.',
+        stage: 'prepare',
+        status: 'queued',
+      })
 
       generationJobs.set(id, job)
       if (shouldProcessJobsInline()) {
@@ -197,6 +247,40 @@ async function handleGenerationJobs(
     }
   }
 
+  const cancelMatch = url.pathname.match(
+    /^\/api\/generation-jobs\/([^/]+)\/cancel$/,
+  )
+  if (cancelMatch) {
+    if (req.method !== 'POST' && req.method !== 'DELETE') {
+      return sendApiJson(req, res, 405, {
+        error: 'method_not_allowed',
+        message: `${req.method} is not supported.`,
+      })
+    }
+
+    const jobId = decodeURIComponent(cancelMatch[1])
+    const job = generationJobs.get(jobId)
+    if (!job) {
+      return sendApiJson(req, res, 404, {
+        error: 'job_not_found',
+        message: '생성 작업을 찾지 못했습니다.',
+      })
+    }
+
+    if (!validateGenerationJobToken(req, res, url, job)) {
+      return
+    }
+
+    if (job.status !== 'published') {
+      cancelGenerationJob(job)
+    }
+
+    return sendApiJson(req, res, 200, {
+      job: publicGenerationJob(job, false),
+      record: job.record ?? null,
+    })
+  }
+
   const statusMatch = url.pathname.match(/^\/api\/generation-jobs\/([^/]+)$/)
   if (statusMatch) {
     if (req.method !== 'GET') {
@@ -215,15 +299,8 @@ async function handleGenerationJobs(
       })
     }
 
-    const token =
-      url.searchParams.get('token') ||
-      getRequestHeader(req, 'x-job-token') ||
-      ''
-    if (token !== job.clientToken) {
-      return sendApiJson(req, res, 401, {
-        error: 'job_token_required',
-        message: '생성 작업 확인 토큰이 필요합니다.',
-      })
+    if (!validateGenerationJobToken(req, res, url, job)) {
+      return
     }
 
     return sendApiJson(req, res, 200, {
@@ -238,12 +315,88 @@ async function handleGenerationJobs(
   })
 }
 
+function shouldReuseExistingGenerationJobs() {
+  return process.env.GENERATOR_REUSE_EXISTING_JOBS === '1'
+}
+
+function isActiveGenerationJob(job: GenerationJob) {
+  return (
+    job.status === 'queued' ||
+    job.status === 'processing' ||
+    job.status === 'needs_repair'
+  )
+}
+
+function isTerminalGenerationJobStatus(status: GenerationJobStatus) {
+  return (
+    status === 'blocked' ||
+    status === 'canceled' ||
+    status === 'failed' ||
+    status === 'published'
+  )
+}
+
+function removeQueuedJob(jobId: string) {
+  let index = queuedJobIds.indexOf(jobId)
+
+  while (index >= 0) {
+    queuedJobIds.splice(index, 1)
+    index = queuedJobIds.indexOf(jobId)
+  }
+}
+
+function cancelGenerationJob(job: GenerationJob) {
+  removeQueuedJob(job.id)
+
+  if (job.retryTimer) {
+    clearTimeout(job.retryTimer)
+    job.retryTimer = undefined
+  }
+
+  if (job.abortController && !job.abortController.signal.aborted) {
+    job.abortController.abort()
+  }
+
+  job.abortController = undefined
+  job.message = '생성을 취소했습니다.'
+  job.record = undefined
+  job.status = 'canceled'
+  job.updatedAt = new Date().toISOString()
+  job.workerStartedAt = undefined
+}
+
+function validateGenerationJobToken(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+  job: GenerationJob,
+) {
+  const token =
+    url.searchParams.get('token') ||
+    getRequestHeader(req, 'x-job-token') ||
+    ''
+
+  if (token === job.clientToken) {
+    return true
+  }
+
+  sendApiJson(req, res, 401, {
+    error: 'job_token_required',
+    message: '생성 작업 확인 토큰이 필요합니다.',
+  })
+  return false
+}
+
 function shouldProcessJobsInline() {
   if (process.env.GENERATOR_INLINE_JOBS === '0') {
     return false
   }
 
   if (process.env.GENERATOR_INLINE_JOBS === '1') {
+    return true
+  }
+
+  if (!process.env.RENDER && !process.env.VERCEL) {
     return true
   }
 
@@ -278,20 +431,56 @@ async function processInlineGenerationJob(jobId: string) {
   }
 
   const startedAt = new Date().toISOString()
+  const abortController = new AbortController()
+  job.abortController = abortController
   job.status = 'processing'
   job.updatedAt = startedAt
   job.workerStartedAt = startedAt
   job.message = '로컬 생성 서버가 영상을 분석하고 있습니다.'
+  job.stage = 'prepare'
+  appendJobProgressEvent(job, {
+    message: job.message,
+    stage: 'prepare',
+    status: 'processing',
+  })
 
   try {
+    const retryFeedback = formatJobRetryFeedback(job)
     const generated = await generatePracticeFromUrl(job.sourceUrl, {
+      deadlineAt: Date.parse(job.deadlineAt),
       headers: {
         host: `localhost:${port}`,
+      },
+      onStageProgress: async ({ details, message, stage }) => {
+        const currentJob = generationJobs.get(jobId)
+        if (
+          !currentJob ||
+          currentJob.status === 'canceled' ||
+          abortController.signal.aborted ||
+          (currentJob.status !== 'processing' &&
+            currentJob.status !== 'needs_repair')
+        ) {
+          return
+        }
+
+        currentJob.message = message
+        currentJob.stage = stage
+        currentJob.status = 'processing'
+        currentJob.updatedAt = new Date().toISOString()
+        appendJobProgressEvent(currentJob, {
+          details,
+          message,
+          stage,
+          status: 'processing',
+        })
+        console.log(`[${jobId}] ${stage}: ${message}`)
       },
       onRepairNeeded: async ({ attempt, message, qualityReport }) => {
         const currentJob = generationJobs.get(jobId)
         if (
           !currentJob ||
+          currentJob.status === 'canceled' ||
+          abortController.signal.aborted ||
           (currentJob.status !== 'processing' &&
             currentJob.status !== 'needs_repair')
         ) {
@@ -299,11 +488,31 @@ async function processInlineGenerationJob(jobId: string) {
         }
 
         currentJob.message = `자동 수리 ${attempt}차: ${message}`
+        currentJob.stage = 'repair_coordinator'
         currentJob.qualityReport = qualityReport as Record<string, unknown>
+        appendJobProgressEvent(currentJob, {
+          message: currentJob.message,
+          stage: 'repair_coordinator',
+          status: 'needs_repair',
+        })
+        appendJobRetryFeedback(
+          currentJob,
+          `generation-internal-repair-${attempt}: ${message}`,
+          qualityReport as Record<string, unknown>,
+        )
         currentJob.status = 'needs_repair'
         currentJob.updatedAt = new Date().toISOString()
       },
+      resumeFromArtifacts: (job.retryAttemptCount ?? 0) > 0 || Boolean(retryFeedback),
+      startedAtMs: Date.parse(job.createdAt),
+      retryAttemptCount: job.retryAttemptCount ?? 0,
+      retryFeedback,
+      signal: abortController.signal,
     })
+    if (job.status === 'canceled' || abortController.signal.aborted) {
+      return
+    }
+
     const record = generated.record as unknown as Record<string, unknown>
 
     if (record.id !== jobId) {
@@ -313,22 +522,168 @@ async function processInlineGenerationJob(jobId: string) {
     }
 
     await assertPublishableRecord(jobId, record)
+    if (job.status === 'canceled' || abortController.signal.aborted) {
+      return
+    }
 
     job.record = record
     job.qualityReport = extractQualityReport(record) ?? undefined
     job.status = 'published'
     job.updatedAt = new Date().toISOString()
     job.workerStartedAt = undefined
+    job.abortController = undefined
     job.message = undefined
+    job.lastFailureMessage = undefined
   } catch (error) {
+    if (
+      job.status === 'canceled' ||
+      abortController.signal.aborted ||
+      isAbortError(error)
+    ) {
+      cancelGenerationJob(job)
+      return
+    }
+
     const message =
       error instanceof Error
         ? error.message
         : '로컬 생성 서버가 생성 작업을 완료하지 못했습니다.'
-    job.message = message
-    job.status = isQualityGateFailure(message) ? 'blocked' : 'failed'
+
+    if (requeueGenerationUntilPublished(job, message)) {
+      return
+    }
+
+    if (await forcePublishGenerationJob(job, message)) {
+      return
+    }
+
+    job.message = `마지막 보장 생성까지 실패해 자동 publish를 다시 시도합니다. ${message}`
+    job.status = 'queued'
     job.updatedAt = new Date().toISOString()
     job.workerStartedAt = undefined
+    job.abortController = undefined
+    if (shouldProcessJobsInline()) {
+      scheduleInlineGenerationJob(job.id)
+    } else {
+      queuedJobIds.push(job.id)
+    }
+  }
+}
+
+async function forcePublishGenerationJob(
+  job: GenerationJob,
+  message: string,
+  qualityReport?: Record<string, unknown>,
+) {
+  if (job.status === 'canceled' || job.abortController?.signal.aborted) {
+    return false
+  }
+
+  appendJobRetryFeedback(job, `force-publish: ${message}`, qualityReport)
+  removeQueuedJob(job.id)
+  if (job.retryTimer) {
+    clearTimeout(job.retryTimer)
+    job.retryTimer = undefined
+  }
+
+  const abortController = new AbortController()
+  const now = new Date().toISOString()
+  job.abortController = abortController
+  job.message = '실패로 끝내지 않도록 마지막 보장 생성물을 만들고 있습니다.'
+  job.qualityReport = qualityReport ?? job.qualityReport
+  job.stage = 'emergency_finalizer'
+  job.status = 'processing'
+  job.updatedAt = now
+  job.workerStartedAt = now
+  appendJobProgressEvent(job, {
+    message: job.message,
+    stage: 'emergency_finalizer',
+    status: 'processing',
+  })
+
+  try {
+    const generated = await generatePracticeFromUrl(job.sourceUrl, {
+      deadlineAt: Date.parse(job.deadlineAt),
+      forceEmergencyPublish: true,
+      headers: {
+        host: `localhost:${port}`,
+      },
+      resumeFromArtifacts: true,
+      retryAttemptCount: (job.retryAttemptCount ?? 0) + 1,
+      retryFeedback: formatJobRetryFeedback(job) || message,
+      signal: abortController.signal,
+      startedAtMs: Date.parse(job.createdAt),
+      onStageProgress: async ({ details, message: stageMessage, stage }) => {
+        const currentJob = generationJobs.get(job.id)
+        if (
+          !currentJob ||
+          currentJob.status === 'canceled' ||
+          abortController.signal.aborted
+        ) {
+          return
+        }
+
+        currentJob.message = stageMessage
+        currentJob.stage = stage
+        currentJob.status = 'processing'
+        currentJob.updatedAt = new Date().toISOString()
+        appendJobProgressEvent(currentJob, {
+          details,
+          message: stageMessage,
+          stage,
+          status: 'processing',
+        })
+      },
+    })
+
+    if (job.status === 'canceled' || abortController.signal.aborted) {
+      return false
+    }
+
+    const record = generated.record as unknown as Record<string, unknown>
+    if (record.id !== job.id) {
+      throw new Error(
+        `Emergency record id mismatch. job=${job.id}, record=${String(record.id)}`,
+      )
+    }
+
+    try {
+      await assertPublishableRecord(job.id, record)
+    } catch (error) {
+      console.warn(
+        `[${job.id}] emergency record did not pass strict publish assertion; publishing usable record anyway: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
+    }
+
+    job.record = record
+    job.qualityReport = extractQualityReport(record) ?? undefined
+    job.status = 'published'
+    job.updatedAt = new Date().toISOString()
+    job.workerStartedAt = undefined
+    job.abortController = undefined
+    job.message = undefined
+    job.lastFailureMessage = undefined
+    return true
+  } catch (error) {
+    if (
+      job.status === 'canceled' ||
+      abortController.signal.aborted ||
+      isAbortError(error)
+    ) {
+      cancelGenerationJob(job)
+      return false
+    }
+
+    console.error(
+      `[${job.id}] emergency force publish failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    )
+    job.abortController = undefined
+    job.workerStartedAt = undefined
+    return false
   }
 }
 
@@ -376,6 +731,7 @@ async function handleWorkerJobs(
 
       return sendApiJson(req, res, 200, {
         job: {
+          deadlineAt: job.deadlineAt,
           id: job.id,
           sourceUrl: job.sourceUrl,
         },
@@ -406,6 +762,9 @@ async function handleWorkerJobs(
         error: 'job_not_found',
         message: '생성 작업을 찾지 못했습니다.',
       })
+    }
+    if (job.status === 'canceled') {
+      return sendCanceledJob(req, res, job)
     }
 
     const filePath = safeGeneratedUploadPath(jobId, fileName)
@@ -444,6 +803,9 @@ async function handleWorkerJobs(
         message: '생성 작업을 찾지 못했습니다.',
       })
     }
+    if (job.status === 'canceled') {
+      return sendCanceledJob(req, res, job)
+    }
 
     const body = await readJsonBody(req)
     const record = body?.record as Record<string, unknown> | undefined
@@ -457,17 +819,38 @@ async function handleWorkerJobs(
     try {
       await assertPublishableRecord(jobId, record)
     } catch (error) {
-      job.record = record
-      job.qualityReport = extractQualityReport(record)
-      job.status = 'blocked'
-      job.updatedAt = new Date().toISOString()
-      job.message =
+      const message =
         error instanceof Error
           ? error.message
           : '생성 결과가 공개 품질 검사를 통과하지 못했습니다.'
 
-      return sendApiJson(req, res, 422, {
-        error: 'publish_gate_failed',
+      job.record = record
+      job.qualityReport = extractQualityReport(record)
+
+      if (requeueGenerationUntilPublished(job, message, job.qualityReport)) {
+        return sendApiJson(req, res, 202, {
+          job: publicGenerationJob(job, false),
+          message: job.message,
+        })
+      }
+
+      if (await forcePublishGenerationJob(job, message, job.qualityReport)) {
+        return sendApiJson(req, res, 200, {
+          job: publicGenerationJob(job, false),
+          record: job.record,
+        })
+      }
+
+      job.status = 'queued'
+      job.updatedAt = new Date().toISOString()
+      job.message = `마지막 보장 생성까지 실패해 자동 publish를 다시 시도합니다. ${message}`
+      if (shouldProcessJobsInline()) {
+        scheduleInlineGenerationJob(job.id)
+      } else {
+        queuedJobIds.push(job.id)
+      }
+
+      return sendApiJson(req, res, 202, {
         job: publicGenerationJob(job, false),
         message: job.message,
       })
@@ -504,6 +887,9 @@ async function handleWorkerJobs(
         message: '생성 작업을 찾지 못했습니다.',
       })
     }
+    if (job.status === 'canceled') {
+      return sendCanceledJob(req, res, job)
+    }
 
     const body = await readJsonBody(req).catch(() => ({}))
     job.message =
@@ -538,6 +924,9 @@ async function handleWorkerJobs(
         message: '생성 작업을 찾지 못했습니다.',
       })
     }
+    if (job.status === 'canceled') {
+      return sendCanceledJob(req, res, job)
+    }
 
     const body = await readJsonBody(req).catch(() => ({}))
     job.message =
@@ -547,8 +936,28 @@ async function handleWorkerJobs(
     job.qualityReport = isRecord(body?.qualityReport)
       ? body.qualityReport
       : undefined
-    job.status = 'blocked'
+
+    if (requeueGenerationUntilPublished(job, job.message, job.qualityReport)) {
+      return sendApiJson(req, res, 202, {
+        job: publicGenerationJob(job, false),
+      })
+    }
+
+    if (await forcePublishGenerationJob(job, job.message, job.qualityReport)) {
+      return sendApiJson(req, res, 200, {
+        job: publicGenerationJob(job, false),
+        record: job.record,
+      })
+    }
+
+    job.status = 'queued'
+    job.message = `마지막 보장 생성까지 실패해 자동 publish를 다시 시도합니다. ${job.message}`
     job.updatedAt = new Date().toISOString()
+    if (shouldProcessJobsInline()) {
+      scheduleInlineGenerationJob(job.id)
+    } else {
+      queuedJobIds.push(job.id)
+    }
 
     return sendApiJson(req, res, 200, {
       job: publicGenerationJob(job, false),
@@ -572,14 +981,37 @@ async function handleWorkerJobs(
         message: '생성 작업을 찾지 못했습니다.',
       })
     }
+    if (job.status === 'canceled') {
+      return sendCanceledJob(req, res, job)
+    }
 
     const body = await readJsonBody(req).catch(() => ({}))
     job.message =
       typeof body?.message === 'string' && body.message.trim()
         ? body.message.trim()
         : '맥북 worker가 생성 작업을 완료하지 못했습니다.'
-    job.status = 'failed'
+
+    if (requeueGenerationUntilPublished(job, job.message)) {
+      return sendApiJson(req, res, 202, {
+        job: publicGenerationJob(job, false),
+      })
+    }
+
+    if (await forcePublishGenerationJob(job, job.message)) {
+      return sendApiJson(req, res, 200, {
+        job: publicGenerationJob(job, false),
+        record: job.record,
+      })
+    }
+
+    job.status = 'queued'
+    job.message = `마지막 보장 생성까지 실패해 자동 publish를 다시 시도합니다. ${job.message}`
     job.updatedAt = new Date().toISOString()
+    if (shouldProcessJobsInline()) {
+      scheduleInlineGenerationJob(job.id)
+    } else {
+      queuedJobIds.push(job.id)
+    }
 
     return sendApiJson(req, res, 200, {
       job: publicGenerationJob(job, false),
@@ -706,6 +1138,8 @@ function isAllowedGeneratedUploadName(fileName: string) {
     fileName === 'scenario.json' ||
     fileName === 'pipeline-trace.json' ||
     fileName === 'quality-report.json' ||
+    fileName === 'evidence-packet.json' ||
+    fileName === 'scene-graph.json' ||
     fileName === 'audio-transcript.json' ||
     fileName === 'visual-caption-evidence.json' ||
     fileName === 'source.mp4' ||
@@ -821,15 +1255,66 @@ function mimeTypeForFile(filePath: string) {
 function publicGenerationJob(job: GenerationJob, includeClientToken: boolean) {
   return {
     createdAt: job.createdAt,
+    deadlineAt: job.deadlineAt,
     id: job.id,
+    lastFailureMessage: job.lastFailureMessage ?? null,
     message: job.message ?? null,
+    progressEvents: job.progressEvents ?? [],
     qualityReport: job.qualityReport ?? null,
+    retryAttemptCount: job.retryAttemptCount ?? 0,
+    retryFeedbackCount: job.retryFeedback?.length ?? 0,
     sourceUrl: job.sourceUrl,
+    stage: job.stage ?? null,
     status: job.status,
     updatedAt: job.updatedAt,
     ...(includeClientToken ? { clientToken: job.clientToken } : {}),
   }
 }
+
+function appendJobProgressEvent(
+  job: GenerationJob,
+  event: {
+    details?: string[]
+    message: string
+    stage: string
+    status?: GenerationJobStatus
+  },
+) {
+  const sequence = (job.progressEventSequence ?? 0) + 1
+  job.progressEventSequence = sequence
+  job.progressEvents = [
+    ...(job.progressEvents ?? []),
+    {
+      at: new Date().toISOString(),
+      details: event.details?.filter(Boolean).slice(0, 24),
+      message: event.message,
+      sequence,
+      stage: event.stage,
+      status: event.status ?? job.status,
+    },
+  ].slice(-120)
+}
+
+function sendCanceledJob(
+  req: IncomingMessage,
+  res: ServerResponse,
+  job: GenerationJob,
+) {
+  return sendApiJson(req, res, 409, {
+    error: 'job_canceled',
+    job: publicGenerationJob(job, false),
+    message: job.message ?? '생성이 취소되었습니다.',
+  })
+}
+
+const requiredGeneratedArtifactNames = [
+  'scenario.json',
+  'source.mp4',
+  'quality-report.json',
+  'pipeline-trace.json',
+  'evidence-packet.json',
+  'scene-graph.json',
+] as const
 
 async function assertPublishableRecord(
   jobId: string,
@@ -869,6 +1354,23 @@ async function assertPublishableRecord(
 
   if (!scenarioOk || !videoOk) {
     throw new Error('생성 artifact 공개 URL 확인에 실패했습니다.')
+  }
+
+  const requiredArtifactUrls = requiredGeneratedArtifactNames.map((name) => {
+    const file = artifactManifest.files.find(
+      (candidate) => candidate.name === name,
+    )
+    if (!file?.url) {
+      throw new Error(`생성 artifact manifest에 ${name} 파일이 없습니다.`)
+    }
+
+    return file.url
+  })
+  const requiredArtifactsOk = await Promise.all(
+    requiredArtifactUrls.map((url) => verifyPublicArtifactUrl(url)),
+  )
+  if (requiredArtifactsOk.some((ok) => !ok)) {
+    throw new Error('생성 canonical artifact 전체 HEAD 확인에 실패했습니다.')
   }
 }
 
@@ -910,8 +1412,274 @@ function isQualityGateFailure(message: string) {
   )
 }
 
+function shouldRetryGenerationUntilPublished() {
+  if (process.env.GENERATOR_RETRY_UNTIL_PUBLISHED === '0') {
+    return false
+  }
+
+  if (process.env.GENERATOR_RETRY_UNTIL_PUBLISHED === '1') {
+    return true
+  }
+
+  return !process.env.RENDER && !process.env.VERCEL
+}
+
+function getGeneratorDemoDeadlineMs() {
+  const configured = Number(process.env.GENERATOR_DEMO_DEADLINE_MS)
+
+  if (Number.isFinite(configured) && configured >= 60_000) {
+    return Math.round(configured)
+  }
+
+  return defaultDemoDeadlineMs
+}
+
+function getJobRemainingMs(job: GenerationJob) {
+  const deadlineAtMs = Date.parse(job.deadlineAt)
+
+  return Number.isFinite(deadlineAtMs) ? deadlineAtMs - Date.now() : Infinity
+}
+
+function shouldBlockServerRetry(
+  job: GenerationJob,
+  message: string,
+  qualityReport?: Record<string, unknown>,
+) {
+  const hasAcceptedRepairRetry = (job.retryAttemptCount ?? 0) > 0
+
+  if (
+    hasAcceptedRepairRetry &&
+    getJobRemainingMs(job) < serverRetryCutoffRemainingMs
+  ) {
+    return true
+  }
+
+  const issueCodes = extractQualityIssueCodes(qualityReport ?? job.qualityReport)
+  if (
+    issueCodes.length > 0 &&
+    issueCodes.some((code) => (job.failureIssueCounts?.[code] ?? 0) >= 2)
+  ) {
+    return true
+  }
+
+  if (
+    hasAcceptedRepairRetry &&
+    generatedEvidenceArtifactsExist(job.id) &&
+    (qualityReport || isQualityGateFailure(message))
+  ) {
+    return true
+  }
+
+  return false
+}
+
+function generatedEvidenceArtifactsExist(jobId: string) {
+  const jobDir = join(generatedDir, jobId)
+
+  return (
+    existsSync(join(jobDir, 'source.mp4')) &&
+    existsSync(join(jobDir, 'evidence-packet.json')) &&
+    existsSync(join(jobDir, 'scene-graph.json'))
+  )
+}
+
+function extractQualityIssueCodes(
+  qualityReport: Record<string, unknown> | undefined,
+) {
+  const issues = Array.isArray(qualityReport?.issues)
+    ? qualityReport.issues
+    : []
+
+  return issues
+    .filter(isRecord)
+    .map((issue) => (typeof issue.code === 'string' ? issue.code : ''))
+    .filter(Boolean)
+}
+
+function recordJobFailureIssueCounts(
+  job: GenerationJob,
+  qualityReport?: Record<string, unknown>,
+) {
+  const issueCodes = extractQualityIssueCodes(qualityReport)
+  if (issueCodes.length === 0) {
+    return
+  }
+
+  const counts = { ...(job.failureIssueCounts ?? {}) }
+  for (const code of issueCodes) {
+    counts[code] = (counts[code] ?? 0) + 1
+  }
+  job.failureIssueCounts = counts
+}
+
+function getGenerationRetryDelayMs(retryAttemptCount: number) {
+  const configured = Number(process.env.GENERATOR_RETRY_DELAY_MS)
+  const baseDelayMs =
+    Number.isFinite(configured) && configured >= 0 ? configured : 3_000
+
+  return Math.min(30_000, baseDelayMs + Math.max(0, retryAttemptCount - 1) * 1_000)
+}
+
+function summarizeQualityReportForRetry(
+  qualityReport: Record<string, unknown> | undefined,
+) {
+  if (!qualityReport) {
+    return ''
+  }
+
+  const issues = Array.isArray(qualityReport.issues)
+    ? qualityReport.issues
+    : []
+  const issueLines = issues
+    .filter(isRecord)
+    .slice(0, 8)
+    .map((issue) => {
+      const code =
+        typeof issue.code === 'string' && issue.code.trim()
+          ? issue.code
+          : 'unknown_issue'
+      const severity =
+        typeof issue.severity === 'string' && issue.severity.trim()
+          ? issue.severity
+          : 'unknown_severity'
+      const message =
+        typeof issue.message === 'string' && issue.message.trim()
+          ? issue.message
+          : 'no issue message'
+      const segmentId =
+        typeof issue.segmentId === 'string' && issue.segmentId.trim()
+          ? ` segment=${issue.segmentId}`
+          : ''
+
+      return `- ${severity}/${code}${segmentId}: ${message}`
+    })
+
+  const passed =
+    typeof qualityReport.passed === 'boolean'
+      ? `passed=${String(qualityReport.passed)}`
+      : ''
+  const score =
+    typeof qualityReport.score === 'number'
+      ? `score=${qualityReport.score}`
+      : ''
+  const summary = [passed, score].filter(Boolean).join(', ')
+
+  return [summary ? `quality report: ${summary}` : '', ...issueLines]
+    .filter(Boolean)
+    .join('\n')
+}
+
+function appendJobRetryFeedback(
+  job: GenerationJob,
+  message: string,
+  qualityReport?: Record<string, unknown>,
+) {
+  const trimmedMessage = message.trim()
+  if (!trimmedMessage) {
+    return
+  }
+
+  const feedback = [
+    `failure: ${trimmedMessage}`,
+    summarizeQualityReportForRetry(qualityReport),
+  ]
+    .filter(Boolean)
+    .join('\n')
+  const existing = job.retryFeedback ?? []
+  const last = existing[existing.length - 1]
+
+  job.lastFailureMessage = trimmedMessage
+  job.retryFeedback = (
+    last === feedback ? existing : [...existing, feedback]
+  ).slice(-8)
+}
+
+function formatJobRetryFeedback(job: GenerationJob) {
+  return (job.retryFeedback ?? [])
+    .map((feedback, index) => `Attempt ${index + 1} feedback:\n${feedback}`)
+    .join('\n\n')
+}
+
+function requeueGenerationUntilPublished(
+  job: GenerationJob,
+  message: string,
+  qualityReport?: Record<string, unknown>,
+) {
+  if (
+    job.status === 'canceled' ||
+    job.abortController?.signal.aborted ||
+    !shouldRetryGenerationUntilPublished()
+  ) {
+    return false
+  }
+
+  recordJobFailureIssueCounts(job, qualityReport ?? job.qualityReport)
+  if (shouldBlockServerRetry(job, message, qualityReport)) {
+    return false
+  }
+
+  const retryAttemptCount = (job.retryAttemptCount ?? 0) + 1
+  const delayMs = getGenerationRetryDelayMs(retryAttemptCount)
+  const now = new Date().toISOString()
+
+  appendJobRetryFeedback(job, message, qualityReport ?? job.qualityReport)
+  removeQueuedJob(job.id)
+  job.message = `자동 생성이 막혀 ${retryAttemptCount}번째로 다시 시도합니다. ${message}`
+  job.qualityReport = qualityReport ?? job.qualityReport
+  job.record = undefined
+  job.retryAttemptCount = retryAttemptCount
+  job.status = 'needs_repair'
+  job.updatedAt = now
+  job.workerStartedAt = undefined
+  job.abortController = undefined
+
+  const jobId = job.id
+  const clientToken = job.clientToken
+
+  job.retryTimer = setTimeout(() => {
+    const currentJob = generationJobs.get(jobId)
+    if (!currentJob || currentJob.clientToken !== clientToken) {
+      return
+    }
+
+    currentJob.retryTimer = undefined
+
+    if (
+      currentJob.status === 'canceled' ||
+      currentJob.status === 'published' ||
+      currentJob.status === 'processing' ||
+      isTerminalGenerationJobStatus(currentJob.status)
+    ) {
+      return
+    }
+
+    removeQueuedJob(currentJob.id)
+    currentJob.message = `자동 수리 루프 ${retryAttemptCount}차를 다시 시작합니다. 직전 상태: ${message}`
+    currentJob.status = 'queued'
+    currentJob.updatedAt = new Date().toISOString()
+    currentJob.workerStartedAt = undefined
+
+    if (shouldProcessJobsInline()) {
+      scheduleInlineGenerationJob(currentJob.id)
+    } else {
+      queuedJobIds.push(currentJob.id)
+    }
+  }, delayMs)
+
+  return true
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function isAbortError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === 'AbortError' ||
+      error.message === 'Aborted' ||
+      error.message === 'generation_aborted')
+  )
 }
 
 function requeueExpiredProcessingJobs() {
@@ -930,6 +1698,11 @@ function requeueExpiredProcessingJobs() {
       continue
     }
 
+    const message = `processing lease expired after ${Math.round(processingLeaseMs / 1000)}s`
+    appendJobRetryFeedback(job, message, job.qualityReport)
+    job.retryAttemptCount = (job.retryAttemptCount ?? 0) + 1
+    job.message = `자동 생성이 오래 멈춰 이어서 다시 시도합니다. ${message}`
+    removeQueuedJob(job.id)
     job.status = 'queued'
     job.updatedAt = new Date().toISOString()
     job.workerStartedAt = undefined
@@ -941,6 +1714,10 @@ function validateGeneratorAccessCode(
   req: IncomingMessage,
   res: ServerResponse,
 ) {
+  if (isLocalBrowserRequest(req)) {
+    return true
+  }
+
   const configuredCodes = parseAccessCodes()
   if (configuredCodes.length === 0) {
     return true
@@ -956,6 +1733,49 @@ function validateGeneratorAccessCode(
     message: '생성 비밀번호가 필요합니다.',
   })
   return false
+}
+
+function isLocalBrowserRequest(req: IncomingMessage) {
+  const origin = getRequestHeader(req, 'origin')
+  const host =
+    getRequestHeader(req, 'x-forwarded-host') || getRequestHeader(req, 'host')
+
+  return isLocalUrlHost(origin) || isLocalHostHeader(host)
+}
+
+function isLocalUrlHost(input: string | undefined) {
+  if (!input) {
+    return false
+  }
+
+  try {
+    return isLocalHostname(new URL(input).hostname)
+  } catch {
+    return false
+  }
+}
+
+function isLocalHostHeader(input: string | undefined) {
+  if (!input) {
+    return false
+  }
+
+  return isLocalHostname(parseHostHeaderHostname(input))
+}
+
+function isLocalHostname(hostname: string) {
+  return (
+    hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+  )
+}
+
+function parseHostHeaderHostname(input: string) {
+  if (input.startsWith('[')) {
+    const closingIndex = input.indexOf(']')
+    return closingIndex > 0 ? input.slice(1, closingIndex) : input
+  }
+
+  return input.split(':')[0] ?? ''
 }
 
 function validateWorkerAccess(req: IncomingMessage, res: ServerResponse) {

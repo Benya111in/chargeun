@@ -32,6 +32,7 @@ const generationSteps = [
 ]
 const generationStatusStep: Record<GenerationJobProgress['status'], number> = {
   blocked: generationSteps.length - 1,
+  canceled: generationSteps.length - 1,
   failed: generationSteps.length - 1,
   needs_repair: 5,
   processing: 2,
@@ -464,6 +465,8 @@ function getGenerationStatusLabel(progress: GenerationJobProgress | null) {
       return '자동 수리 중'
     case 'published':
       return '공개 준비 완료'
+    case 'canceled':
+      return '취소됨'
     case 'blocked':
       return '품질 차단'
     case 'failed':
@@ -486,6 +489,7 @@ function getGenerationStepIndex(
       return 5
     case 'published':
     case 'blocked':
+    case 'canceled':
     case 'failed':
       return generationSteps.length - 1
     default:
@@ -500,6 +504,10 @@ function getGenerationStatusClass(status: GenerationJobProgress['status'] | unde
 
   if (status === 'blocked' || status === 'failed') {
     return 'border-rose-300 bg-rose-50 text-rose-900'
+  }
+
+  if (status === 'canceled') {
+    return 'border-stone-300 bg-stone-50 text-stone-800'
   }
 
   if (status === 'published') {

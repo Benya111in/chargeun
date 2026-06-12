@@ -12,6 +12,8 @@ export type GeneratedArtifactManifest = {
   }>
   provider: 'cloudflare-r2' | 'render-local'
   qualityVersion: typeof generatedQualityVersion
+  evidencePacketUrl: string
+  sceneGraphUrl: string
   scenarioJsonUrl: string
   sourceVideoUrl: string
 }
@@ -93,15 +95,31 @@ export function buildGeneratedArtifactManifest(input: {
   })
   const scenario = files.find((file) => file.name === 'scenario.json')
   const sourceVideo = files.find((file) => file.name === 'source.mp4')
+  const evidencePacket = files.find(
+    (file) => file.name === 'evidence-packet.json',
+  )
+  const sceneGraph = files.find((file) => file.name === 'scene-graph.json')
+  const qualityReport = files.find((file) => file.name === 'quality-report.json')
+  const pipelineTrace = files.find((file) => file.name === 'pipeline-trace.json')
 
-  if (!scenario || !sourceVideo) {
-    throw new Error('scenario.json과 source.mp4 artifact가 필요합니다.')
+  if (!scenario || !sourceVideo || !evidencePacket || !sceneGraph) {
+    throw new Error(
+      'scenario.json, source.mp4, evidence-packet.json, scene-graph.json artifact가 필요합니다.',
+    )
+  }
+
+  if (!qualityReport || !pipelineTrace) {
+    throw new Error(
+      'quality-report.json과 pipeline-trace.json artifact가 필요합니다.',
+    )
   }
 
   return {
+    evidencePacketUrl: evidencePacket.url,
     files,
     provider: input.provider,
     qualityVersion: generatedQualityVersion,
+    sceneGraphUrl: sceneGraph.url,
     scenarioJsonUrl: scenario.url,
     sourceVideoUrl: sourceVideo.url,
   } satisfies GeneratedArtifactManifest
@@ -217,6 +235,8 @@ function assertSafeGeneratedArtifactName(fileName: string) {
     fileName !== 'scenario.json' &&
     fileName !== 'pipeline-trace.json' &&
     fileName !== 'quality-report.json' &&
+    fileName !== 'evidence-packet.json' &&
+    fileName !== 'scene-graph.json' &&
     fileName !== 'audio-transcript.json' &&
     fileName !== 'visual-caption-evidence.json' &&
     fileName !== 'source.mp4' &&

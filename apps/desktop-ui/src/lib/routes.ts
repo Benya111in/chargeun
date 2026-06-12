@@ -49,6 +49,7 @@ function isDirectAppRoute(path: string) {
     path === '/teacher' ||
     path === '/live-lab' ||
     path === '/url-generator' ||
+    path === '/url-generator-v2' ||
     path.startsWith('/guardian-editor') ||
     (isLocalSeasonalEnabled() && path === '/local-seasonal') ||
     path === '/qa' ||

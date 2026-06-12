@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { TheaterShow } from './demo-theater-content'
 import {
+  acceptedGeneratedQualityContractVersion,
   acceptedGeneratedPipelineVersion,
   createGeneratedScenarioRecord,
   matchUrlToScenario,
@@ -116,6 +117,32 @@ describe('generated scenario URL flow', () => {
       customScenario: {
         accentClassName: 'bg-emerald-400',
         generatedArtifactManifest: {
+          files: [
+            {
+              name: 'scenario.json',
+              url: `/generated/${record.id}/quality-v1/scenario.json`,
+            },
+            {
+              name: 'source.mp4',
+              url: `/generated/${record.id}/quality-v1/source.mp4`,
+            },
+            {
+              name: 'quality-report.json',
+              url: `/generated/${record.id}/quality-v1/quality-report.json`,
+            },
+            {
+              name: 'pipeline-trace.json',
+              url: `/generated/${record.id}/quality-v1/pipeline-trace.json`,
+            },
+            {
+              name: 'evidence-packet.json',
+              url: `/generated/${record.id}/quality-v1/evidence-packet.json`,
+            },
+            {
+              name: 'scene-graph.json',
+              url: `/generated/${record.id}/quality-v1/scene-graph.json`,
+            },
+          ],
           qualityVersion: 'quality-v1',
           scenarioJsonUrl: `/generated/${record.id}/quality-v1/scenario.json`,
           sourceVideoUrl: `/generated/${record.id}/quality-v1/source.mp4`,
@@ -123,10 +150,12 @@ describe('generated scenario URL flow', () => {
         generationPipelineTrace: {
           agentRuns: [],
           pipelineVersion: acceptedGeneratedPipelineVersion,
+          qualityContractVersion: acceptedGeneratedQualityContractVersion,
         },
         generationQualityReport: {
           groundingPassed: true,
           passed: true,
+          qualityContractVersion: acceptedGeneratedQualityContractVersion,
           sourceCoveragePassed: true,
           uiPlaybackPassed: true,
         },

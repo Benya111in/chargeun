@@ -11,6 +11,7 @@ export type GeneratorApiConfig = {
 
 export type GenerationJobStatus =
   | 'blocked'
+  | 'canceled'
   | 'failed'
   | 'needs_repair'
   | 'processing'
@@ -19,13 +20,32 @@ export type GenerationJobStatus =
 
 export type GenerationJobProgress = {
   message: string | null
+  progressEvents?: GenerationJobProgressEvent[]
   qualityReport?: Record<string, unknown> | null
+  stage?: string | null
   status: GenerationJobStatus
 }
 
+export type GenerationJobProgressEvent = {
+  at?: string
+  details?: string[]
+  message?: string | null
+  sequence?: number
+  stage?: string | null
+  status?: GenerationJobStatus
+}
+
 export type RequestGeneratedPracticeOptions = {
+  apiBase?: string
   onProgress?: (progress: GenerationJobProgress) => void
   signal?: AbortSignal
+  timeoutMs?: number | null
+}
+
+export const localGeneratorApiBase = 'http://127.0.0.1:10000'
+
+export function getDefaultGenerationPollTimeoutMs() {
+  return null
 }
 
 export function getGeneratorApiConfig(): GeneratorApiConfig {
@@ -109,6 +129,12 @@ export function isPublishedGenerationStatus(status: string | undefined) {
   return status === 'published'
 }
 
+function createAbortError() {
+  const error = new Error('Aborted')
+  error.name = 'AbortError'
+  return error
+}
+
 export async function requestGeneratedPracticeFromApi(
   sourceUrl: string,
   accessCode = '',
@@ -117,26 +143,27 @@ export async function requestGeneratedPracticeFromApi(
   record: GeneratedScenarioRecord
 }> {
   const config = getGeneratorApiConfig()
+  const apiBase = normalizeApiBase(options.apiBase) || config.apiBase
 
-  if (config.requiresRemoteApi) {
+  if (!apiBase && config.requiresRemoteApi) {
     throw new Error(
       'GitHub Pages는 API key를 안전하게 보관할 수 없습니다. 생성 API 서버 주소를 먼저 연결해 주세요.',
     )
   }
 
   const queued = await queueGeneratedPracticeJob(
-    config.apiBase,
+    apiBase,
     sourceUrl,
     accessCode,
     options.signal,
   )
 
   if (queued) {
-    return pollGeneratedPracticeJob(config.apiBase, queued, options)
+    return pollGeneratedPracticeJob(apiBase, queued, options)
   }
 
   return requestGeneratedPracticeDirectly(
-    config.apiBase,
+    apiBase,
     sourceUrl,
     accessCode,
     options.signal,
@@ -186,13 +213,6 @@ async function queueGeneratedPracticeJob(
     )
   }
 
-  if (payload.job.status === 'blocked' || payload.job.status === 'failed') {
-    throw new Error(
-      payload.job.message ||
-        '이 영상은 자동 생성 품질 검사에서 막혀 학습 화면으로 열지 않습니다.',
-    )
-  }
-
   if (payload.record && isPublishedGenerationStatus(payload.job.status)) {
     return {
       publishedRecord: payload.record,
@@ -221,57 +241,112 @@ async function pollGeneratedPracticeJob(
   }
 
   const startedAt = Date.now()
-  const timeoutMs = 30 * 60 * 1000
-
-  while (Date.now() - startedAt < timeoutMs) {
-    await wait(2_500, options.signal)
-
-    const response = await fetch(
-      `${apiBase}/api/generation-jobs/${encodeURIComponent(
-        job.id,
-      )}?token=${encodeURIComponent(job.token)}`,
-      { signal: options.signal },
-    )
-    const payload = (await response.json().catch(() => ({}))) as {
-      job?: {
-        message?: string | null
-        qualityReport?: Record<string, unknown> | null
-        status?:
-          | GenerationJobStatus
-      }
-      message?: string
-      record?: GeneratedScenarioRecord | null
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        payload.message || '생성 작업 상태를 확인하지 못했습니다.',
-      )
-    }
-
-    if (isKnownGenerationStatus(payload.job?.status)) {
-      options.onProgress?.({
-        message: payload.job.message ?? null,
-        qualityReport: payload.job.qualityReport ?? null,
-        status: payload.job.status,
-      })
-    }
-
-    if (isPublishedGenerationStatus(payload.job?.status) && payload.record) {
-      return { record: payload.record }
-    }
-
-    if (payload.job?.status === 'failed' || payload.job?.status === 'blocked') {
-      throw new Error(
-        payload.job.message ||
-          '생성 작업이 품질 검사에서 막혔습니다. 실패한 결과는 학습 화면으로 열지 않습니다.',
-      )
-    }
+  const timeoutMs =
+    options.timeoutMs === undefined
+      ? getDefaultGenerationPollTimeoutMs()
+      : options.timeoutMs
+  const handleAbort = () => {
+    void cancelGeneratedPracticeJob(apiBase, job)
   }
 
-  throw new Error(
-    '생성 시간이 너무 오래 걸립니다. 맥북 worker가 켜져 있는지 확인해 주세요.',
-  )
+  if (options.signal?.aborted) {
+    handleAbort()
+    throw createAbortError()
+  }
+
+  options.signal?.addEventListener('abort', handleAbort, { once: true })
+
+  try {
+    while (timeoutMs === null || Date.now() - startedAt < timeoutMs) {
+      await wait(2_500, options.signal)
+
+      const response = await fetch(
+        `${apiBase}/api/generation-jobs/${encodeURIComponent(
+          job.id,
+        )}?token=${encodeURIComponent(job.token)}`,
+        { signal: options.signal },
+      )
+      const payload = (await response.json().catch(() => ({}))) as {
+      job?: {
+        message?: string | null
+        progressEvents?: GenerationJobProgressEvent[]
+        qualityReport?: Record<string, unknown> | null
+        stage?: string | null
+        status?: GenerationJobStatus
+      }
+        message?: string
+        record?: GeneratedScenarioRecord | null
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          payload.message || '생성 작업 상태를 확인하지 못했습니다.',
+        )
+      }
+
+      if (isKnownGenerationStatus(payload.job?.status)) {
+        options.onProgress?.({
+          message: payload.job.message ?? null,
+          progressEvents: Array.isArray(payload.job.progressEvents)
+            ? payload.job.progressEvents
+            : [],
+          qualityReport: payload.job.qualityReport ?? null,
+          stage: payload.job.stage ?? null,
+          status: payload.job.status,
+        })
+      }
+
+      if (isPublishedGenerationStatus(payload.job?.status) && payload.record) {
+        return { record: payload.record }
+      }
+
+      if (payload.job?.status === 'canceled') {
+        throw createAbortError()
+      }
+
+      if (
+        payload.job?.status === 'failed' ||
+        payload.job?.status === 'blocked'
+      ) {
+        options.onProgress?.({
+          message:
+            payload.job.message ??
+            '생성 서버가 마지막 보장 생성물을 준비하고 있습니다.',
+          progressEvents: Array.isArray(payload.job.progressEvents)
+            ? payload.job.progressEvents
+            : [],
+          qualityReport: payload.job.qualityReport ?? null,
+          stage: payload.job.stage ?? 'repair_coordinator',
+          status: 'needs_repair',
+        })
+      }
+    }
+
+    throw new Error(
+      '생성 시간이 너무 오래 걸립니다. 생성 서버가 켜져 있는지 확인해 주세요.',
+    )
+  } finally {
+    options.signal?.removeEventListener('abort', handleAbort)
+  }
+}
+
+async function cancelGeneratedPracticeJob(
+  apiBase: string,
+  job: { id: string; token: string },
+) {
+  try {
+    await fetch(
+      `${apiBase}/api/generation-jobs/${encodeURIComponent(
+        job.id,
+      )}/cancel?token=${encodeURIComponent(job.token)}`,
+      {
+        keepalive: true,
+        method: 'POST',
+      },
+    )
+  } catch {
+    // The UI is already aborting locally; cancellation is best-effort over HTTP.
+  }
 }
 
 function isKnownGenerationStatus(
@@ -282,6 +357,7 @@ function isKnownGenerationStatus(
     status === 'processing' ||
     status === 'needs_repair' ||
     status === 'published' ||
+    status === 'canceled' ||
     status === 'blocked' ||
     status === 'failed'
   )

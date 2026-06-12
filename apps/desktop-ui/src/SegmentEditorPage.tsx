@@ -20,6 +20,7 @@ import type {
   TheaterShow,
 } from './lib/demo-theater-content'
 import {
+  acceptedGeneratedQualityContractVersion,
   acceptedGeneratedPipelineVersion,
   type GeneratedScenarioRecord,
   toGeneratedTheaterShow,
@@ -1127,15 +1128,18 @@ function buildScenarioAssetCandidate(
 function isPublishableGeneratedScenarioAsset(scenario: TheaterShow) {
   const candidate = scenario as TheaterShow & {
     generatedArtifactManifest?: {
+      files?: unknown
       qualityVersion?: string
     }
     generationPipelineTrace?: {
       agentRuns?: unknown
       pipelineVersion?: string
+      qualityContractVersion?: string
     }
     generationQualityReport?: {
       groundingPassed?: boolean
       passed?: boolean
+      qualityContractVersion?: string
       sourceCoveragePassed?: boolean
       uiPlaybackPassed?: boolean
     }
@@ -1143,14 +1147,39 @@ function isPublishableGeneratedScenarioAsset(scenario: TheaterShow) {
 
   return (
     candidate.generationQualityReport?.passed === true &&
+    candidate.generationQualityReport.qualityContractVersion ===
+      acceptedGeneratedQualityContractVersion &&
     candidate.generationQualityReport.groundingPassed === true &&
     candidate.generationQualityReport.sourceCoveragePassed === true &&
     candidate.generationQualityReport.uiPlaybackPassed === true &&
     candidate.generationPipelineTrace?.pipelineVersion ===
       acceptedGeneratedPipelineVersion &&
+    candidate.generationPipelineTrace.qualityContractVersion ===
+      acceptedGeneratedQualityContractVersion &&
     Array.isArray(candidate.generationPipelineTrace.agentRuns) &&
     candidate.generatedArtifactManifest?.qualityVersion ===
-      generatedQualityVersion
+      generatedQualityVersion &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'scenario.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'source.mp4') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'quality-report.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'pipeline-trace.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'evidence-packet.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'scene-graph.json')
+  )
+}
+
+function generatedManifestContains(
+  manifest: { files?: unknown } | undefined,
+  name: string,
+) {
+  return (
+    Array.isArray(manifest?.files) &&
+    manifest.files.some(
+      (file) =>
+        Boolean(file) &&
+        typeof file === 'object' &&
+        (file as { name?: unknown }).name === name,
+    )
   )
 }
 

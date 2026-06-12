@@ -24,6 +24,7 @@ import { isLocalSeasonalEnabled } from './lib/local-seasonal'
 import { appHref, getAppRoute, publicAssetSrc } from './lib/routes'
 import { cn } from './lib/utils'
 import {
+  acceptedGeneratedQualityContractVersion,
   acceptedGeneratedPipelineVersion,
   toGeneratedTheaterShow,
   type GeneratedScenarioRecord,
@@ -112,14 +113,14 @@ export default function ScenarioPracticePage() {
 
   if (!scenario) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f7f8f4] px-4 text-[#151713]">
-        <section className="max-w-lg rounded-md border border-[#dfe4da] bg-white p-6">
+      <main className="practice-page flex min-h-screen items-center justify-center px-4">
+        <section className="practice-panel max-w-lg">
           <h1 className="text-2xl font-semibold">
             {isLoadingGeneratedScenario
               ? '연습 장면을 불러오고 있어요.'
               : '연습 장면을 찾지 못했어요.'}
           </h1>
-          <p className="mt-3 text-sm leading-6 text-[#596257]">
+          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
             {isLoadingGeneratedScenario
               ? '생성된 학습 화면을 서버에서 확인하고 있습니다.'
               : '다시 홈으로 가서 연습할 장면을 골라 주세요.'}
@@ -501,17 +502,18 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8f4] text-[#151713]">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col gap-2 px-4 py-1.5 lg:px-6">
+    <main className="practice-page">
+      <div className="practice-container practice-stack">
+        <PracticeBrandStrip />
         <SafetyBanner notice={segment.safetyNotice} />
         {scenario.generatedSourceUrl ? (
           <GeneratedSourceBanner scenario={scenario} />
         ) : null}
 
-        <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,0.98fr)_minmax(440px,0.58fr)]">
-          <section className="flex min-w-0 flex-col gap-3">
-            <section className="overflow-hidden rounded-md border border-[#dfe4da] bg-black">
-              <div className="relative h-[clamp(280px,39vh,520px)] bg-black">
+        <div className="practice-layout">
+          <section className="practice-left-column">
+            <section className="practice-media-shell">
+              <div className="practice-media-frame">
                 {usesYouTubePlayback ? (
                   <iframe
                     key={`${scenario.id}-${segment.id}-${stage}-${youtubePlaybackRequestId}`}
@@ -572,13 +574,11 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
                   </video>
                 )}
 
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/76 via-black/10 to-black/44" />
+                <div className="practice-video-shade" />
 
                 <div className="absolute inset-x-0 top-0 flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-                  <div className="rounded-md border border-white/12 bg-black/42 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm">
-                    {scenario.title}
-                  </div>
-                  <div className="rounded-md border border-white/12 bg-black/42 px-3 py-2 text-sm text-white/86 backdrop-blur-sm">
+                  <div className="practice-video-meta">{scenario.title}</div>
+                  <div className="practice-video-meta">
                     {segmentIndex + 1} / {scenario.segments.length}
                   </div>
                 </div>
@@ -586,13 +586,13 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
                 {stage === 'ready' ? (
                   <button
                     aria-label="영상 시작하기"
-                    className="absolute inset-0 flex items-center justify-center"
+                    className="practice-start-overlay"
                     onClick={() => {
                       playSegment(segmentIndex)
                     }}
                     type="button"
                   >
-                    <span className="inline-flex items-center gap-3 rounded-md border border-white/16 bg-black/58 px-7 py-4 text-xl font-semibold text-white backdrop-blur-sm">
+                    <span className="practice-start-pill">
                       <Play className="size-6" />
                       시작하기
                     </span>
@@ -601,23 +601,31 @@ function ScenarioPractice({ scenario }: { scenario: TheaterShow }) {
               </div>
             </section>
 
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(2.35rem,1fr))] gap-2">
+            <div className="practice-step-nav">
               {scenario.segments.map((item, index) => (
                 <button
                   key={item.id}
                   aria-label={`${index + 1}번째 장면`}
+                  aria-current={index === segmentIndex ? 'step' : undefined}
                   className={cn(
-                    'flex min-h-10 items-center justify-center rounded-md border px-2 text-sm font-semibold transition',
+                    'practice-step-button',
                     index < segmentIndex
-                      ? 'border-emerald-300 bg-emerald-100 text-emerald-950'
+                      ? 'is-complete'
                       : index === segmentIndex
-                        ? 'border-[#151713] bg-[#151713] text-white'
-                        : 'border-[#dfe4da] bg-white text-[#596257] hover:border-[#151713]/40',
+                        ? 'is-current'
+                        : 'is-upcoming',
                   )}
                   onClick={() => loadSegment(index)}
                   type="button"
                 >
-                  {index + 1}
+                  <span>{index + 1}</span>
+                  <span className="practice-step-status" aria-hidden="true">
+                    {index < segmentIndex ? (
+                      <CheckCircle2 className="size-3.5" />
+                    ) : (
+                      <span className="practice-step-dot" />
+                    )}
+                  </span>
                 </button>
               ))}
             </div>
@@ -668,6 +676,7 @@ function PracticeHero({
 }) {
   const isResting = stage === 'rest'
   const isExplaining = stage === 'explanation'
+  const status = getPracticeStageStatus(stage)
   const headingText = isResting
     ? '잠깐 쉬어도 괜찮아요.'
     : isExplaining
@@ -683,32 +692,48 @@ function PracticeHero({
           : 'text-[clamp(2rem,5cqw,4rem)] leading-[1.03]'
 
   return (
-    <section className="rounded-md border border-[#dfe4da] bg-white p-4 [container-type:inline-size]">
-      <p className="text-sm font-semibold text-[#596257]">
-        {isResting ? '잠깐 멈췄어요.' : segment.learnerPrompt}
-      </p>
+    <section className="practice-hero-card">
+      <div className="practice-hero-topline">
+        <span className="practice-status-pill">{status.label}</span>
+        <p className="practice-hero-prompt">
+          {isResting ? '잠깐 멈췄어요.' : segment.learnerPrompt}
+        </p>
+      </div>
       <h1
         ref={isExplaining ? headingRef : undefined}
         tabIndex={isExplaining ? -1 : undefined}
-        className={cn(
-          'mt-1 max-w-full break-keep font-semibold tracking-tight outline-none',
-          headingLengthClassName,
-        )}
+        className={cn('practice-hero-title', headingLengthClassName)}
       >
         {headingText}
       </h1>
       {isResting ? (
-        <p className="mt-2 text-lg font-semibold leading-7 text-[#596257]">
+        <p className="mt-2 text-lg font-semibold leading-7 text-[var(--muted)]">
           필요하면 선생님이나 보호자를 불러요.
         </p>
       ) : null}
       {playbackNotice ? (
-        <p className="mt-4 text-sm leading-6 text-amber-700">
+        <p className="mt-4 text-sm font-semibold leading-6 text-[var(--honey)]">
           {playbackNotice}
         </p>
       ) : null}
     </section>
   )
+}
+
+function getPracticeStageStatus(stage: PracticeStage) {
+  if (stage === 'playback') {
+    return { label: '보고 있어요' }
+  }
+
+  if (stage === 'explanation') {
+    return { label: '이제 연습해요' }
+  }
+
+  if (stage === 'rest') {
+    return { label: '쉬는 중이에요' }
+  }
+
+  return { label: '준비됐어요' }
 }
 
 function PracticePanel({
@@ -760,13 +785,13 @@ function PracticePanel({
     : null
   if (stage === 'rest') {
     return (
-      <section className="rounded-md border border-[#dfe4da] bg-white p-4">
-        <h2 className="text-xl font-semibold">쉬기</h2>
-        <p className="mt-2 text-xl font-semibold leading-8 text-[#596257]">
+      <section className="practice-panel">
+        <h2 className="practice-panel-title">쉬기</h2>
+        <p className="mt-2 text-xl font-semibold leading-8 text-[var(--muted)]">
           준비되면 같은 장면을 다시 볼 수 있어요.
         </p>
         <button
-          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-4 py-2 text-base font-medium text-[#151713]"
+          className="practice-action-button mt-4"
           onClick={onReplay}
           type="button"
         >
@@ -779,12 +804,12 @@ function PracticePanel({
 
   if (stage !== 'explanation') {
     return (
-      <section className="rounded-md border border-[#dfe4da] bg-white p-4">
-        <h2 className="text-xl font-semibold">장면을 본 뒤 연습해요</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
+      <section className="practice-panel">
+        <h2 className="practice-panel-title">장면을 본 뒤 연습해요</h2>
+        <div className="practice-action-row">
           {stage === 'playback' ? (
             <button
-              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-4 py-2 text-base font-medium text-[#151713]"
+              className="practice-action-button"
               onClick={onReplay}
               type="button"
             >
@@ -793,7 +818,7 @@ function PracticePanel({
             </button>
           ) : null}
           <button
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-4 py-2 text-base font-medium text-[#151713]"
+            className="practice-action-button"
             onClick={onRest}
             type="button"
           >
@@ -806,7 +831,7 @@ function PracticePanel({
   }
 
   return (
-    <section className="rounded-md border border-[#dfe4da] bg-white p-3">
+    <section className="practice-panel">
       {isReviewSegment ? (
         <ScenarioReviewCarousel
           groups={reviewGroups}
@@ -817,18 +842,18 @@ function PracticePanel({
         <SceneNarrationList segment={segment} />
       )}
 
-      <div className="mt-3 grid gap-2">
+      <div className="practice-callout-stack mt-3">
         {isReviewSegment ? (
-          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
-            <h2 className="text-lg font-semibold">전체 복습</h2>
-            <p className="mt-2 text-lg font-semibold leading-7 text-[#596257]">
+          <section className="practice-callout is-notice">
+            <h2 className="practice-callout-title">전체 복습</h2>
+            <p className="practice-callout-text">
               오늘 배운 행동을 장면 순서대로 다시 봐요.
             </p>
           </section>
         ) : isIntroSegment ? (
-          <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-3 py-2">
-            <h2 className="text-lg font-semibold">지금 장면</h2>
-            <p className="mt-2 text-lg font-semibold leading-7 text-[#596257]">
+          <section className="practice-callout is-notice">
+            <h2 className="practice-callout-title">지금 장면</h2>
+            <p className="practice-callout-text">
               내용을 소개하는 부분이에요. 다음 장면에서 행동을 연습해요.
             </p>
           </section>
@@ -844,7 +869,7 @@ function PracticePanel({
                 ) : null}
               </div>
             ) : (
-              <p className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] px-4 py-4 text-xl font-semibold leading-8 text-[#596257]">
+              <p className="practice-callout is-notice practice-callout-text">
                 확실하지 않아요. 선생님이나 보호자와 공식 안내를 확인해요.
               </p>
             )}
@@ -855,39 +880,30 @@ function PracticePanel({
       {canAskQuestion ? (
         <section
           className={cn(
-            'mt-2 rounded-md border bg-[#f7f8f4] p-1.5 transition',
-            selectedAnswer
-              ? 'border-[#dfe4da]'
-              : 'question-attention border-emerald-500',
+            'practice-question-card mt-3',
+            !selectedAnswer && 'question-attention',
           )}
         >
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">{segment.checkQuestion}</h2>
-            <span
-              className={cn(
-                'shrink-0 rounded-md px-2 py-1 text-xs font-semibold',
-                selectedAnswer
-                  ? 'bg-[#e9eee9] text-[#596257]'
-                  : 'bg-emerald-700 text-white',
-              )}
-            >
+          <div className="practice-question-topline">
+            <h2 className="practice-question-title">{segment.checkQuestion}</h2>
+            <span className="practice-question-chip">
               {selectedAnswer ? '답을 골랐어요' : '여기를 골라요'}
             </span>
           </div>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {segment.answerOptions.map((option) => (
+          <div className="practice-answer-grid">
+            {segment.answerOptions.map((option, optionIndex) => (
               <button
                 key={option.id}
                 className={cn(
-                  'rounded-md border px-3 py-1.5 text-left text-base font-semibold transition',
+                  'practice-answer-button',
                   selectedAnswer?.correct &&
                     selectedAnswerId !== option.id &&
-                    'cursor-not-allowed opacity-55',
+                    'is-disabled',
                   selectedAnswerId === option.id
                     ? option.correct
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
-                      : 'border-amber-500 bg-amber-50 text-amber-950'
-                    : 'border-[#dfe4da] bg-white text-[#151713] hover:border-[#151713]/40',
+                      ? 'is-correct'
+                      : 'is-wrong'
+                    : '',
                 )}
                 disabled={
                   selectedAnswer?.correct && selectedAnswerId !== option.id
@@ -901,39 +917,54 @@ function PracticePanel({
                 }}
                 type="button"
               >
-                {option.label}
+                <span className="practice-answer-marker">
+                  {String.fromCharCode(65 + optionIndex)}
+                </span>
+                <span>{option.label}</span>
+                {selectedAnswerId === option.id ? (
+                  option.correct ? (
+                    <CheckCircle2 className="size-5 shrink-0" />
+                  ) : (
+                    <HelpCircle className="size-5 shrink-0" />
+                  )
+                ) : null}
               </button>
             ))}
           </div>
           {selectedAnswer ? (
-            <div className="mt-2 grid gap-1.5">
-              <p className="flex items-center gap-2 text-sm font-semibold leading-6">
+            <div className="grid gap-1.5">
+              <p
+                className={cn(
+                  'practice-feedback',
+                  selectedAnswer.correct ? 'is-correct' : 'is-hint',
+                )}
+              >
                 {selectedAnswer.correct ? (
-                  <CheckCircle2 className="size-5" />
+                  <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
                 ) : (
-                  <HelpCircle className="size-5" />
+                  <HelpCircle className="mt-0.5 size-5 shrink-0" />
                 )}
                 {selectedAnswer.feedback}
               </p>
             </div>
           ) : (
-            <p className="mt-2 text-sm font-semibold leading-6 text-[#596257]">
+            <p className="mt-3 text-sm font-semibold leading-6 text-[var(--muted)]">
               답을 하나 고르면 다음으로 갈 수 있어요.
             </p>
           )}
         </section>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="practice-action-row">
         <button
-          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+          className="practice-action-button"
           onClick={onReplay}
           type="button"
         >
           <RotateCcw className="size-4" />이 장면 다시 보기
         </button>
         <button
-          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-medium text-[#151713]"
+          className="practice-action-button"
           onClick={onRest}
           type="button"
         >
@@ -954,18 +985,16 @@ function PracticePanel({
               canContinue ? '다음 장면 보기' : '답을 고르면 다음 장면으로 가요'
             }
             className={cn(
-              'inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white',
+              'practice-action-button is-primary',
               shouldEmphasizeNextButton && 'next-ready-attention',
-              !canContinue && 'cursor-not-allowed opacity-50',
+              !canContinue && 'is-disabled',
             )}
             disabled={!canContinue}
             onClick={onNext}
             type="button"
           >
             {shouldEmphasizeNextButton ? (
-              <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
-                이제 눌러요
-              </span>
+              <span className="practice-cta-chip">이제 눌러요</span>
             ) : null}
             {canContinue ? '다음 장면 보기' : '답을 고르면 다음으로 가요'}
           </button>
@@ -977,21 +1006,21 @@ function PracticePanel({
 
 function DoNotCard({ text }: { text: string }) {
   return (
-    <div className="rounded-md border border-rose-400 bg-rose-50 px-4 py-3 text-rose-950">
-      <div className="flex items-center gap-1.5 text-xs font-semibold">
+    <div className="practice-callout is-warning">
+      <div className="practice-callout-title">
         <TriangleAlert className="size-4 shrink-0" />
         하지 말아요
       </div>
-      <p className="mt-1 text-lg font-semibold leading-7">{text}</p>
+      <p className="practice-callout-text">{text}</p>
     </div>
   )
 }
 
 function ReasonCard({ text }: { text: string }) {
   return (
-    <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950">
-      <h2 className="text-base font-semibold">왜 이렇게 해야 할까요?</h2>
-      <p className="mt-1 text-lg font-semibold leading-7">{text}</p>
+    <div className="practice-callout is-reason">
+      <h2 className="practice-callout-title">왜 이렇게 해야 할까요?</h2>
+      <p className="practice-callout-text">{text}</p>
     </div>
   )
 }
@@ -1014,62 +1043,63 @@ function ScenarioReviewCarousel({
   }
 
   return (
-    <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-2">
+    <section className="practice-section">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">한 장씩 복습해요</h2>
-          <p className="mt-1 text-sm leading-6 text-[#596257]">
+          <h2 className="practice-section-header">한 장씩 복습해요</h2>
+          <p className="mt-1 text-sm font-semibold leading-6 text-[var(--muted)]">
             해야 할 일과 하지 말 일을 같이 봐요.
           </p>
         </div>
-        <span className="shrink-0 rounded-md bg-[#151713] px-2 py-1 text-sm font-semibold text-white">
+        <span className="practice-status-pill">
           {reviewIndex + 1} / {groups.length}
         </span>
       </div>
 
-      <article className="mt-2 rounded-md border border-[#dfe4da] bg-white p-3">
-        <h3 className="text-2xl font-semibold leading-8">{group.title}</h3>
+      <article className="practice-review-card mt-3">
+        <h3 className="text-2xl font-extrabold leading-8">{group.title}</h3>
 
-        <section className="mt-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2">
-          <p className="text-sm font-semibold text-sky-900">상황</p>
-          <p className="mt-1 text-lg font-semibold leading-7">
-            {group.situationText}
+        <section className="practice-sequence-row is-situation mt-3">
+          <p className="practice-row-label">
+            <span className="practice-row-badge is-situation">상황</span>
           </p>
+          <p className="practice-row-text">{group.situationText}</p>
         </section>
 
-        <section className="mt-2">
-          <p className="text-sm font-semibold text-emerald-900">해야 할 일</p>
-          <ol className="mt-2 grid gap-2">
+        <section className="mt-3">
+          <p className="practice-section-header">
+            <span className="practice-section-icon">
+              <CheckCircle2 className="size-4" />
+            </span>
+            해야 할 일
+          </p>
+          <ol className="practice-review-list">
             {group.steps.map((step, stepIndex) => (
               <li
                 key={`${group.segmentId}-${step}`}
-                className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2"
+                className="practice-sequence-row is-action"
               >
-                <span className="text-xs font-semibold text-emerald-900">
-                  {stepIndex + 1}번
-                </span>
-                <p className="mt-1 text-lg font-semibold leading-7">{step}</p>
+                <span className="practice-row-label">{stepIndex + 1}번</span>
+                <p className="practice-row-text">{step}</p>
               </li>
             ))}
           </ol>
         </section>
 
         {group.doNotText ? (
-          <section className="mt-3 rounded-md border border-rose-400 bg-rose-50 px-3 py-2 text-rose-950">
-            <div className="flex items-center gap-1.5 text-sm font-semibold">
+          <section className="practice-callout is-warning mt-3">
+            <div className="practice-callout-title">
               <TriangleAlert className="size-4 shrink-0" />
               하지 말아요
             </div>
-            <p className="mt-1 text-lg font-semibold leading-7">
-              {group.doNotText}
-            </p>
+            <p className="practice-callout-text">{group.doNotText}</p>
           </section>
         ) : null}
       </article>
 
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="practice-action-row items-center justify-between">
         <button
-          className="inline-flex min-h-9 items-center rounded-md border border-[#dfe4da] bg-white px-3 py-1 text-sm font-semibold text-[#151713] disabled:cursor-not-allowed disabled:opacity-45"
+          className="practice-action-button disabled:cursor-not-allowed disabled:opacity-45"
           disabled={!canGoPrevious}
           onClick={() => setReviewIndex(reviewIndex - 1)}
           type="button"
@@ -1083,14 +1113,16 @@ function ScenarioReviewCarousel({
               aria-label={`복습 ${index + 1}`}
               className={cn(
                 'size-2 rounded-full',
-                index === reviewIndex ? 'bg-[#151713]' : 'bg-[#cfd6cc]',
+                index === reviewIndex
+                  ? 'bg-[var(--ink)]'
+                  : 'bg-[var(--line-strong)]',
               )}
             />
           ))}
         </div>
         <button
           className={cn(
-            'inline-flex min-h-9 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:border-[#dfe4da] disabled:bg-white disabled:text-[#596257]',
+            'practice-action-button is-primary disabled:cursor-not-allowed disabled:opacity-45',
             canGoNext && 'next-ready-attention',
           )}
           disabled={!canGoNext}
@@ -1098,9 +1130,7 @@ function ScenarioReviewCarousel({
           type="button"
         >
           {canGoNext ? (
-            <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
-              이어서 봐요
-            </span>
+            <span className="practice-cta-chip">이어서 봐요</span>
           ) : null}
           다음 복습
         </button>
@@ -1113,9 +1143,12 @@ function SceneNarrationList({ segment }: { segment: TheaterSegment }) {
   const steps = segment.learnerSequence
 
   return (
-    <section className="rounded-md border border-[#dfe4da] bg-[#f7f8f4] p-2">
-      <h2 className="text-lg font-semibold">순서대로 읽어봐요</h2>
-      <ol className="mt-2 grid gap-2">
+    <section className="practice-section">
+      <h2 className="practice-section-header">
+        <span className="practice-section-icon">1</span>
+        순서대로 읽어봐요
+      </h2>
+      <ol className="practice-sequence-list">
         {steps.map((step, index) => (
           <li key={`${index}-${step.kind}-${step.text}`}>
             <LearnerSequenceCard index={index} step={step} />
@@ -1136,23 +1169,14 @@ function LearnerSequenceCard({
   const tone = getLearnerSequenceTone(step.kind)
 
   return (
-    <div className={cn('rounded-md border px-3 py-1', tone.cardClassName)}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-[#596257]">
-          {index + 1}번
-        </span>
-        <span
-          className={cn(
-            'rounded-md px-2 py-0.5 text-xs font-semibold',
-            tone.badgeClassName,
-          )}
-        >
+    <div className={cn('practice-sequence-row', tone.cardClassName)}>
+      <div className="practice-row-label">
+        <span>{index + 1}번</span>
+        <span className={cn('practice-row-badge', tone.badgeClassName)}>
           {step.kind === 'situation' ? '상황' : '해야 할 일'}
         </span>
       </div>
-      <p className="mt-1 text-base font-semibold leading-5 text-[#151713]">
-        {step.text}
-      </p>
+      <p className="practice-row-text">{step.text}</p>
     </div>
   )
 }
@@ -1162,14 +1186,14 @@ function getLearnerSequenceTone(
 ) {
   if (kind === 'situation') {
     return {
-      badgeClassName: 'bg-sky-100 text-sky-900',
-      cardClassName: 'border-sky-200 bg-sky-50',
+      badgeClassName: 'is-situation',
+      cardClassName: 'is-situation',
     }
   }
 
   return {
-    badgeClassName: 'bg-emerald-100 text-emerald-900',
-    cardClassName: 'border-emerald-200 bg-emerald-50',
+    badgeClassName: 'is-action',
+    cardClassName: 'is-action',
   }
 }
 
@@ -1198,28 +1222,24 @@ function FinalPracticeActions({
     <>
       {canAdvance && nextPractice ? (
         <a
-          className="next-ready-attention inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
+          className="practice-action-button is-primary next-ready-attention"
           href={nextHref}
         >
-          <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
-            이제 눌러요
-          </span>
+          <span className="practice-cta-chip">이제 눌러요</span>
           다음 연습으로 가기
         </a>
       ) : canAdvance ? (
         <button
-          className="next-ready-attention inline-flex min-h-10 items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white"
+          className="practice-action-button is-primary next-ready-attention"
           onClick={onShowSurvey}
           type="button"
         >
-          <span className="rounded bg-white/18 px-1.5 py-0.5 text-xs">
-            이제 눌러요
-          </span>
+          <span className="practice-cta-chip">이제 눌러요</span>
           연습 끝내기
         </button>
       ) : (
         <button
-          className="inline-flex min-h-10 cursor-not-allowed items-center gap-2 rounded-md border border-[#151713] bg-[#151713] px-3 py-1.5 text-sm font-semibold text-white opacity-50"
+          className="practice-action-button is-primary is-disabled"
           disabled
           type="button"
         >
@@ -1235,33 +1255,30 @@ function FinalPracticeActions({
       {nextPractice && canAdvance ? (
         <a
           aria-label={`다음 연습 ${nextPractice.title} ${nextPracticeNote}`}
-          className="inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713]"
+          className="practice-next-card"
           href={nextHref}
         >
-          <span className="text-xs font-semibold text-[#596257]">
+          <span className="text-xs font-bold text-[var(--muted)]">
             다음 연습
           </span>
-          <span className="text-sm font-semibold">{nextPractice.title}</span>
-          <span className="text-xs leading-5 text-[#596257]">
+          <span className="text-sm font-extrabold">{nextPractice.title}</span>
+          <span className="text-xs font-semibold leading-5 text-[var(--muted)]">
             {nextPracticeNote}
           </span>
         </a>
       ) : nextPractice ? (
-        <div
-          aria-disabled="true"
-          className="inline-flex min-h-10 max-w-full flex-col items-start gap-0.5 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-left text-[#151713] opacity-55"
-        >
-          <span className="text-xs font-semibold text-[#596257]">
+        <div aria-disabled="true" className="practice-next-card is-disabled">
+          <span className="text-xs font-bold text-[var(--muted)]">
             다음 연습
           </span>
-          <span className="text-sm font-semibold">{nextPractice.title}</span>
-          <span className="text-xs leading-5 text-[#596257]">
+          <span className="text-sm font-extrabold">{nextPractice.title}</span>
+          <span className="text-xs font-semibold leading-5 text-[var(--muted)]">
             {nextPracticeNote}
           </span>
         </div>
       ) : null}
       <button
-        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#dfe4da] bg-white px-3 py-1.5 text-sm font-medium text-[#151713]"
+        className="practice-action-button"
         onClick={onRestart}
         type="button"
       >
@@ -1276,29 +1293,26 @@ function SurveyDialog({ onClose }: { onClose: () => void }) {
   const hasSurveyLink = surveyFormUrl.length > 0
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/42 px-4 py-6">
+    <div className="practice-dialog-backdrop">
       <section
         aria-labelledby="survey-dialog-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-md border border-[#dfe4da] bg-white p-6 text-[#151713] shadow-[0_24px_80px_rgba(0,0,0,0.22)]"
+        className="practice-dialog"
         role="dialog"
       >
-        <p className="text-sm font-semibold text-[#596257]">연습 완료</p>
-        <h2
-          className="mt-2 text-3xl font-semibold tracking-tight"
-          id="survey-dialog-title"
-        >
+        <p className="text-sm font-bold text-[var(--muted)]">연습 완료</p>
+        <h2 className="mt-2 text-3xl font-extrabold" id="survey-dialog-title">
           끝까지 연습해 주셔서 고맙습니다.
         </h2>
-        <p className="mt-4 text-lg font-semibold leading-8 text-[#596257]">
+        <p className="mt-4 text-lg font-semibold leading-8 text-[var(--muted)]">
           더 좋은 학습 화면을 만들 수 있도록 짧은 설문 조사를 부탁드립니다.
           답변은 화면을 고치는 데 사용하겠습니다.
         </p>
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="practice-action-row mt-6">
           {hasSurveyLink ? (
             <a
-              className="inline-flex min-h-11 items-center rounded-md border border-[#151713] bg-[#151713] px-4 py-2 text-base font-semibold text-white"
+              className="practice-action-button is-primary"
               href={surveyFormUrl}
               rel="noreferrer"
               target="_blank"
@@ -1307,21 +1321,18 @@ function SurveyDialog({ onClose }: { onClose: () => void }) {
             </a>
           ) : (
             <button
-              className="inline-flex min-h-11 cursor-not-allowed items-center rounded-md border border-[#dfe4da] bg-[#eef1ee] px-4 py-2 text-base font-semibold text-[#596257]"
+              className="practice-action-button is-disabled"
               disabled
               type="button"
             >
               설문 링크 준비 중
             </button>
           )}
-          <a
-            className="inline-flex min-h-11 items-center rounded-md border border-[#dfe4da] bg-white px-4 py-2 text-base font-semibold text-[#151713]"
-            href={appHref('/')}
-          >
+          <a className="practice-action-button" href={appHref('/')}>
             처음 화면으로 가기
           </a>
           <button
-            className="inline-flex min-h-11 items-center rounded-md border border-[#dfe4da] bg-white px-4 py-2 text-base font-semibold text-[#151713]"
+            className="practice-action-button"
             onClick={onClose}
             type="button"
           >
@@ -1333,11 +1344,23 @@ function SurveyDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
+function PracticeBrandStrip() {
+  return (
+    <header className="practice-brand-strip" aria-label="프로젝트 이름">
+      <span className="practice-brand-line">
+        <span>차근차근</span>
+        <span className="practice-brand-red">재난 안전</span>
+        <span>AI 도우미</span>
+      </span>
+    </header>
+  )
+}
+
 function SafetyBanner({ notice }: { notice: string }) {
   return (
-    <section className="rounded-md border border-amber-300 bg-amber-50 px-4 py-1 text-amber-950">
-      <p className="text-sm font-semibold leading-6">
-        <span className="mr-3 text-sm">연습 전에 기억해요</span>
+    <section className="practice-callout is-reason px-4 py-2">
+      <p className="text-sm font-bold leading-6">
+        <span className="mr-3">연습 전에 기억해요</span>
         {notice}
       </p>
     </section>
@@ -1346,14 +1369,12 @@ function SafetyBanner({ notice }: { notice: string }) {
 
 function GeneratedSourceBanner({ scenario }: { scenario: TheaterShow }) {
   return (
-    <section className="rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-emerald-950">
+    <section className="practice-callout px-4 py-2">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
-        <span className="rounded-md bg-emerald-700 px-2 py-1 text-white">
-          URL로 만든 연습
-        </span>
+        <span className="practice-status-pill">URL로 만든 연습</span>
         <span>{scenario.generatedTopicLabel ?? '재난안전 연습'}</span>
         {scenario.generatedSourceTitle ? (
-          <span className="text-emerald-900">
+          <span className="text-[var(--muted)]">
             입력한 영상: {scenario.generatedSourceTitle}
           </span>
         ) : null}
@@ -1688,6 +1709,7 @@ function normalizeGeneratedAssetBase(input: unknown) {
 function isPublishableGeneratedScenarioAsset(scenario: TheaterShow) {
   const candidate = scenario as TheaterShow & {
     generatedArtifactManifest?: {
+      files?: unknown
       qualityVersion?: string
       scenarioJsonUrl?: string
       sourceVideoUrl?: string
@@ -1695,10 +1717,12 @@ function isPublishableGeneratedScenarioAsset(scenario: TheaterShow) {
     generationPipelineTrace?: {
       agentRuns?: unknown
       pipelineVersion?: string
+      qualityContractVersion?: string
     }
     generationQualityReport?: {
       groundingPassed?: boolean
       passed?: boolean
+      qualityContractVersion?: string
       sourceCoveragePassed?: boolean
       uiPlaybackPassed?: boolean
     }
@@ -1706,14 +1730,39 @@ function isPublishableGeneratedScenarioAsset(scenario: TheaterShow) {
 
   return (
     candidate.generationQualityReport?.passed === true &&
+    candidate.generationQualityReport.qualityContractVersion ===
+      acceptedGeneratedQualityContractVersion &&
     candidate.generationQualityReport.groundingPassed === true &&
     candidate.generationQualityReport.sourceCoveragePassed === true &&
     candidate.generationQualityReport.uiPlaybackPassed === true &&
     candidate.generationPipelineTrace?.pipelineVersion ===
       acceptedGeneratedPipelineVersion &&
+    candidate.generationPipelineTrace.qualityContractVersion ===
+      acceptedGeneratedQualityContractVersion &&
     Array.isArray(candidate.generationPipelineTrace.agentRuns) &&
     candidate.generatedArtifactManifest?.qualityVersion ===
-      generatedQualityVersion
+      generatedQualityVersion &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'scenario.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'source.mp4') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'quality-report.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'pipeline-trace.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'evidence-packet.json') &&
+    generatedManifestContains(candidate.generatedArtifactManifest, 'scene-graph.json')
+  )
+}
+
+function generatedManifestContains(
+  manifest: { files?: unknown } | undefined,
+  name: string,
+) {
+  return (
+    Array.isArray(manifest?.files) &&
+    manifest.files.some(
+      (file) =>
+        Boolean(file) &&
+        typeof file === 'object' &&
+        (file as { name?: unknown }).name === name,
+    )
   )
 }
 

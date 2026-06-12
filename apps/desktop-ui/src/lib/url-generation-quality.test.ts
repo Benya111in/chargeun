@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
+import { generatedQualityContractVersion } from '../../../../api/generation/pipeline'
 import { __testGeneratePracticeFromUrl } from '../../../../api/generate-practice-from-url'
+
+function buildMinimalEvidenceReport() {
+  return __testGeneratePracticeFromUrl.buildGenerationEvidenceReport({
+    cues: [],
+    rawCues: [],
+    sceneCutCandidatesMs: [],
+    videoProbe: { durationMs: null, frameRate: null },
+  })
+}
 
 const stormSafetyVtt = `WEBVTT
 
@@ -297,6 +307,307 @@ const directAudioWildfireCues = [
 ]
 
 describe('URL practice generation quality gate', () => {
+  it('waits for scenario author model calls by default', () => {
+    const previous = process.env.GENERATOR_SCENARIO_AUTHOR_TIMEOUT_MS
+
+    try {
+      delete process.env.GENERATOR_SCENARIO_AUTHOR_TIMEOUT_MS
+      expect(
+        __testGeneratePracticeFromUrl.getScenarioAuthorOpenAiTimeoutMs(),
+      ).toBeNull()
+
+      process.env.GENERATOR_SCENARIO_AUTHOR_TIMEOUT_MS = '120000'
+      expect(
+        __testGeneratePracticeFromUrl.getScenarioAuthorOpenAiTimeoutMs(),
+      ).toBe(120_000)
+
+      process.env.GENERATOR_SCENARIO_AUTHOR_TIMEOUT_MS = '5000'
+      expect(
+        __testGeneratePracticeFromUrl.getScenarioAuthorOpenAiTimeoutMs(),
+      ).toBeNull()
+    } finally {
+      if (previous === undefined) {
+        delete process.env.GENERATOR_SCENARIO_AUTHOR_TIMEOUT_MS
+      } else {
+        process.env.GENERATOR_SCENARIO_AUTHOR_TIMEOUT_MS = previous
+      }
+    }
+  })
+
+  it('waits for visual caption LVLM calls by default', () => {
+    const previous = process.env.OPENAI_VISUAL_CAPTION_TIMEOUT_MS
+
+    try {
+      delete process.env.OPENAI_VISUAL_CAPTION_TIMEOUT_MS
+      expect(
+        __testGeneratePracticeFromUrl.getVisualCaptionOpenAiTimeoutMs(),
+      ).toBeNull()
+
+      process.env.OPENAI_VISUAL_CAPTION_TIMEOUT_MS = '70000'
+      expect(
+        __testGeneratePracticeFromUrl.getVisualCaptionOpenAiTimeoutMs(),
+      ).toBe(70_000)
+
+      process.env.OPENAI_VISUAL_CAPTION_TIMEOUT_MS = '5000'
+      expect(
+        __testGeneratePracticeFromUrl.getVisualCaptionOpenAiTimeoutMs(),
+      ).toBeNull()
+    } finally {
+      if (previous === undefined) {
+        delete process.env.OPENAI_VISUAL_CAPTION_TIMEOUT_MS
+      } else {
+        process.env.OPENAI_VISUAL_CAPTION_TIMEOUT_MS = previous
+      }
+    }
+  })
+
+  it('allows deadline finalizer to waive only soft issues', () => {
+    const finalized =
+      __testGeneratePracticeFromUrl.finalizeQualityReportForDeadline({
+        analysisDepth: buildMinimalEvidenceReport(),
+        checkedAt: '2026-06-10T00:00:00.000Z',
+        groundingPassed: false,
+        issues: [
+          {
+            code: 'ungrounded_action',
+            message: 'RAG 직접 근거가 없습니다.',
+            severity: 'blocker',
+          },
+          {
+            code: 'mixed_topic_segment',
+            message: '한 장면 안에 여러 판단 주제가 섞였을 수 있습니다.',
+            severity: 'warning',
+          },
+        ],
+        passed: false,
+        qualityContractVersion: generatedQualityContractVersion,
+        repairAttemptCount: 1,
+        score: 50,
+        sourceCoveragePassed: true,
+        sourceTopicCount: 2,
+        uiPlaybackPassed: true,
+        version: 'url_generation_lrs_v1',
+      })
+
+    expect(finalized.deadlineFinalized).toBe(true)
+    expect(finalized.passed).toBe(true)
+    expect(finalized.waivedSoftIssues).toHaveLength(2)
+  })
+
+  it('force-publishes non-waivable deadline issues after recording them', () => {
+    const finalized =
+      __testGeneratePracticeFromUrl.finalizeQualityReportForDeadline({
+        analysisDepth: buildMinimalEvidenceReport(),
+        checkedAt: '2026-06-10T00:00:00.000Z',
+        groundingPassed: true,
+        issues: [
+          {
+            code: 'source_keyword_erased',
+            message: '영상 핵심 단어가 사라졌습니다.',
+            severity: 'blocker',
+          },
+        ],
+        passed: false,
+        qualityContractVersion: generatedQualityContractVersion,
+        repairAttemptCount: 1,
+        score: 75,
+        sourceCoveragePassed: false,
+        sourceTopicCount: 1,
+        uiPlaybackPassed: true,
+        version: 'url_generation_lrs_v1',
+      })
+
+    expect(finalized.deadlineFinalized).toBe(true)
+    expect(finalized.forcedPublished).toBe(true)
+    expect(finalized.passed).toBe(true)
+    expect(finalized.issues).toHaveLength(0)
+    expect(finalized.waivedHardIssues).toHaveLength(1)
+  })
+
+  it('anchors the first learning card sentence onset to the preceding scene cut', () => {
+    const visualCaptionEvidence = {
+      boundaries: [
+        {
+          afterCaption:
+            '침수도로 / 지하차도 / 교량, 하천 / 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+          beforeCaption: '다행이와 함께하는 태풍, 호우 국민행동요령',
+          changeType: 'new_topic' as const,
+          confidence: 0.95,
+          reason: 'OCR caption changed from intro title to first learning topic.',
+          recommendedBoundaryMs: 6000,
+          timeMs: 6000,
+        },
+      ],
+      frames: [
+        {
+          confidence: 0.98,
+          hasLearningCaption: true,
+          index: 0,
+          normalizedCaption: '다행이와 함께하는 태풍, 호우 국민행동요령',
+          tsMs: 3350,
+          visibleCaption: '다행이와 함께하는 태풍, 호우 국민행동요령',
+        },
+        {
+          confidence: 0.95,
+          hasLearningCaption: true,
+          index: 1,
+          normalizedCaption:
+            '침수도로, 지하차도, 교량·하천 등 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+          tsMs: 6000,
+          visibleCaption:
+            '침수도로 / 지하차도 / 교량, 하천 / 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+        },
+      ],
+      warnings: [],
+    }
+
+    const aligned =
+      __testGeneratePracticeFromUrl.alignLearningCardOnsetBoundaries(
+        {
+          sceneCutCandidatesMs: [3570, 5540, 8210],
+          videoDurationMs: 43_000,
+          visualCaptionEvidence,
+        },
+      )
+    const firstBoundary = aligned.boundaries[0]
+
+    expect(firstBoundary.recommendedBoundaryMs).toBe(5540)
+    expect(firstBoundary.reason).toContain('학습카드 문장 시작')
+    expect(firstBoundary.reason).toContain('실제 장면 전환 컷')
+
+    const cues = __testGeneratePracticeFromUrl.prepareEvidenceCues(
+      [
+        {
+          endMs: 7540,
+          startMs: 0,
+          text: '다행이와 함께하는 태풍, 호우 국민행동요령 침수도로, 지하차도, 교량, 하천 등 급류에 휩쓸릴 수 있는 지역은 접근하면 안 돼요.',
+        },
+      ],
+      aligned.boundaries.map((boundary) => boundary.recommendedBoundaryMs),
+      [3570, 5540, 8210],
+      {
+        durationMs: 43_000,
+        visualCaptionEvidence: aligned,
+      },
+    )
+
+    expect(cues[0]?.startMs).toBe(0)
+    expect(cues[0]?.endMs).toBe(5540)
+    expect(cues[1]?.startMs).toBe(5540)
+  })
+
+  it('infers the first learning card onset from OCR frames when the model omits that boundary', () => {
+    const visualCaptionEvidence = {
+      boundaries: [
+        {
+          afterCaption: '침수도로 지하차도 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+          beforeCaption: '침수도로 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+          changeType: 'new_topic' as const,
+          confidence: 0.97,
+          reason: 'Model only detected a later within-card caption refinement.',
+          recommendedBoundaryMs: 7540,
+          timeMs: 5220,
+        },
+      ],
+      frames: [
+        {
+          confidence: 0.96,
+          hasLearningCaption: true,
+          index: 0,
+          normalizedCaption: '다행이와 함께하는 태풍, 호우 국민행동요령',
+          tsMs: 1000,
+          visibleCaption: '다행이와 함께하는 태풍, 호우 국민행동요령',
+        },
+        {
+          confidence: 0.97,
+          hasLearningCaption: true,
+          index: 1,
+          normalizedCaption: '침수도로 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+          tsMs: 4220,
+          visibleCaption: '침수도로 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+        },
+        {
+          confidence: 0.97,
+          hasLearningCaption: true,
+          index: 2,
+          normalizedCaption:
+            '침수도로 지하차도 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+          tsMs: 5220,
+          visibleCaption:
+            '침수도로 지하차도 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+        },
+      ],
+      warnings: [],
+    }
+
+    const aligned =
+      __testGeneratePracticeFromUrl.alignLearningCardOnsetBoundaries({
+        sceneCutCandidatesMs: [3570, 5540, 8210],
+        videoDurationMs: 43_000,
+        visualCaptionEvidence,
+      })
+    const firstBoundary = aligned.boundaries[0]
+
+    expect(firstBoundary.beforeCaption).toContain('국민행동요령')
+    expect(firstBoundary.afterCaption).toContain('침수도로')
+    expect(firstBoundary.recommendedBoundaryMs).toBe(3570)
+
+    const cues = __testGeneratePracticeFromUrl.prepareEvidenceCues(
+      [
+        {
+          endMs: 7540,
+          startMs: 0,
+          text: '다행이와 함께하는 태풍, 호우 국민행동요령 침수도로, 지하차도, 교량, 하천 등 급류에 휩쓸릴 수 있는 지역은 접근하면 안 돼요.',
+        },
+      ],
+      aligned.boundaries.map((boundary) => boundary.recommendedBoundaryMs),
+      [3570, 5540, 8210],
+      {
+        durationMs: 43_000,
+        visualCaptionEvidence: aligned,
+      },
+    )
+
+    expect(cues[0]?.endMs).toBe(3570)
+    expect(cues[1]?.startMs).toBe(3570)
+    expect(cues[1]?.text).toContain('침수도로')
+  })
+
+  it('uses the preceding scene cut when intro OCR is weak but the first learning card appears early', () => {
+    const aligned =
+      __testGeneratePracticeFromUrl.alignLearningCardOnsetBoundaries({
+        sceneCutCandidatesMs: [3570, 5540, 8210],
+        videoDurationMs: 43_000,
+        visualCaptionEvidence: {
+          boundaries: [],
+          frames: [
+            {
+              confidence: 0,
+              hasLearningCaption: false,
+              index: 0,
+              normalizedCaption: '다행 okie',
+              tsMs: 1000,
+              visibleCaption: '다행 okie',
+            },
+            {
+              confidence: 0.78,
+              hasLearningCaption: true,
+              index: 1,
+              normalizedCaption: '침수도로 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+              tsMs: 4220,
+              visibleCaption: '침수도로 급류에 휩쓸릴 수 있는 지역은 접근 금지',
+            },
+          ],
+          warnings: [],
+        },
+      })
+
+    expect(aligned.boundaries).toHaveLength(1)
+    expect(aligned.boundaries[0]?.beforeCaption).toContain('다행')
+    expect(aligned.boundaries[0]?.afterCaption).toContain('침수도로')
+    expect(aligned.boundaries[0]?.recommendedBoundaryMs).toBe(3570)
+  })
+
   it('splits short caption-heavy disaster videos by learning topic', () => {
     const cues = __testGeneratePracticeFromUrl.parseVtt(stormSafetyVtt)
     const hazard = __testGeneratePracticeFromUrl.detectHazard(
@@ -328,6 +639,7 @@ describe('URL practice generation quality gate', () => {
     expect(report.issues).toEqual([])
     expect(report.passed).toBe(true)
     expect(report.score).toBe(100)
+    expect(report.qualityContractVersion).toBe(generatedQualityContractVersion)
     expect(report.analysisDepth.segmentationEvidence).toContain('audio-asr')
     expect(report.analysisDepth.frameBoundaryPrecisionMs).toBe(10)
   })
@@ -384,7 +696,7 @@ describe('URL practice generation quality gate', () => {
 
     expect(scenario.generatedTopicLabel).toBe('태풍 영상 학습')
     expect(scenario.segments.map((segment) => segment.learnerPrompt)).toEqual([
-      '태풍 안전수칙을 배워요.',
+      '펭수와 함께하는 국민행동요령',
       '태풍 소식을 확인하고 있어요.',
       '태풍이 가까이 오고 있어요.',
       '집 안에 있어요.',
@@ -406,9 +718,9 @@ describe('URL practice generation quality gate', () => {
     const actionSegments = scenario.segments.filter(
       (segment) => segment.practiceMode === 'action',
     )
-    expect(actionSegments.map((segment) => segment.checkQuestion)).not.toContain(
-      '무엇을 기억할까요?',
-    )
+    expect(
+      actionSegments.map((segment) => segment.checkQuestion),
+    ).not.toContain('무엇을 기억할까요?')
     expect(
       actionSegments.flatMap((segment) =>
         segment.answerOptions.map((option) => option.label),
@@ -546,11 +858,12 @@ describe('URL practice generation quality gate', () => {
       videoSrc: '/generated/generated-test-source-evidence-fallback/source.mp4',
     })
     const segment = scenario.segments[0]!
-    const report = __testGeneratePracticeFromUrl.validateGeneratedScenarioForPublish(
-      scenario,
-      cues,
-      evidenceReport,
-    )
+    const report =
+      __testGeneratePracticeFromUrl.validateGeneratedScenarioForPublish(
+        scenario,
+        cues,
+        evidenceReport,
+      )
 
     expect(segment.practiceMode).toBe('action')
     expect(segment.segment.officialRuleIds).toEqual([
@@ -576,7 +889,7 @@ describe('URL practice generation quality gate', () => {
     const target = scenario.segments.find(
       (segment) => segment.practiceMode === 'action',
     )!
-    target.requiredLearnerKeywords = ['우비']
+    target.requiredLearnerKeywords = ['문과 창문']
 
     const failedReport =
       __testGeneratePracticeFromUrl.validateGeneratedScenarioForPublish(
@@ -645,6 +958,66 @@ describe('URL practice generation quality gate', () => {
 
     expect(report.passed).toBe(false)
     expect(report.issues.map((issue) => issue.code)).toContain(
+      'low_quality_teach_back',
+    )
+    expect(report.issues.map((issue) => issue.code)).toContain('generic_quiz')
+  })
+
+  it('repairs generic teach-back questions with deterministic action prompts', () => {
+    const cues = __testGeneratePracticeFromUrl.parseVtt(typhoonPreparednessVtt)
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('태풍')
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      hazard,
+      jobId: 'generated-test-low-quality-teach-back-repair',
+      sourceTitle: '태풍 대비법',
+      sourceUrl: 'https://www.youtube.com/watch?v=oWu95ZitpTI',
+      videoSrc:
+        '/generated/generated-test-low-quality-teach-back-repair/source.mp4',
+    })
+    const target = scenario.segments.find(
+      (segment) => segment.practiceMode === 'action',
+    )!
+    target.checkQuestion = '무엇이 중요할까요?'
+    target.answerOptions = [
+      {
+        ...target.answerOptions[0]!,
+        correct: true,
+        label: '안전',
+      },
+      {
+        ...target.answerOptions[1]!,
+        correct: false,
+        label: '태풍',
+      },
+    ]
+
+    const failedReport =
+      __testGeneratePracticeFromUrl.validateGeneratedScenarioForPublish(
+        scenario,
+        cues,
+        scenario.generationEvidenceReport,
+      )
+    const repaired = __testGeneratePracticeFromUrl.repairScenarioForQuality({
+      hazard,
+      jobId: 'generated-test-low-quality-teach-back-repair',
+      report: failedReport,
+      scenario,
+      sourceTitle: '태풍 대비법',
+      sourceUrl: 'https://www.youtube.com/watch?v=oWu95ZitpTI',
+    })
+    const repairedReport =
+      __testGeneratePracticeFromUrl.validateGeneratedScenarioForPublish(
+        repaired.scenario,
+        cues,
+        repaired.scenario.generationEvidenceReport,
+      )
+
+    expect(repaired.changed).toBe(true)
+    expect(repairedReport.issues.map((issue) => issue.code)).not.toContain(
+      'generic_quiz',
+    )
+    expect(repairedReport.issues.map((issue) => issue.code)).not.toContain(
       'low_quality_teach_back',
     )
   })
@@ -774,7 +1147,8 @@ describe('URL practice generation quality gate', () => {
       jobId: 'generated-test-mixed-action-topic-repair',
       sourceTitle: '태풍 대비법',
       sourceUrl: 'https://www.youtube.com/watch?v=oWu95ZitpTI',
-      videoSrc: '/generated/generated-test-mixed-action-topic-repair/source.mp4',
+      videoSrc:
+        '/generated/generated-test-mixed-action-topic-repair/source.mp4',
     })
     const drainIndex = scenario.segments.findIndex((segment) =>
       segment.sourceTopicKeys?.includes('home_drain'),
@@ -1016,12 +1390,14 @@ describe('URL practice generation quality gate', () => {
     expect(evacuationSegment.checkQuestion).toBe('어디로 갈까요?')
     expect(evacuationCorrectOption?.label).toBe('안전한 곳')
     expect(evacuationSegment.learnerPrompt).toBe('비가 갑자기 많이 와요.')
-    expect(evacuationSegment.actionSteps).not.toEqual(outdoorSegment.actionSteps)
+    expect(evacuationSegment.actionSteps).not.toEqual(
+      outdoorSegment.actionSteps,
+    )
     expect(report.passed).toBe(true)
 
     const hiddenKeywordScenario = structuredClone(scenario)
-    const hiddenOutdoorSegment = hiddenKeywordScenario.segments.find((segment) =>
-      segment.sourceTopicKeys?.includes('outdoor_activity'),
+    const hiddenOutdoorSegment = hiddenKeywordScenario.segments.find(
+      (segment) => segment.sourceTopicKeys?.includes('outdoor_activity'),
     )!
     hiddenOutdoorSegment.learnerExplanation = '안전한 실내에 있어요'
     hiddenOutdoorSegment.label = '안전한 실내에 있어요'
@@ -1070,6 +1446,9 @@ describe('URL practice generation quality gate', () => {
     expect(hiddenKeywordReport.issues.map((issue) => issue.code)).toContain(
       'missing_required_keyword_in_ui',
     )
+    expect(hiddenKeywordReport.issues.map((issue) => issue.code)).toContain(
+      'source_keyword_erased',
+    )
   })
 
   it('keeps continuation narration together even when the safety topic changes', () => {
@@ -1116,7 +1495,8 @@ describe('URL practice generation quality gate', () => {
       jobId: 'generated-test-keep-continuation-sentence',
       sourceTitle: '호우 태풍 행동요령',
       sourceUrl: 'https://www.youtube.com/watch?v=IiVsojHcoEo',
-      videoSrc: '/generated/generated-test-keep-continuation-sentence/source.mp4',
+      videoSrc:
+        '/generated/generated-test-keep-continuation-sentence/source.mp4',
     })
     const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
       scenario,
@@ -1176,9 +1556,9 @@ describe('URL practice generation quality gate', () => {
         '체감온도 33도 이상의 기온이 이틀 이상 지속되면 폭염주의보 35도 이상이면 폭염경보',
       ),
     ).toBe('heatwave_cool')
-    expect(
-      __testGeneratePracticeFromUrl.topicKeyForCueText('폭염경보'),
-    ).toBe('heatwave_cool')
+    expect(__testGeneratePracticeFromUrl.topicKeyForCueText('폭염경보')).toBe(
+      'heatwave_cool',
+    )
   })
 
   it('keeps typhoon water-area guidance from borrowing vehicle quizzes', () => {
@@ -1202,7 +1582,8 @@ describe('URL practice generation quality gate', () => {
               timeMs: 41_000,
             },
             {
-              afterCaption: '개울가, 하천 변, 해안가 등 침수 위험지역은 가지 않기',
+              afterCaption:
+                '개울가, 하천 변, 해안가 등 침수 위험지역은 가지 않기',
               beforeCaption: '산사태 위험지역은 안전한 곳으로 대피',
               changeType: 'new_topic',
               confidence: 0.96,
@@ -1258,13 +1639,13 @@ describe('URL practice generation quality gate', () => {
     )
 
     expect(report.passed).toBe(true)
-    expect(scenario.segments.map((segment) => segment.checkQuestion)).not.toContain(
-      '차를 어디에서 옮길까요?',
-    )
+    expect(
+      scenario.segments.map((segment) => segment.checkQuestion),
+    ).not.toContain('차를 어디에서 옮길까요?')
     expect(waterSegment?.checkQuestion).toBe('어디에 가지 말아야 할까요?')
-    expect(waterSegment?.answerOptions.find((option) => option.correct)?.label).toBe(
-      '개울가, 하천 변, 해안가',
-    )
+    expect(
+      waterSegment?.answerOptions.find((option) => option.correct)?.label,
+    ).toBe('개울가, 하천 변, 해안가')
     expect(constructionActionSegments).toHaveLength(1)
     expect(constructionActionSegments[0]?.checkQuestion).toBe(
       '어디에 가지 말아야 할까요?',
@@ -1288,9 +1669,7 @@ describe('URL practice generation quality gate', () => {
     )
     expect(
       preparedCues.some(
-        (cue) =>
-          cue.text === '피하고' ||
-          cue.endMs - cue.startMs < 1_200,
+        (cue) => cue.text === '피하고' || cue.endMs - cue.startMs < 1_200,
       ),
     ).toBe(false)
   })
@@ -1345,8 +1724,7 @@ describe('URL practice generation quality gate', () => {
             confidence: 0.97,
             hasLearningCaption: true,
             index: 0,
-            normalizedCaption:
-              '다행이 와 함께하는 / 태풍, 호우 국민행동요령',
+            normalizedCaption: '다행이 와 함께하는 / 태풍, 호우 국민행동요령',
             tsMs: 250,
             visibleCaption: '다행이 와 함께하는 태풍, 호우 국민행동요령',
           },
@@ -1363,10 +1741,9 @@ describe('URL practice generation quality gate', () => {
         ],
         rawCues,
       })
-    const cues = __testGeneratePracticeFromUrl.prepareEvidenceCues(
-      rawCues,
-      [boundaries[0]!.recommendedBoundaryMs],
-    )
+    const cues = __testGeneratePracticeFromUrl.prepareEvidenceCues(rawCues, [
+      boundaries[0]!.recommendedBoundaryMs,
+    ])
 
     expect(boundaries[0]?.recommendedBoundaryMs).toBe(6_000)
     expect(cues.map((cue) => [cue.startMs, cue.endMs])).toEqual([
@@ -1374,6 +1751,195 @@ describe('URL practice generation quality gate', () => {
       [6_000, 7_540],
       [7_540, 10_940],
     ])
+  })
+
+  it('promotes strong OCR captions to evidence cues when ASR collapses into one weak full-video cue', () => {
+    const rawCues = [
+      {
+        endMs: 20_020,
+        startMs: 0,
+        text: '시청해주셔서 감사합니다!',
+      },
+    ]
+    const visualCaptionEvidence = {
+      boundaries: [
+        {
+          afterCaption: '산림 근처 소각 행위 금지',
+          beforeCaption: '다행이와 함께하는 산불 국민행동요령',
+          changeType: 'new_topic' as const,
+          confidence: 0.99,
+          reason: '화면 자막이 산불 인트로에서 소각 금지로 바뀜',
+          recommendedBoundaryMs: 3_250,
+          timeMs: 3_250,
+        },
+        {
+          afterCaption: '화목보일러 사용 후 불씨 확인',
+          beforeCaption: '산림 근처 소각 행위 금지',
+          changeType: 'new_topic' as const,
+          confidence: 0.99,
+          reason: '화면 자막이 소각 금지에서 불씨 확인으로 바뀜',
+          recommendedBoundaryMs: 5_790,
+          timeMs: 5_790,
+        },
+        {
+          afterCaption: '산에서는 라이터, 담배 절대 금지',
+          beforeCaption: '화목보일러 사용 후 불씨 확인',
+          changeType: 'new_topic' as const,
+          confidence: 0.99,
+          reason: '화면 자막이 불씨 확인에서 라이터 금지로 바뀜',
+          recommendedBoundaryMs: 7_950,
+          timeMs: 7_950,
+        },
+        {
+          afterCaption: '산불 발생! 대피 안내 확인! 주변에 즉시 알림',
+          beforeCaption: '산에서는 라이터, 담배 절대 금지',
+          changeType: 'new_topic' as const,
+          confidence: 0.99,
+          reason: '화면 자막이 예방에서 대피 안내로 바뀜',
+          recommendedBoundaryMs: 10_010,
+          timeMs: 10_010,
+        },
+        {
+          afterCaption: '산과 떨어진 도로로 대피',
+          beforeCaption: '산불 발생! 대피 안내 확인! 주변에 즉시 알림',
+          changeType: 'new_topic' as const,
+          confidence: 0.99,
+          reason: '화면 자막이 대피 안내에서 대피 경로로 바뀜',
+          recommendedBoundaryMs: 11_000,
+          timeMs: 11_000,
+        },
+        {
+          afterCaption: '대피 불가 시 낙엽 제거 · 엎드려 보호',
+          beforeCaption: '산과 떨어진 도로로 대피',
+          changeType: 'new_topic' as const,
+          confidence: 0.99,
+          reason: '화면 자막이 대피에서 보호 행동으로 바뀜',
+          recommendedBoundaryMs: 16_000,
+          timeMs: 16_000,
+        },
+      ],
+      frames: [
+        {
+          confidence: 0.99,
+          hasLearningCaption: true,
+          index: 0,
+          normalizedCaption: '다행이와 함께하는 산불 국민행동요령',
+          tsMs: 250,
+          visibleCaption: '다행이와 함께하는 산불 국민행동요령',
+        },
+        {
+          confidence: 0.99,
+          hasLearningCaption: true,
+          index: 1,
+          normalizedCaption: '산림 근처 소각 행위 금지',
+          tsMs: 3_250,
+          visibleCaption: '산림 근처 소각 행위 금지',
+        },
+        {
+          confidence: 0.99,
+          hasLearningCaption: true,
+          index: 2,
+          normalizedCaption: '화목보일러 사용 후 불씨 확인',
+          tsMs: 5_790,
+          visibleCaption: '화목보일러 사용 후 불씨 확인',
+        },
+        {
+          confidence: 0.99,
+          hasLearningCaption: true,
+          index: 3,
+          normalizedCaption: '산에서는 라이터, 담배 절대 금지',
+          tsMs: 7_950,
+          visibleCaption: '산에서는 라이터, 담배 절대 금지',
+        },
+        {
+          confidence: 0.99,
+          hasLearningCaption: true,
+          index: 4,
+          normalizedCaption: '산불 발생! 대피 안내 확인! 주변에 즉시 알림',
+          tsMs: 10_010,
+          visibleCaption: '산불 발생! 대피 안내 확인! 주변에 즉시 알림',
+        },
+        {
+          confidence: 0.99,
+          hasLearningCaption: true,
+          index: 5,
+          normalizedCaption: '산과 떨어진 도로로 대피',
+          tsMs: 11_000,
+          visibleCaption: '산과 떨어진 도로로 대피',
+        },
+        {
+          confidence: 0.99,
+          hasLearningCaption: true,
+          index: 6,
+          normalizedCaption: '대피 불가 시 낙엽 제거 · 엎드려 보호',
+          tsMs: 16_000,
+          visibleCaption: '대피 불가 시 낙엽 제거 · 엎드려 보호',
+        },
+      ],
+      warnings: [],
+    }
+
+    const preparedCues = __testGeneratePracticeFromUrl.prepareEvidenceCues(
+      rawCues,
+      visualCaptionEvidence.boundaries.map(
+        (boundary) => boundary.recommendedBoundaryMs,
+      ),
+      [],
+      {
+        durationMs: 20_020,
+        visualCaptionEvidence,
+      },
+    )
+
+    expect(preparedCues.map((cue) => [cue.startMs, cue.endMs])).toEqual([
+      [0, 3_250],
+      [3_250, 5_790],
+      [5_790, 7_950],
+      [7_950, 10_010],
+      [10_010, 11_000],
+      [11_000, 16_000],
+      [16_000, 20_020],
+    ])
+    expect(preparedCues.map((cue) => cue.text)).toEqual([
+      '다행이와 함께하는 산불 국민행동요령',
+      '산림 근처 소각 행위 금지',
+      '화목보일러 사용 후 불씨 확인',
+      '산에서는 라이터, 담배 절대 금지',
+      '산불 발생! 대피 안내 확인! 주변에 즉시 알림',
+      '산과 떨어진 도로로 대피',
+      '대피 불가 시 낙엽 제거 · 엎드려 보호',
+    ])
+
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('산불')
+    const evidenceReport =
+      __testGeneratePracticeFromUrl.buildGenerationEvidenceReport({
+        cues: preparedCues,
+        rawCues,
+        sceneCutCandidatesMs: [],
+        videoProbe: { durationMs: 20_020, frameRate: null },
+        visualCaptionEvidence,
+      })
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues: preparedCues,
+      evidenceReport,
+      hazard,
+      jobId: 'generated-test-wildfire-ocr-intro',
+      sourceTitle: '산불 국민행동요령',
+      sourceUrl: 'https://www.youtube.com/watch?v=OvgNos5QS5U',
+      videoSrc: '/generated/generated-test-wildfire-ocr-intro/source.mp4',
+    })
+    const introSegment = scenario.segments[0]!
+    const firstActionSegment = scenario.segments[1]!
+
+    expect(introSegment.practiceMode).toBe('intro')
+    expect(introSegment.learnerExplanation).toBe(
+      '다행이와 함께하는 산불 국민행동요령',
+    )
+    expect(introSegment.learnerPrompt).toBe(
+      '다행이와 함께하는 산불 국민행동요령',
+    )
+    expect(firstActionSegment.practiceMode).toBe('action')
+    expect(firstActionSegment.sourceTopicKeys).toContain('wildfire_burn_ban')
   })
 
   it('keeps intro title separate from the first learning topic when OCR times out', () => {
@@ -1424,7 +1990,9 @@ describe('URL practice generation quality gate', () => {
     expect(introSegment.teacherGuide.script).not.toMatch(/침수도로|하천/u)
     expect(firstActionSegment.startMs).toBe(5_880)
     expect(firstActionSegment.sourceTopicKeys).toContain('water_area_avoid')
-    expect(firstActionSegment.teacherGuide.script).toMatch(/침수도로|하천|급류/u)
+    expect(firstActionSegment.teacherGuide.script).toMatch(
+      /침수도로|하천|급류/u,
+    )
   })
 
   it('aligns OCR-timeout intro fallback to a nearby scene cut instead of a fixed ratio', () => {
@@ -1541,7 +2109,8 @@ describe('URL practice generation quality gate', () => {
       jobId: 'generated-test-same-topic-water-boundary',
       sourceTitle: '호우 태풍 행동요령',
       sourceUrl: 'https://www.youtube.com/watch?v=hsgJ7ZnqVDc',
-      videoSrc: '/generated/generated-test-same-topic-water-boundary/source.mp4',
+      videoSrc:
+        '/generated/generated-test-same-topic-water-boundary/source.mp4',
     })
     const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
       scenario,
@@ -1559,9 +2128,9 @@ describe('URL practice generation quality gate', () => {
     expect(waterSegments[0]?.actionSteps).toEqual([
       '침수도로, 지하차도, 교량, 하천에서 멀어져요',
     ])
-    expect(waterSegments[0]?.answerOptions.find((option) => option.correct)?.label).toBe(
-      '침수도로, 지하차도, 교량',
-    )
+    expect(
+      waterSegments[0]?.answerOptions.find((option) => option.correct)?.label,
+    ).toBe('침수도로, 지하차도, 교량')
     expect(waterSegments[0]?.teacherGuide.script).toMatch(/침수도로|급류/u)
     expect(report.passed).toBe(true)
   })
@@ -1731,8 +2300,7 @@ describe('URL practice generation quality gate', () => {
     expect(
       scenario.segments.some((segment) =>
         segment.narration.some(
-          (cue) =>
-            cue.text.endsWith('휴식을') || cue.text.startsWith('취하고'),
+          (cue) => cue.text.endsWith('휴식을') || cue.text.startsWith('취하고'),
         ),
       ),
     ).toBe(false)
@@ -1838,6 +2406,120 @@ describe('URL practice generation quality gate', () => {
     ).toContain(62_820)
   })
 
+  it('does not promote noisy local OCR fallback captions into forced split boundaries', () => {
+    const rawCues = [
+      {
+        endMs: 13_000,
+        startMs: 9_000,
+        text: '폭우가 예상되면 날씨 소식을 자주 듣고 가족과 수시로 연락해 주세요.',
+      },
+      {
+        endMs: 23_000,
+        startMs: 20_000,
+        text: '대피소 그리고 대피소 가는 길은 폭우가 발생하기 전',
+      },
+      {
+        endMs: 29_000,
+        startMs: 23_000,
+        text: '미리 알아두고 미리 주변 이웃과 함께 마을회관과 같은 안전한 곳으로 대피하는 것도 좋아요.',
+      },
+      {
+        endMs: 35_000,
+        startMs: 29_000,
+        text: '폭우 발생 시 마을 방송 또는 공무원의 대피 요청이 있으면 신속히 주변 대피소로 이동하세요.',
+      },
+      {
+        endMs: 40_000,
+        startMs: 36_000,
+        text: '하천 주변, 산길 또는 배수로 같은 위험 장소는 절대 접근금지!',
+      },
+    ]
+    const stabilized =
+      __testGeneratePracticeFromUrl.stabilizeVisualCaptionEvidence({
+        durationMs: 48_982,
+        rawCues,
+        visualCaptionEvidence: {
+          boundaries: [],
+          frames: [
+            {
+              confidence: 0.78,
+              hasLearningCaption: true,
+              index: 0,
+              normalizedCaption:
+                '달씨 소식을 자주 듣고 가족과 수시로 연락하기',
+              tsMs: 13_000,
+              visibleCaption:
+                '달씨 소식을 자주 듣고 가족과 수시로 연락하기',
+            },
+            {
+              confidence: 0.78,
+              hasLearningCaption: true,
+              index: 1,
+              normalizedCaption:
+                '안전한 0723 갈미경로당 대피소입니다 안전한 미경',
+              tsMs: 21_000,
+              visibleCaption:
+                '안전한 0723 갈미경로당 대피소입니다 안전한 미경',
+            },
+            {
+              confidence: 0.78,
+              hasLearningCaption: true,
+              index: 2,
+              normalizedCaption: '안전한 Os 4 ORS 각종 재난에 13 안전한 갈미',
+              tsMs: 23_500,
+              visibleCaption: '안전한 Os 4 ORS 각종 재난에 13 안전한 갈미',
+            },
+            {
+              confidence: 0.78,
+              hasLearningCaption: true,
+              index: 3,
+              normalizedCaption:
+                'Peas WN 으느 마을 방송 또는 2520 8 들 내피 요정이 있으면 신속히 이동 그발생 마을 방송 또는 공무원 의 요청 AOA 신속히 OS',
+              tsMs: 30_000,
+              visibleCaption:
+                'Peas WN 으느 마을 방송 또는 2520 8 들 내피 요정이 있으면 신속히 이동 그발생 마을 방송 또는 공무원 의 요청 AOA 신속히 OS',
+            },
+            {
+              confidence: 0.78,
+              hasLearningCaption: true,
+              index: 4,
+              normalizedCaption:
+                '마천 주변 산길 배수로 위염 장소 절대 접근 금지 4 우마',
+              tsMs: 36_750,
+              visibleCaption:
+                '마천 주변 산길 배수로 위염 장소 절대 접근 금지 4 우마',
+            },
+          ],
+          warnings: [
+            '화면 자막 LVLM 분석을 완료하지 못해 로컬 OCR로 대체했습니다: 화면 자막 LVLM 분석 시간이 너무 오래 걸렸습니다.',
+          ],
+        },
+      })
+    const reliableBoundaries = stabilized.boundaries
+      .filter(__testGeneratePracticeFromUrl.isReliableVisualCaptionBoundary)
+      .map((boundary) => boundary.recommendedBoundaryMs)
+    const aligned =
+      __testGeneratePracticeFromUrl.alignLearningCardOnsetBoundaries({
+        sceneCutCandidatesMs: [],
+        videoDurationMs: 48_982,
+        visualCaptionEvidence: stabilized,
+      })
+    const mapShelterFrame = stabilized.frames.find((frame) =>
+      frame.normalizedCaption.includes('갈미경로당'),
+    )
+
+    expect(mapShelterFrame?.confidence).toBeLessThan(0.65)
+    expect(reliableBoundaries).not.toEqual(
+      expect.arrayContaining([20_000, 21_000, 23_000]),
+    )
+    expect(aligned.boundaries).toHaveLength(0)
+    expect(
+      stabilized.frames.find((frame) =>
+        frame.normalizedCaption.includes('산길 배수로'),
+      )?.confidence,
+    ).toBeGreaterThanOrEqual(0.65)
+  })
+
   it('uses concrete mountain place quiz instead of generic movement quiz', () => {
     expect(
       __testGeneratePracticeFromUrl.optionForAction(
@@ -1848,6 +2530,53 @@ describe('URL practice generation quality gate', () => {
       label: '산, 계곡, 비탈면',
       prompt: '어디에 가지 말아야 할까요?',
     })
+  })
+
+  it('keeps fire evacuation topics from leaking into earthquake or wildfire topics', () => {
+    const topicFor = __testGeneratePracticeFromUrl.topicKeyForCueText
+
+    expect(
+      topicFor('계단을 이용해 낮은 자세로 지상층, 옥상 등 안전한 장소로 대피해요'),
+    ).toBe('fire_smoke')
+    expect(
+      topicFor('대피 시 출입문은 반드시 닫고 엘리베이터를 타지 않아요'),
+    ).toBe('fire_stairs')
+    expect(
+      topicFor('화재 시 피난 행동 요령을 익히고 우리 모두 안전하게 대피해요'),
+    ).toBe('outro_review')
+    expect(topicFor('산불 대피가 어려우면 낮은 자세로 몸을 보호해요')).toBe(
+      'wildfire_ground_protect',
+    )
+  })
+
+  it('keeps fire refuge continuation sentences in one segment', () => {
+    const cues = [
+      {
+        endMs: 41_000,
+        startMs: 37_900,
+        text: '대피 공간, 경량 칸막이, 하향식 피난고 등이',
+      },
+      {
+        endMs: 43_500,
+        startMs: 41_000,
+        text: '설치된 곳으로 이동하여 대피해요',
+      },
+    ]
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('화재')
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      hazard,
+      jobId: 'generated-test-fire-refuge-continuation',
+      sourceTitle: '화재 피난 행동요령',
+      sourceUrl: 'https://www.youtube.com/watch?v=zDojwE75E6I',
+      videoSrc: '/generated/generated-test-fire-refuge-continuation/source.mp4',
+    })
+
+    expect(scenario.segments).toHaveLength(1)
+    expect(scenario.segments[0]?.narration.map((cue) => cue.text)).toEqual([
+      '대피 공간, 경량 칸막이, 하향식 피난고 등이',
+      '설치된 곳으로 이동하여 대피해요',
+    ])
   })
 
   it('compiles generated action scenes into the same positive-card shape as the golden samples', () => {
@@ -1876,9 +2605,9 @@ describe('URL practice generation quality gate', () => {
         /않아요|않습니다|말아요|말고|피해요|금지|하지|만지지|무리해서/u,
       )
       expect(segment.checkQuestion).not.toMatch(/무엇이 중요|무엇을 기억/u)
-      expect(segment.answerOptions.filter((option) => option.correct)).toHaveLength(
-        1,
-      )
+      expect(
+        segment.answerOptions.filter((option) => option.correct),
+      ).toHaveLength(1)
     }
   })
 
@@ -1903,22 +2632,29 @@ describe('URL practice generation quality gate', () => {
     )
     const prompts = actionSegments.map((segment) => segment.checkQuestion)
     const correctLabels = actionSegments.map(
-      (segment) => segment.answerOptions.find((option) => option.correct)?.label,
+      (segment) =>
+        segment.answerOptions.find((option) => option.correct)?.label,
     )
 
     expect(hazard.label).toBe('화재')
-    expect(__testGeneratePracticeFromUrl.topicKeyForCueText('산림 근처 소각 행위 금지')).toBe(
-      'wildfire_burn_ban',
-    )
-    expect(__testGeneratePracticeFromUrl.topicKeyForCueText('화목보일러 사용 후 불씨 확인')).toBe(
-      'wildfire_ember_check',
-    )
-    expect(__testGeneratePracticeFromUrl.topicKeyForCueText('산에서는 라이터, 담배 절대 금지')).toBe(
-      'wildfire_lighter_ban',
-    )
-    expect(report.issues.filter((issue) => issue.severity === 'blocker')).toEqual(
-      [],
-    )
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '산림 근처 소각 행위 금지',
+      ),
+    ).toBe('wildfire_burn_ban')
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '화목보일러 사용 후 불씨 확인',
+      ),
+    ).toBe('wildfire_ember_check')
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '산에서는 라이터, 담배 절대 금지',
+      ),
+    ).toBe('wildfire_lighter_ban')
+    expect(
+      report.issues.filter((issue) => issue.severity === 'blocker'),
+    ).toEqual([])
     expect(report.passed).toBe(true)
     expect(report.issues.map((issue) => issue.code)).not.toContain(
       'low_quality_teach_back',
@@ -2043,8 +2779,10 @@ describe('URL practice generation quality gate', () => {
               timeMs: 32_650,
             },
             {
-              afterCaption: '폭염 대비 작전 ①: 폭염 발생 시 가급적 야외 활동 자제하기',
-              beforeCaption: '폭염 대비 작전 ①: TV, 라디오 등을 통해 기상 상황을 파악하기',
+              afterCaption:
+                '폭염 대비 작전 ①: 폭염 발생 시 가급적 야외 활동 자제하기',
+              beforeCaption:
+                '폭염 대비 작전 ①: TV, 라디오 등을 통해 기상 상황을 파악하기',
               changeType: 'new_topic',
               confidence: 0.93,
               reason: '기상 상황 확인에서 야외 활동 자제로 바뀝니다.',
@@ -2063,7 +2801,8 @@ describe('URL practice generation quality gate', () => {
       jobId: 'generated-test-heatwave-visual-boundaries',
       sourceTitle: '폭염 대비법',
       sourceUrl: 'https://www.youtube.com/watch?v=XtwfBT4uFzs',
-      videoSrc: '/generated/generated-test-heatwave-visual-boundaries/source.mp4',
+      videoSrc:
+        '/generated/generated-test-heatwave-visual-boundaries/source.mp4',
     })
     const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
       scenario,
@@ -2088,10 +2827,7 @@ describe('URL practice generation quality gate', () => {
         .filter((segment) => segment.practiceMode === 'action')
         .map((segment) => segment.checkQuestion),
     ).not.toEqual(
-      expect.arrayContaining([
-        '더울 때 무엇을 할까요?',
-        '먼저 어떻게 할까요?',
-      ]),
+      expect.arrayContaining(['더울 때 무엇을 할까요?', '먼저 어떻게 할까요?']),
     )
     expect(report.issues.map((issue) => issue.code)).not.toContain(
       'low_quality_teach_back',
@@ -2180,7 +2916,8 @@ describe('URL practice generation quality gate', () => {
                 '추락 / 휩쓸림 사고 예방을 위해 / 하수도, 맨홀 근처 등 접근 금지',
               changeType: 'new_topic',
               confidence: 0.95,
-              reason: '하수도·맨홀 접근 금지에서 유리창·간판 낙하물 위험으로 바뀝니다.',
+              reason:
+                '하수도·맨홀 접근 금지에서 유리창·간판 낙하물 위험으로 바뀝니다.',
               recommendedBoundaryMs: 33_000,
               timeMs: 33_250,
             },
@@ -2464,9 +3201,9 @@ describe('URL practice generation quality gate', () => {
     expect(riverCarSegment?.segment.officialRuleIds[0]).toBe(
       'SOURCE_EVIDENCE_HEAVY_RAIN',
     )
-    expect(riverCarSegment?.structuredExplanation.tracks.action?.cards[0]?.label).toBe(
-      '하천변 차량을 미리 옮겨요',
-    )
+    expect(
+      riverCarSegment?.structuredExplanation.tracks.action?.cards[0]?.label,
+    ).toBe('하천변 차량을 미리 옮겨요')
     expect(
       riverCarSegment?.answerOptions.find((option) => option.correct)?.label,
     ).toBe('하천변 차량')
@@ -2533,15 +3270,7 @@ describe('URL practice generation quality gate', () => {
       },
     ]
     const visualBoundaries = [
-      2_720,
-      6_720,
-      10_360,
-      13_160,
-      16_640,
-      24_440,
-      27_520,
-      32_480,
-      39_200,
+      2_720, 6_720, 10_360, 13_160, 16_640, 24_440, 27_520, 32_480, 39_200,
     ].map((boundaryMs) => ({
       afterCaption: 'after',
       beforeCaption: 'before',
@@ -2571,7 +3300,8 @@ describe('URL practice generation quality gate', () => {
       jobId: 'generated-test-heavy-snow-source-keywords',
       sourceTitle: '대설 국민행동요령',
       sourceUrl: 'https://www.youtube.com/watch?v=V2OrcdTwPH0',
-      videoSrc: '/generated/generated-test-heavy-snow-source-keywords/source.mp4',
+      videoSrc:
+        '/generated/generated-test-heavy-snow-source-keywords/source.mp4',
     })
     const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
       scenario,
@@ -2619,6 +3349,143 @@ describe('URL practice generation quality gate', () => {
     expect(report.passed).toBe(true)
   })
 
+  it('preserves concrete typhoon preparedness OCR and ASR keywords in deterministic fallback', () => {
+    const cues = [
+      {
+        endMs: 8_500,
+        startMs: 0,
+        text: '호우 태풍 이렇게 행동하세요. 비 내리기 전 물 보이지 않게 배수로를 점검해요.',
+      },
+      {
+        endMs: 14_380,
+        startMs: 8_580,
+        text: '침수 위험이 있는 곳에 수중 펌프 모래 주머니 등 수방 자제를 배치해요.',
+      },
+      {
+        endMs: 20_220,
+        startMs: 14_460,
+        text: '침수 위험이 있는 곳을 피해 차를 주차해요. 야외 활동은 자제예요.',
+      },
+      {
+        endMs: 25_980,
+        startMs: 20_300,
+        text: '위급시 바로 대피할 수 있게 먹는 약 보청기 지팡이 등을 챙겨놔요.',
+      },
+      {
+        endMs: 28_500,
+        startMs: 25_980,
+        text: '대피 속하는 길을 미리 알아봐요.',
+      },
+      {
+        endMs: 33_220,
+        startMs: 29_920,
+        text: '산 인근 주민은 산사태 위험이 있어요.',
+      },
+      {
+        endMs: 39_980,
+        startMs: 33_760,
+        text: '대피 요청이 있으면 신속하게 대피소로 대피해요. 대피소로 가는 길',
+      },
+      {
+        endMs: 43_740,
+        startMs: 40_140,
+        text: '산미탈 급경사지는 붕괴 위험이 있어요.',
+      },
+      {
+        endMs: 51_420,
+        startMs: 43_820,
+        text: '하천변 배수로 해안가 근처는 휩쓸릴 위험이 있어요. 지하공간은 침수 위험이 있어요.',
+      },
+      {
+        endMs: 56_080,
+        startMs: 51_420,
+        text: '호우 태풍 발생 시 다행이와 함께 안전하게 대피해요.',
+      },
+    ]
+    const hazard = __testGeneratePracticeFromUrl.detectHazard('호우 태풍')
+    const evidenceReport =
+      __testGeneratePracticeFromUrl.buildGenerationEvidenceReport({
+        cues,
+        rawCues: cues,
+        sceneCutCandidatesMs: [],
+        videoProbe: { durationMs: 56_080, frameRate: null },
+        visualCaptionEvidence: {
+          boundaries: [
+            8_500, 14_380, 20_220, 25_980, 28_500, 33_220, 39_980, 43_740,
+            51_420,
+          ].map((boundaryMs) => ({
+            afterCaption: 'after',
+            beforeCaption: 'before',
+            changeType: 'new_topic' as const,
+            confidence: 0.96,
+            reason: 'test boundary',
+            recommendedBoundaryMs: boundaryMs,
+            timeMs: boundaryMs,
+          })),
+          frames: [],
+          warnings: [],
+        },
+      })
+    const scenario = __testGeneratePracticeFromUrl.buildScenario({
+      cues,
+      evidenceReport,
+      hazard,
+      jobId: 'generated-test-typhoon-source-keywords',
+      sourceTitle: '호우 태풍 국민행동요령',
+      sourceUrl: 'https://www.youtube.com/watch?v=test-typhoon',
+      videoSrc: '/generated/generated-test-typhoon-source-keywords/source.mp4',
+    })
+    const report = __testGeneratePracticeFromUrl.auditGeneratedScenario(
+      scenario,
+      cues,
+      evidenceReport,
+    )
+    const uiText = scenario.segments
+      .flatMap((segment) => [
+        segment.description,
+        segment.label,
+        segment.learnerExplanation,
+        segment.learnerPrompt,
+        ...segment.learnerSequence.map((step) => step.text),
+        ...segment.actionSteps,
+        segment.structuredExplanation.tracks.doNot?.text ?? '',
+        segment.checkQuestion,
+        ...segment.answerOptions.map((option) => option.label),
+      ])
+      .join(' ')
+    const actionText = scenario.segments
+      .flatMap((segment) => segment.actionSteps)
+      .join(' ')
+
+    expect(report.passed).toBe(true)
+    expect(actionText).toContain('모래주머니와 수방자재를 미리 놓아요')
+    expect(actionText).toContain('침수 위험 장소를 피해 주차해요')
+    expect(actionText).toContain('야외 활동을 줄여요')
+    expect(actionText).toContain('비상 가방을 챙겨요')
+    expect(actionText).toContain('대피소 가는 길을 알아둬요')
+    expect(actionText).toContain('산사태 위험에서 멀어져요')
+    expect(actionText).toContain('대피 요청을 들으면 대피소로 가요')
+    expect(actionText).toContain('산비탈과 급경사지에서 멀어져요')
+    expect(actionText).toContain('하천변, 배수로, 해안가에서 멀어져요')
+    expect(actionText).toContain('지하공간과 침수도로에서 멀어져요')
+    expect(uiText).toContain('모래주머니')
+    expect(uiText).toContain('수방자재')
+    expect(uiText).toContain('야외 활동')
+    expect(uiText).toContain('비상 가방')
+    expect(uiText).toContain('대피소 가는 길')
+    expect(uiText).toContain('산사태')
+    expect(uiText).toContain('대피 요청')
+    expect(uiText).toContain('산비탈')
+    expect(uiText).toContain('급경사지')
+    expect(uiText).toContain('지하공간')
+    expect(uiText).toContain('침수도로')
+    expect(
+      scenario.segments.filter((segment) =>
+        segment.actionSteps.includes('안전한 곳으로 가요'),
+      ),
+    ).toHaveLength(0)
+  })
+
   it('aligns URL generation hazard support with shared seasonal hazards', () => {
     expect(
       __testGeneratePracticeFromUrl.detectHazard('폭염 온열질환').hazard,
@@ -2629,6 +3496,29 @@ describe('URL practice generation quality gate', () => {
     expect(__testGeneratePracticeFromUrl.detectHazard('대설 눈길').hazard).toBe(
       'heavy_snow',
     )
+  })
+
+  it('does not misclassify safety-tv titles or emergency items as weather/outro actions', () => {
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '안전한 TV가 알려주는 국민행동요령',
+      ),
+    ).toBe('intro_weather')
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '복용하고 있는 약, 보청기, 지팡이 등 평소 자주 쓰는 물건은 미리 챙겨주세요.',
+      ),
+    ).toBe('evacuate_to_safe_place')
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '안전수칙 또 챙겨주세요',
+      ),
+    ).toBe('outro_review')
+    expect(
+      __testGeneratePracticeFromUrl.topicKeyForCueText(
+        '하천 주변, 산길 또는 배수로 같은 위험 장소는 절대 접근금지!',
+      ),
+    ).toBe('water_area_avoid')
   })
 
   it('canonicalizes equivalent YouTube URLs to the same generated practice id', () => {
@@ -2647,5 +3537,41 @@ describe('URL practice generation quality gate', () => {
     expect(canonical.sourceUrl).toBe(
       'https://www.youtube.com/watch?v=V2OrcdTwPH0',
     )
+  })
+
+  it('keeps generated scenario file cache disabled unless explicitly re-enabled', () => {
+    const originalReuse = process.env.GENERATOR_REUSE_GENERATED_CACHE
+    const originalDisable = process.env.GENERATOR_DISABLE_CACHE
+
+    try {
+      delete process.env.GENERATOR_REUSE_GENERATED_CACHE
+      delete process.env.GENERATOR_DISABLE_CACHE
+
+      expect(__testGeneratePracticeFromUrl.shouldReuseGeneratedCache()).toBe(
+        false,
+      )
+
+      process.env.GENERATOR_REUSE_GENERATED_CACHE = '1'
+      expect(__testGeneratePracticeFromUrl.shouldReuseGeneratedCache()).toBe(
+        true,
+      )
+
+      process.env.GENERATOR_DISABLE_CACHE = '1'
+      expect(__testGeneratePracticeFromUrl.shouldReuseGeneratedCache()).toBe(
+        false,
+      )
+    } finally {
+      if (originalReuse === undefined) {
+        delete process.env.GENERATOR_REUSE_GENERATED_CACHE
+      } else {
+        process.env.GENERATOR_REUSE_GENERATED_CACHE = originalReuse
+      }
+
+      if (originalDisable === undefined) {
+        delete process.env.GENERATOR_DISABLE_CACHE
+      } else {
+        process.env.GENERATOR_DISABLE_CACHE = originalDisable
+      }
+    }
   })
 })

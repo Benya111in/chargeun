@@ -11,6 +11,7 @@ const ScenarioPracticePage = lazy(() => import('./ScenarioPracticePage.tsx'))
 const SegmentEditorPage = lazy(() => import('./SegmentEditorPage.tsx'))
 const TeacherGuidePage = lazy(() => import('./TeacherGuidePage.tsx'))
 const UrlGeneratorPage = lazy(() => import('./UrlGeneratorPage.tsx'))
+const UrlGeneratorV2Page = lazy(() => import('./UrlGeneratorV2Page.tsx'))
 
 export function Root() {
   const [normalizedPathname, setNormalizedPathname] = useState(getAppRoute)
@@ -32,6 +33,7 @@ export function Root() {
     normalizedPathname === '/teacher' ||
     normalizedPathname === '/live-lab' ||
     normalizedPathname === '/url-generator' ||
+    normalizedPathname === '/url-generator-v2' ||
     normalizedPathname.startsWith('/guardian-editor') ||
     (isLocalSeasonalEnabled() && normalizedPathname === '/local-seasonal') ||
     normalizedPathname === '/qa' ||
@@ -50,15 +52,17 @@ export function Root() {
               ? LiveLabPage
               : normalizedPathname === '/url-generator'
                 ? UrlGeneratorPage
-                : normalizedPathname === '/qa'
-                  ? isQaUnlocked()
-                    ? QaWorkspacePage
-                    : InternalQaGatePage
-                  : normalizedPathname === '/'
-                    ? LearningHomePage
-                    : isKnownPath
+                : normalizedPathname === '/url-generator-v2'
+                  ? UrlGeneratorV2Page
+                  : normalizedPathname === '/qa'
+                    ? isQaUnlocked()
+                      ? QaWorkspacePage
+                      : InternalQaGatePage
+                    : normalizedPathname === '/'
                       ? LearningHomePage
-                      : NotFoundPage
+                      : isKnownPath
+                        ? LearningHomePage
+                        : NotFoundPage
 
   return (
     <Suspense

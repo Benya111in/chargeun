@@ -1,13 +1,17 @@
-export const generatedPipelineVersion = 'url-multi-agent-quality-v20'
+export const generatedPipelineVersion = 'url-multi-agent-quality-v21'
+export const generatedQualityContractVersion = 'url-quality-contract-v1'
 
 export type GenerationAgentName =
   | 'critic-agent'
+  | 'easy-language-agent'
   | 'evidence-agent'
   | 'grounding-agent'
   | 'publisher-agent'
+  | 'quiz-agent'
   | 'repair-coordinator'
   | 'scenario-author-agent'
   | 'scene-agent'
+  | 'source-lock-agent'
 
 export type GenerationAgentRun = {
   agent: GenerationAgentName
@@ -16,6 +20,13 @@ export type GenerationAgentRun = {
   startedAt: string
   status: 'blocked' | 'needs_repair' | 'passed' | 'skipped'
   summary: string
+}
+
+export type GenerationStageTiming = {
+  completedAt: string
+  durationMs: number
+  stage: string
+  startedAt: string
 }
 
 export type GenerationIssueRouting = {
@@ -27,9 +38,20 @@ export type GenerationPipelineTrace = {
   agentRuns: GenerationAgentRun[]
   artifactManifest?: Record<string, unknown>
   attempts: number
+  deadlineMode?:
+    | 'deadline_finalizer'
+    | 'forced_publish'
+    | 'normal'
+    | 'timeboxed_repair'
+  finalizationReason?: string
   issueRouting: GenerationIssueRouting[]
   pipelineVersion: typeof generatedPipelineVersion
+  qualityContractVersion: typeof generatedQualityContractVersion
   publishedAt?: string
+  remainingMs?: number
+  stageTimings: GenerationStageTiming[]
+  waivedHardIssues?: GenerationQualityIssueLike[]
+  waivedSoftIssues?: GenerationQualityIssueLike[]
 }
 
 export type GenerationQualityIssueLike = {
@@ -40,6 +62,7 @@ export type GenerationQualityIssueLike = {
 export type GenerationQualityReportLike = {
   groundingPassed?: unknown
   passed?: unknown
+  qualityContractVersion?: unknown
   sourceCoveragePassed?: unknown
   uiPlaybackPassed?: unknown
   version?: unknown
@@ -49,8 +72,11 @@ export function createGenerationPipelineTrace(): GenerationPipelineTrace {
   return {
     agentRuns: [],
     attempts: 0,
+    deadlineMode: 'normal',
     issueRouting: [],
     pipelineVersion: generatedPipelineVersion,
+    qualityContractVersion: generatedQualityContractVersion,
+    stageTimings: [],
   }
 }
 
@@ -104,6 +130,8 @@ export function agentForIssueCode(code: string): GenerationAgentName {
     code === 'mixed_topic_segment' ||
     code === 'mixed_action_topic_segment' ||
     code === 'action_missing_source_topic' ||
+    code === 'intro_mixed_with_action' ||
+    code === 'outro_mixed_with_action' ||
     code === 'intro_has_direct_action_evidence' ||
     code === 'incomplete_audio_fragment' ||
     code === 'topic_action_semantic_mismatch'
@@ -111,19 +139,41 @@ export function agentForIssueCode(code: string): GenerationAgentName {
     return 'scene-agent'
   }
 
-  if (code === 'ungrounded_action' || code === 'missing_official_rule') {
+  if (
+    code === 'official_contradiction' ||
+    code === 'rag_overwrite' ||
+    code === 'ungrounded_action' ||
+    code === 'missing_official_rule'
+  ) {
     return 'grounding-agent'
   }
 
   if (
-    code === 'learner_text_not_easy' ||
-    code === 'learner_text_too_long' ||
-    code === 'learner_sequence_action_mismatch' ||
-    code === 'learner_sequence_shape_invalid' ||
-    code === 'low_quality_teach_back' ||
-    code === 'bad_answer_option' ||
+    code === 'source_keyword_erased' ||
+    code === 'source_locked_action_missing' ||
     code === 'missing_required_keyword' ||
     code === 'missing_required_keyword_in_ui' ||
+    code === 'hallucinated_source_keyword'
+  ) {
+    return 'source-lock-agent'
+  }
+
+  if (
+    code === 'generic_quiz' ||
+    code === 'low_quality_teach_back' ||
+    code === 'bad_answer_option' ||
+    code === 'ambiguous_question'
+  ) {
+    return 'quiz-agent'
+  }
+
+  if (code === 'learner_text_not_easy' || code === 'learner_text_too_long') {
+    return 'easy-language-agent'
+  }
+
+  if (
+    code === 'learner_sequence_action_mismatch' ||
+    code === 'learner_sequence_shape_invalid' ||
     code === 'negative_action_card' ||
     code === 'repeated_action_scene' ||
     code === 'too_many_action_reasons' ||
@@ -149,6 +199,7 @@ export function isCurrentPipelineTrace(value: unknown) {
   return (
     isRecord(value) &&
     value.pipelineVersion === generatedPipelineVersion &&
+    value.qualityContractVersion === generatedQualityContractVersion &&
     Array.isArray(value.agentRuns)
   )
 }
@@ -159,6 +210,7 @@ export function isPublishableQualityReport(
   return (
     isRecord(value) &&
     value.passed === true &&
+    value.qualityContractVersion === generatedQualityContractVersion &&
     value.groundingPassed === true &&
     value.sourceCoveragePassed === true &&
     value.uiPlaybackPassed === true
@@ -171,7 +223,13 @@ export function isCanonicalArtifactManifest(value: unknown) {
     value.qualityVersion === 'quality-v1' &&
     typeof value.scenarioJsonUrl === 'string' &&
     typeof value.sourceVideoUrl === 'string' &&
-    Array.isArray(value.files)
+    Array.isArray(value.files) &&
+    manifestContainsFile(value, 'scenario.json') &&
+    manifestContainsFile(value, 'source.mp4') &&
+    manifestContainsFile(value, 'quality-report.json') &&
+    manifestContainsFile(value, 'pipeline-trace.json') &&
+    manifestContainsFile(value, 'evidence-packet.json') &&
+    manifestContainsFile(value, 'scene-graph.json')
   )
 }
 
@@ -186,4 +244,14 @@ export function isPublishableGeneratedScenario(value: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function manifestContainsFile(value: Record<string, unknown>, name: string) {
+  return (
+    Array.isArray(value.files) &&
+    value.files.some(
+      (file) =>
+        isRecord(file) && file.name === name && typeof file.url === 'string',
+    )
+  )
 }

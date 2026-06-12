@@ -581,7 +581,7 @@ test('keeps live screen-share analysis isolated under /live-lab', async ({
         maxFramesPerAnalysis: 3,
         maxSessionMinutes: 10,
         models: {
-          analysis: 'gpt-5.4-mini',
+          analysis: 'gpt-5.5',
           transcription: 'gpt-4o-mini-transcribe',
         },
         rateLimit: {
@@ -614,7 +614,7 @@ test('runs live-lab screen share with a synthetic browser stream', async ({
 
   await page.goto('/live-lab')
 
-  await expect(page.getByText('분석 서버 준비됨 · gpt-5.4-mini')).toBeVisible()
+  await expect(page.getByText('분석 서버 준비됨 · gpt-5.5')).toBeVisible()
   await page.getByLabel('베타 접근 코드').fill('live')
   await page.getByRole('button', { name: '확인' }).click()
   await expect(page.getByText('베타 코드가 확인되었습니다.')).toBeVisible()
@@ -810,7 +810,7 @@ async function mockLiveLabApis(
         maxFramesPerAnalysis: 3,
         maxSessionMinutes: 10,
         models: {
-          analysis: 'gpt-5.4-mini',
+          analysis: 'gpt-5.5',
           transcription: 'gpt-4o-mini-transcribe',
         },
         rateLimit: {

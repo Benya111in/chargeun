@@ -1,4 +1,4 @@
-const defaultAnalysisModel = 'gpt-5.4-mini'
+const defaultAnalysisModel = 'gpt-5.5'
 const defaultTranscribeModel = 'gpt-4o-mini-transcribe'
 const defaultMaxFrames = 3
 const defaultMaxSessionMinutes = 10
